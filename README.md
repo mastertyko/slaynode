@@ -107,15 +107,13 @@ swift test
 Slaynode’s visual identity is now aligned with the macOS 26 “Liquid Glass” aesthetic:
 
 ### App Icon
-- **Source**: `Sources/SlayNodeMenuBar/Resources/AppIcon.iconset/`
-- **Pipeline**: Generated programmatically via SF Symbols (`bolt.horizontal.circle.fill`) blended over an indigo→mint gradient.
+- **Source**: `Sources/SlayNodeMenuBar/Resources/SlayNodeIcon.png` (1024² master artwork)
+- **Pipeline**: `swift generate-icons.swift` downscales the master image into the full `.iconset` (16×16 → 512×512 + Retina).
 - **Sizes**: 16×16 → 512×512 with @2× Retina variants, plus 1024×1024 marketing size.
-- **Regeneration**: `swift generate-icons.swift`
 
 ### Menu Bar Icon
 - **Asset**: `Sources/SlayNodeMenuBar/Resources/Assets.xcassets/MenuBarIcon.imageset`
-- **Format**: 22 pt monochrome template PNG (1×/2×) for automatic system tinting in transparent/backed bars.
-- **Symbol**: SF Symbol `bolt.horizontal.fill` sized for the Tahoe menu bar cap.
+- **Format**: 22 pt monochrome template PNG (1×/2×) derived from `SlayNodeIcon.png` for automatic system tinting.
 - **Regeneration**: `swift generate-icons.swift`
 
 ### Icon Refresh Workflow
