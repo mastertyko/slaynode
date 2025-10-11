@@ -2,9 +2,15 @@ import AppKit
 import SwiftUI
 
 struct MenuContentView: View {
-    @ObservedObject var viewModel: MenuViewModel
+    @StateObject private var viewModel: MenuViewModel
+    @ObservedObject var preferences: PreferencesStore
 
     private let backgroundColor = Color(nsColor: .clear)
+    
+    init(preferences: PreferencesStore) {
+        self.preferences = preferences
+        self._viewModel = StateObject(wrappedValue: MenuViewModel(preferences: preferences))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {

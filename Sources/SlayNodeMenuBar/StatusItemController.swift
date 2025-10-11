@@ -5,10 +5,10 @@ import SwiftUI
 final class StatusItemController: NSObject {
     private let statusItem: NSStatusItem
     private let popover = NSPopover()
-    private let viewModel: MenuViewModel
+    private let preferences: PreferencesStore
 
-    init(viewModel: MenuViewModel) {
-        self.viewModel = viewModel
+    init(preferences: PreferencesStore) {
+        self.preferences = preferences
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
         configureStatusItem()
@@ -31,6 +31,7 @@ final class StatusItemController: NSObject {
         button.action = #selector(togglePopover(_:))
         button.imagePosition = .imageOnly
         
+        // Prioritize our custom Slaynode icon!
         // Try to load the original icon for menu bar
         if let path = Bundle.main.path(forResource: "icon-iOS-Default-1024x1024@1x", ofType: "png"),
            let originalIcon = NSImage(contentsOfFile: path) {
@@ -40,17 +41,18 @@ final class StatusItemController: NSObject {
             originalIcon.draw(in: NSRect(x: 0, y: 0, width: 22, height: 22))
             resizedImage.unlockFocus()
             button.image = resizedImage
-            button.image?.isTemplate = false  // Don't use template to preserve colors
-            print("✅ Loaded original icon for menu bar")
+            button.image?.isTemplate = false  // Preserve our green colors!
+            print("✅ Loaded Slaynode icon for menu bar")
         } else if let path = Bundle.main.path(forResource: "MenuBarIcon", ofType: "png"),
                   let menuBarIcon = NSImage(contentsOfFile: path) {
             button.image = menuBarIcon
-            button.image?.isTemplate = false  // Don't use template to preserve colors
+            button.image?.isTemplate = false  // Preserve colors
             print("✅ Loaded MenuBarIcon")
         } else {
-            button.image = iconImage()
+            // Only use SF Symbol as last resort
+            button.image = NSImage(systemSymbolName: "bolt.horizontal.circle", accessibilityDescription: "SlayNode")
             button.image?.isTemplate = true
-            print("⚠️ Using fallback icon")
+            print("⚠️ Using fallback SF Symbol")
         }
     }
 
@@ -58,16 +60,6 @@ final class StatusItemController: NSObject {
         popover.behavior = .transient
         popover.animates = true
         popover.contentSize = NSSize(width: 360, height: 420)
-        popover.contentViewController = NSHostingController(rootView: MenuContentView(viewModel: viewModel))
-    }
-
-    private func iconImage() -> NSImage? {
-        if let img = NSImage(named: "MenuBarIcon") {
-            return img
-        }
-        if let img = NSImage(named: "AppIcon") {
-            return img
-        }
-        return NSImage(systemSymbolName: "bolt.horizontal.circle", accessibilityDescription: "SlayNode")
+        popover.contentViewController = NSHostingController(rootView: MenuContentView(preferences: preferences))
     }
 }
