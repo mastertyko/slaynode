@@ -30,6 +30,26 @@ final class MenuViewModel: ObservableObject {
     private var cancellables: Set<AnyCancellable> = []
     private var stoppingPids: Set<Int32> = []
     private var latestProcesses: [NodeProcess] = []
+    
+    private func writeToLogFile(_ message: String) {
+        let timestamp = DateFormatter().string(from: Date())
+        let logEntry = "[\(timestamp)] \(message)\n"
+        
+        if let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let logFile = url.appendingPathComponent("slaynode-debug.log")
+            if let data = logEntry.data(using: .utf8) {
+                if FileManager.default.fileExists(atPath: logFile.path) {
+                    if let fileHandle = try? FileHandle(forWritingTo: logFile) {
+                        fileHandle.seekToEndOfFile()
+                        fileHandle.write(data)
+                        fileHandle.closeFile()
+                    }
+                } else {
+                    try? data.write(to: logFile)
+                }
+            }
+        }
+    }
 
     init(preferences: PreferencesStore = PreferencesStore(), monitor: ProcessMonitor = ProcessMonitor()) {
         self.preferences = preferences
@@ -41,6 +61,8 @@ final class MenuViewModel: ObservableObject {
         monitor.updateInterval(preferences.refreshInterval)
         monitor.start()
         monitor.refresh()
+        
+        writeToLogFile("🚀 MenuViewModel initialized - starting process monitoring")
     }
 
     func refresh() {

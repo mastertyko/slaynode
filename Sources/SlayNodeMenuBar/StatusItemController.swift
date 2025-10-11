@@ -6,7 +6,7 @@ final class StatusItemController: NSObject {
     private let statusItem: NSStatusItem
     private let popover = NSPopover()
     private let preferences: PreferencesStore
-
+    
     init(preferences: PreferencesStore) {
         self.preferences = preferences
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -14,7 +14,7 @@ final class StatusItemController: NSObject {
         configureStatusItem()
         configurePopover()
     }
-
+    
     @objc private func togglePopover(_ sender: Any?) {
         guard let button = statusItem.button else { return }
         if popover.isShown {
@@ -24,42 +24,32 @@ final class StatusItemController: NSObject {
             popover.contentViewController?.view.window?.makeKey()
         }
     }
-
+    
     private func configureStatusItem() {
         guard let button = statusItem.button else { return }
         button.target = self
         button.action = #selector(togglePopover(_:))
         button.imagePosition = .imageOnly
-        
-        // Prioritize our custom Slaynode icon!
-        // Try to load the original icon for menu bar
-        if let path = Bundle.main.path(forResource: "icon-iOS-Default-1024x1024@1x", ofType: "png"),
-           let originalIcon = NSImage(contentsOfFile: path) {
-            // Resize for menu bar
-            let resizedImage = NSImage(size: NSSize(width: 22, height: 22))
-            resizedImage.lockFocus()
-            originalIcon.draw(in: NSRect(x: 0, y: 0, width: 22, height: 22))
-            resizedImage.unlockFocus()
-            button.image = resizedImage
-            button.image?.isTemplate = false  // Preserve our green colors!
-            print("✅ Loaded Slaynode icon for menu bar")
-        } else if let path = Bundle.main.path(forResource: "MenuBarIcon", ofType: "png"),
-                  let menuBarIcon = NSImage(contentsOfFile: path) {
-            button.image = menuBarIcon
-            button.image?.isTemplate = false  // Preserve colors
-            print("✅ Loaded MenuBarIcon")
-        } else {
-            // Only use SF Symbol as last resort
-            button.image = NSImage(systemSymbolName: "bolt.horizontal.circle", accessibilityDescription: "SlayNode")
-            button.image?.isTemplate = true
-            print("⚠️ Using fallback SF Symbol")
+        button.toolTip = "Slaynode"
+        button.appearsDisabled = false
+        button.isBordered = false
+        button.focusRingType = .none
+        if let icon = NSImage(named: "MenuBarIcon") {
+            icon.size = NSSize(width: 22, height: 22)
+            icon.isTemplate = true
+            button.image = icon
+        } else if let symbol = NSImage(systemSymbolName: "bolt.horizontal.fill", accessibilityDescription: "Slaynode") {
+            symbol.size = NSSize(width: 20, height: 20)
+            symbol.isTemplate = true
+            button.image = symbol
         }
+        button.image?.isTemplate = true
     }
-
+    
     private func configurePopover() {
         popover.behavior = .transient
         popover.animates = true
-        popover.contentSize = NSSize(width: 360, height: 420)
+        popover.contentSize = NSSize(width: 360, height: 440)
         popover.contentViewController = NSHostingController(rootView: MenuContentView(preferences: preferences))
     }
 }

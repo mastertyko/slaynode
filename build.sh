@@ -53,11 +53,15 @@ cat > "${APP_DIR}/Contents/Info.plist" <<'EOF'
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
-    <true/>
+    <false/>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Slaynode needs to monitor running development servers for process management.</string>
+    <key>NSSystemAdministrationUsageDescription</key>
+    <string>Slaynode needs to inspect system processes to detect development servers.</string>
 </dict>
 </plist>
 EOF
@@ -87,7 +91,12 @@ fi
 
 # Code sign the app
 echo "🔐 Code signing app..."
-codesign --force --sign - "${APP_DIR}"
+ENTITLEMENTS_PATH="${ROOT_DIR}/Slaynode.entitlements"
+if [[ -f "${ENTITLEMENTS_PATH}" ]]; then
+    codesign --force --sign - --entitlements "${ENTITLEMENTS_PATH}" "${APP_DIR}"
+else
+    codesign --force --sign - "${APP_DIR}"
+fi
 
 echo "✅ ${APP_NAME}.app is ready at: ${APP_DIR}"
 echo "🚀 Run with: open '${APP_DIR}'"

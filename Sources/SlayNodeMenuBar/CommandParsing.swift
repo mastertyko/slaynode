@@ -54,13 +54,13 @@ enum CommandParser {
 
         if containsKeyword(in: lowered, keywords: ["next", "next.js"]) {
             let mode = lowered.first(where: { $0 == "dev" || $0 == "start" })
-            let details = mode.map { "Läge: \($0.uppercased())" }
+            let details = mode.map { "Mode: \($0.uppercased())" }
             return ServerDescriptor(name: "Next.js", details: details)
         }
 
         if containsKeyword(in: lowered, keywords: ["vite"]) {
             let mode = lowered.first(where: { $0 == "dev" || $0 == "preview" || $0 == "build" })
-            let details = mode.map { "Läge: \($0.capitalized)" }
+            let details = mode.map { "Mode: \($0.capitalized)" }
             return ServerDescriptor(name: "Vite", details: details)
         }
 

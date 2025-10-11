@@ -67,15 +67,16 @@ Slaynode/
 ├── Sources/
 │   └── SlayNodeMenuBar/
 │       ├── Resources/
-│       │   ├── AppIcon.iconset/     # App icon (16x16 to 512x512)
-│       │   ├── MenuBarIcon.png      # Menu bar icon (22x22)
+│       │   ├── AppIcon.iconset/             # Liquid Glass app icon sources
+│       │   ├── Assets.xcassets/             # Template menu bar glyph + misc assets
 │       │   └── icon-iOS-Default-1024x1024@1x.png
-│       ├── SlayNodeMenuBarApp.swift      # Main app entry point
-│       ├── StatusItemController.swift    # Menu bar integration
+│       ├── SlayNodeMenuBarApp.swift        # Main app entry point + AppKit bridge
+│       ├── StatusItemController.swift      # Menu bar integration (popover)
 │       ├── ProcessMonitor.swift          # Process monitoring logic
 │       ├── MenuViewModel.swift           # UI state management
 │       ├── MenuContentView.swift         # Main UI view
 │       └── ...                           # Other components
+├── generate-icons.swift                 # Utility to regenerate app/menu bar icons
 ├── Tests/                                # Unit tests
 ├── build.sh                            # Build script
 ├── Package.swift                       # Swift Package Manager
@@ -103,26 +104,26 @@ swift test
 
 ## 🎨 Icon System
 
-Slaynode features a comprehensive icon system that works seamlessly across macOS:
+Slaynode’s visual identity is now aligned with the macOS 26 “Liquid Glass” aesthetic:
 
 ### App Icon
-- **Format**: `.icns` with all required sizes
-- **Sizes**: 16x16, 32x32, 128x128, 256x256, 512x512 pixels
-- **HiDPI Support**: @2x versions for Retina displays
-- **Location**: `Sources/SlayNodeMenuBar/Resources/AppIcon.iconset/`
+- **Source**: `Sources/SlayNodeMenuBar/Resources/AppIcon.iconset/`
+- **Pipeline**: Generated programmatically via SF Symbols (`bolt.horizontal.circle.fill`) blended over an indigo→mint gradient.
+- **Sizes**: 16×16 → 512×512 with @2× Retina variants, plus 1024×1024 marketing size.
+- **Regeneration**: `swift generate-icons.swift`
 
 ### Menu Bar Icon
-- **Size**: 22x22 pixels (standard macOS menu bar size)
-- **Format**: PNG with proper alpha channel
-- **Template Support**: Adapts to light/dark mode
-- **Location**: `Sources/SlayNodeMenuBar/Resources/MenuBarIcon.png`
+- **Asset**: `Sources/SlayNodeMenuBar/Resources/Assets.xcassets/MenuBarIcon.imageset`
+- **Format**: 22 pt monochrome template PNG (1×/2×) for automatic system tinting in transparent/backed bars.
+- **Symbol**: SF Symbol `bolt.horizontal.fill` sized for the Tahoe menu bar cap.
+- **Regeneration**: `swift generate-icons.swift`
 
-### Icon Generation
-Icons are automatically processed during build:
-1. Original high-resolution icon is resized for different contexts
-2. AppIcon.icns is generated from the iconset using `iconutil`
-3. Menu bar icon is optimized for template mode
-4. All icons are bundled with the application
+### Icon Refresh Workflow
+1. Run `swift generate-icons.swift` to rebuild all PNG variants.
+2. (Optional) Export an `.icns` for external use:  
+   `iconutil -c icns Sources/SlayNodeMenuBar/Resources/AppIcon.iconset`
+3. Build the project (`./build.sh` or `xcodebuild`) to bundle the refreshed assets.
+4. Launch the app and confirm tinting/contrast in both light and dark wallpapers.
 
 ## 🔧 Configuration
 
@@ -165,6 +166,17 @@ Debug logs are available in Console.app:
 Category: SlayNodeMenuBar
 Process: SlayNodeMenuBar
 ```
+
+## 🧪 Visual Verification Checklist
+
+After regenerating icons or tweaking the Liquid Glass UI, validate the experience on a macOS 26 machine:
+
+1. **Wallpaper Sweep** – Toggle between light, dark, and vivid HDR wallpapers. In *System Settings ▸ Appearance ▸ Menu Bar*, switch between transparent and backed styles and confirm the menu bar glyph remains legible.
+2. **Control Center Roundtrip** – Command-drag the Slaynode icon off the menu bar, re-enable it via *System Settings ▸ Control Center ▸ Menu Bar Only Apps*, and verify the app state survives the cycle.
+3. **Transparency Toggle** – Enable/disable “Automatically hide and show the menu bar” and observe hover/pressed states, panel shadows, and blur fidelity in both configurations.
+4. **Appearance Modes** – Switch between Light, Dark, and Auto; spot-check header/secondary text contrast with Digital Color Meter to keep ≥4.5:1 against underlying wallpapers.
+5. **Multi-Display** – Open the extra on a secondary display and ensure the panel shadow and blur adapt to each wallpaper without clipping.
+6. **Menu Bar Height Variants** – Increase menu bar size in *System Settings ▸ Accessibility ▸ Display*; the 22 pt template glyph should scale crisply (macOS will pick the 2× asset automatically).
 
 ## 🤝 Contributing
 
