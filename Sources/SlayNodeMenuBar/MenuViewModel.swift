@@ -152,11 +152,11 @@ final class MenuViewModel: ObservableObject {
     }
 
     private func makePortText(for process: NodeProcess) -> String {
-        guard !process.ports.isEmpty else { return "Port: okänd" }
+        guard !process.ports.isEmpty else { return "Port: unknown" }
         if process.ports.count == 1 {
             return "Port: \(process.ports[0])"
         }
-        return "Portar: \(process.ports.map(String.init).joined(separator: ", "))"
+        return "Ports: \(process.ports.map(String.init).joined(separator: ", "))"
     }
 
     private func makeDetails(for process: NodeProcess, uptimeText: String) -> String {

@@ -35,11 +35,11 @@ cat > "${APP_DIR}/Contents/Info.plist" <<'EOF'
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key>
-    <string>sv-SE</string>
+    <string>en-US</string>
     <key>CFBundleExecutable</key>
     <string>SlayNodeMenuBar</string>
     <key>CFBundleIdentifier</key>
-    <string>se.slaynode.menubar</string>
+    <string>com.slaynode.menubar</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

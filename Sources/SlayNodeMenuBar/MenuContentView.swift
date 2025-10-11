@@ -36,7 +36,7 @@ struct MenuContentView: View {
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Node-servrar")
+                Text("Node Servers")
                     .font(.title3.weight(.semibold))
                 Text(statusText)
                     .font(.caption)
@@ -54,7 +54,7 @@ struct MenuContentView: View {
             if viewModel.isLoading && viewModel.processes.isEmpty {
                 VStack(alignment: .center, spacing: 12) {
                     ProgressView()
-                    Text("Söker efter Node-servrar...")
+                    Text("Searching for Node servers...")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -82,7 +82,7 @@ struct MenuContentView: View {
             Button {
                 viewModel.refresh()
             } label: {
-                Label("Uppdatera nu", systemImage: "arrow.clockwise")
+                Label("Refresh Now", systemImage: "arrow.clockwise")
             }
 
             Spacer()
@@ -90,7 +90,7 @@ struct MenuContentView: View {
             Button(role: .destructive) {
                 NSApplication.shared.terminate(nil)
             } label: {
-                Text("Avsluta")
+                Text("Quit")
             }
         }
         .buttonStyle(.bordered)
@@ -101,7 +101,7 @@ struct MenuContentView: View {
             let formatter = RelativeDateTimeFormatter()
             formatter.unitsStyle = .abbreviated
             let relative = formatter.localizedString(for: updated, relativeTo: Date())
-            return "Senast uppdaterad " + relative
+            return "Last updated " + relative
         }
         return ""
     }
@@ -131,7 +131,7 @@ private struct ProcessRowView: View {
                     Button(role: .destructive) {
                         stopAction()
                     } label: {
-                        Label("Stoppa", systemImage: "stop.fill")
+                        Label("Stop", systemImage: "stop.fill")
                             .labelStyle(.titleAndIcon)
                     }
                     .controlSize(.small)
@@ -166,11 +166,11 @@ private struct ProcessRowView: View {
                 .stroke(Color.primary.opacity(0.05))
         )
         .contextMenu {
-            Button("Kopiera kommando") {
+            Button("Copy Command") {
                 copyToPasteboard(process.command)
             }
             if let directory = process.workingDirectory {
-                Button("Öppna i Finder") {
+                Button("Open in Finder") {
                     openDirectory(directory)
                 }
             }
@@ -197,13 +197,13 @@ private struct EmptyStateView: View {
             Image(systemName: "server.rack")
                 .font(.system(size: 40))
                 .foregroundStyle(.tertiary)
-            Text("Inga Node-servrar hittades")
+            Text("No Node Servers Found")
                 .font(.headline)
-            Text("Starta en server eller uppdatera manuellt.")
+            Text("Start a server or refresh manually.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Button(action: refreshAction) {
-                Label("Sök igen", systemImage: "arrow.clockwise")
+                Label("Search Again", systemImage: "arrow.clockwise")
             }
         }
         .frame(maxWidth: .infinity)
@@ -251,11 +251,11 @@ private struct PreferencesSectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Uppdateringsintervall")
+            Text("Refresh Interval")
                 .font(.subheadline.weight(.medium))
             HStack {
                 Slider(value: sliderBinding, in: 2...30, step: 1) {
-                    Text("Intervall")
+                    Text("Interval")
                 }
                 .frame(maxWidth: 200)
 

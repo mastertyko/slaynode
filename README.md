@@ -19,7 +19,7 @@
 - 🎨 **Beautiful Interface** - Native macOS design with smooth animations
 - 🔔 **Smart Notifications** - Get notified about process changes
 - 🌙 **Menu Bar Integration** - Always accessible from your menu bar
-- 🇸🇪 **Swedish Localization** - Full Swedish language support
+- 🌐 **English Localization** - Full English language support
 - 🔒 **Secure & Private** - No telemetry, your data stays on your Mac
 
 ## 📸 Screenshots
@@ -130,7 +130,7 @@ Icons are automatically processed during build:
 
 The app stores preferences in:
 ```bash
-~/Library/Containers/se.slaynode.menubar/Data/Library/Preferences/
+~/Library/Containers/com.slaynode.menubar/Data/Library/Preferences/
 ```
 
 ### Supported Commands
@@ -200,7 +200,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Thanks to the Swift community for excellent tools and libraries
 - Icon design inspired by modern macOS design principles
-- Built with ❤️ in Sweden
+- Built with ❤️ for developers worldwide
 
 ## 📞 Support
 
