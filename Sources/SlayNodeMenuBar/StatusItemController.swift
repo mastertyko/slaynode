@@ -34,7 +34,7 @@ final class StatusItemController: NSObject {
         button.appearsDisabled = false
         button.isBordered = false
         button.focusRingType = .none
-        if let icon = NSImage(named: "MenuBarIcon") {
+        if let icon = Bundle.main.image(forResource: "MenuBarIcon") {
             icon.size = NSSize(width: 22, height: 22)
             icon.isTemplate = true
             button.image = icon

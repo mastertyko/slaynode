@@ -76,17 +76,18 @@ if [[ -d "${RESOURCE_BUNDLE}" ]]; then
 fi
 
 # Create AppIcon.icns from iconset
+echo "🎨 Preparing AppIcon.icns..."
+cp -R "${ROOT_DIR}/Sources/SlayNodeMenuBar/Resources/AppIcon.iconset" "${APP_DIR}/Contents/Resources/"
 ICONSET_PATH="${APP_DIR}/Contents/Resources/AppIcon.iconset"
 if [[ -d "${ICONSET_PATH}" ]]; then
-  echo "🎨 Creating AppIcon.icns..."
-  # Copy iconset from Sources to Resources first
-  cp -r "${ROOT_DIR}/Sources/SlayNodeMenuBar/Resources/AppIcon.iconset" "${APP_DIR}/Contents/Resources/"
   iconutil -c icns "${ICONSET_PATH}" -o "${APP_DIR}/Contents/Resources/AppIcon.icns"
   if [[ -f "${APP_DIR}/Contents/Resources/AppIcon.icns" ]]; then
     echo "✅ AppIcon.icns created successfully"
   else
     echo "❌ Failed to create AppIcon.icns"
   fi
+else
+  echo "❌ AppIcon.iconset missing; cannot generate icns" >&2
 fi
 
 # Code sign the app

@@ -19,7 +19,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusController: StatusItemController?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        if let appIcon = NSImage(named: "AppIcon") {
+        if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
+           let appIcon = NSImage(contentsOf: iconURL) {
             NSApp.applicationIconImage = appIcon
         }
         statusController = StatusItemController(preferences: preferences)
