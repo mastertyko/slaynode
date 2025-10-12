@@ -5,9 +5,9 @@ All notable changes to SlayNode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2025-10-12
+## [1.2.0] - 2025-10-12
 
-### 🚀 Major Improvements
+### ✨ New Features & Improvements
 
 #### Architecture & Code Quality
 - **Threading Modernization**: Migrated from DispatchQueue to modern Swift concurrency (Task, async/await)
@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Testing Foundation**: Improved error handling makes testing more reliable
 - **Future-Proofing**: Modern Swift patterns ensure long-term maintainability
 
-## [1.x.x] - Previous Versions
+## [1.1.x] - Previous Versions
 
 ### Core Features
 - Menu bar integration with popover interface
@@ -70,6 +70,6 @@ No action required - all changes are backward compatible and improve reliability
 - Process parsing functions have been unified
 - Threading model has been simplified with MainActor isolation
 
-### Breaking Changes
+### Compatibility
 - Internal API changes only - no user-facing breaking changes
 - All existing functionality preserved with enhanced reliability

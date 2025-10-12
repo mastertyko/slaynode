@@ -99,7 +99,7 @@ private func performProcessDetection() async -> [NodeProcessItemViewModel] {
 - **Code Optimization**: Eliminated ~500+ lines of duplicate code through unified process parsing
 - **Error Resilience**: Graceful degradation and comprehensive error recovery mechanisms
 
-### Recent Improvements (v2.0)
+### Recent Improvements (v1.2.0)
 
 - **Threading Standardization**: Migrated from DispatchQueue to modern Swift concurrency
 - **Error Handling Enhancement**: Implemented comprehensive error type system with localized descriptions
