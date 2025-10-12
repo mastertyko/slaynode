@@ -44,6 +44,11 @@ swift build
 ./build.sh release
 ```
 
+#### Create DMG for Distribution
+```bash
+./release.sh 1.2.0
+```
+
 #### Running Tests
 ```bash
 swift test

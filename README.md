@@ -60,6 +60,25 @@ Click the menu bar icon to see your running servers:
 
 ### Installation
 
+#### 🚀 Easy Installation (Recommended)
+
+1. **Download the DMG**
+   - Go to the [Latest Release](https://github.com/mastertyko/slaynode/releases)
+   - Download `Slaynode-v1.2.0.dmg`
+
+2. **Install the App**
+   ```bash
+   # Double-click the DMG file to mount it
+   # Drag Slaynode.app to your Applications folder
+   ```
+
+3. **Launch SlayNode**
+   ```bash
+   open /Applications/Slaynode.app
+   ```
+
+#### 🔧 Build from Source
+
 1. **Clone the repository**
    ```bash
    git clone https://github.com/mastertyko/slaynode.git
@@ -71,9 +90,9 @@ Click the menu bar icon to see your running servers:
    ./build.sh
    ```
 
-3. **Launch it**
+3. **Create DMG (optional)**
    ```bash
-   open Slaynode.app
+   ./release.sh 1.2.0
    ```
 
 That's it! 🎉 The app appears in your menu bar and starts monitoring Node.js processes automatically.
