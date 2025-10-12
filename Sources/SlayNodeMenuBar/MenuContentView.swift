@@ -4,10 +4,11 @@ import SwiftUI
 struct MenuContentView: View {
     @StateObject private var viewModel: MenuViewModel
     @ObservedObject var preferences: PreferencesStore
-    
+    @State private var currentTime = Date()
+
     private let panelCornerRadius: CGFloat = 24
     private let headerCornerRadius: CGFloat = 18
-    
+
     init(preferences: PreferencesStore) {
         self.preferences = preferences
         self._viewModel = StateObject(wrappedValue: MenuViewModel(preferences: preferences))
@@ -16,25 +17,33 @@ struct MenuContentView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             header
-            
+
             if let error = viewModel.lastError {
                 ErrorBanner(text: error)
                     .transition(.opacity)
             }
-            
+
             content
                 .animation(.spring(response: 0.32, dampingFraction: 0.88), value: viewModel.processes)
-            
+
             Divider()
                 .padding(.horizontal, -12)
                 .overlay(Color.white.opacity(0.08))
-            
+
             footer
         }
         .padding(22)
         .frame(width: 380, alignment: .leading)
         .glassPanel(cornerRadius: panelCornerRadius)
         .animation(.easeInOut(duration: 0.25), value: viewModel.isLoading)
+        .onAppear {
+            // Start a timer to update currentTime every second
+            Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+                Task { @MainActor in
+                    currentTime = Date()
+                }
+            }
+        }
     }
     
     private var header: some View {
@@ -146,8 +155,7 @@ struct MenuContentView: View {
             return "Waiting for first refresh"
         }
 
-        let now = Date()
-        let timeInterval = now.timeIntervalSince(updated)
+        let timeInterval = currentTime.timeIntervalSince(updated)
 
         // Show countdown for the first 5 seconds after update
         if timeInterval < 5 {
@@ -158,7 +166,7 @@ struct MenuContentView: View {
         // Use abbreviated style for updates older than 5 seconds
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
-        let relative = formatter.localizedString(for: updated, relativeTo: now)
+        let relative = formatter.localizedString(for: updated, relativeTo: currentTime)
         return "Updated \(relative)"
     }
 
@@ -167,8 +175,7 @@ struct MenuContentView: View {
             return "clock"
         }
 
-        let now = Date()
-        let timeInterval = now.timeIntervalSince(updated)
+        let timeInterval = currentTime.timeIntervalSince(updated)
 
         // Show timer icon for countdown
         if timeInterval < 5 {
