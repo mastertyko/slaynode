@@ -91,10 +91,11 @@ struct MenuContentView: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.vertical, 32)
             } else if viewModel.processes.isEmpty {
                 EmptyStateView(refreshAction: viewModel.refresh)
+                    .frame(maxHeight: .infinity)
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 14) {
@@ -111,6 +112,7 @@ struct MenuContentView: View {
                 .frame(maxHeight: 600)
             }
         }
+        .frame(minHeight: 300) // Ensure minimum height even when empty
     }
     
     private var footer: some View {
@@ -320,24 +322,32 @@ private struct InfoChipView: View {
 
 private struct EmptyStateView: View {
     let refreshAction: () -> Void
-    
+
     var body: some View {
         VStack(spacing: 14) {
+            Spacer()
+
             Image(systemName: "server.rack")
                 .font(.system(size: 42, weight: .regular, design: .rounded))
                 .foregroundStyle(.tertiary)
+
             Text("No Development Servers Found")
                 .font(.headline)
+
             Text("Start a server or refresh to scan again.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
             Button(action: refreshAction) {
                 Label("Search Again", systemImage: "arrow.clockwise")
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
+
+            Spacer()
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(24)
         .glassTile(cornerRadius: 16)
     }
