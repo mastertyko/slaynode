@@ -51,12 +51,48 @@ struct MenuContentView: View {
             timer = nil
         }
     }
-    
+
+    private func showAboutDialog() {
+        let alert = NSAlert()
+        alert.messageText = "SlayNode"
+        alert.informativeText = """
+        Version 1.2.0
+
+        A sleek macOS menu bar application for Node.js process management.
+
+        © 2025 SlayNode
+
+        GitHub: github.com/mastertyko/slaynode
+        Report Issues: github.com/mastertyko/slaynode/issues
+        """
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "View on GitHub")
+        alert.addButton(withTitle: "Report Issues")
+        alert.addButton(withTitle: "OK")
+
+        let response = alert.runModal()
+
+        switch response {
+        case .alertFirstButtonReturn:
+            // View on GitHub
+            if let url = URL(string: "https://github.com/mastertyko/slaynode") {
+                NSWorkspace.shared.open(url)
+            }
+        case .alertSecondButtonReturn:
+            // Report Issues
+            if let url = URL(string: "https://github.com/mastertyko/slaynode/issues") {
+                NSWorkspace.shared.open(url)
+            }
+        default:
+            break
+        }
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Development Servers")
+                    Text("SlayNode - The Easy Way!")
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(Color.white.opacity(0.92))
                     HStack(spacing: 4) {
@@ -68,14 +104,26 @@ struct MenuContentView: View {
                             .foregroundStyle(Color.white.opacity(0.75))
                     }
                 }
-                
+
                 Spacer()
-                
-                if viewModel.isLoading {
-                    ProgressView()
-                        .progressViewStyle(.circular)
-                        .controlSize(.small)
-                        .tint(.white.opacity(0.9))
+
+                HStack(spacing: 8) {
+                    Button {
+                        showAboutDialog()
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.85))
+                    }
+                    .buttonStyle(.plain)
+                    .help("About SlayNode")
+
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .controlSize(.small)
+                            .tint(.white.opacity(0.9))
+                    }
                 }
             }
             
@@ -144,7 +192,7 @@ struct MenuContentView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            
+
             Button(role: .destructive) {
                 NSApplication.shared.terminate(nil)
             } label: {
