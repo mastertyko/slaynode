@@ -288,9 +288,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- 📧 Email: support@slaynode.app
-- 🐛 Issues: [GitHub Issues](https://github.com/mastertyko/slaynode/issues)
-- 💬 Discord: [Join our community](https://discord.gg/slaynode)
+- 🐛 **Issues**: [Report bugs or request features on GitHub Issues](https://github.com/mastertyko/slaynode/issues)
+- 📖 **Documentation**: Check the [README.md](README.md) and [INSTALL.md](INSTALL.md) for usage guides
 
 ---
 
