@@ -114,7 +114,8 @@ struct MenuContentView: View {
                             ProcessRowView(process: process) {
                                 viewModel.stopProcess(process.pid)
                             }
-                            .transition(.move(edge: .top).combined(with: .opacity))
+                            .transition(.scale.combined(with: .opacity))
+                            .animation(.easeInOut(duration: 0.4), value: viewModel.processes)
                         }
                     }
                     .padding(.vertical, 4)
@@ -241,9 +242,18 @@ private struct ProcessRowView: View {
 
                 // Stop button
                 if process.isStopping {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(.secondary)
+                    HStack(spacing: 4) {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(.secondary)
+                        Text("Slaying...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.secondary.opacity(0.1))
+                    .clipShape(Capsule())
                 } else {
                     Button(role: .destructive) {
                         stopAction()
@@ -293,6 +303,9 @@ private struct ProcessRowView: View {
         }
         .padding(16)
         .glassTile(cornerRadius: 16)
+        .scaleEffect(process.isStopping ? 0.98 : 1.0)
+        .opacity(process.isStopping ? 0.8 : 1.0)
+        .animation(.easeInOut(duration: 0.3), value: process.isStopping)
         .contextMenu {
             Button("Copy Command") {
                 copyToPasteboard(process.command)

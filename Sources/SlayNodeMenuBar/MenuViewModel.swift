@@ -808,7 +808,7 @@ final class MenuViewModel: ObservableObject {
         guard !stoppingPids.contains(pid) else { return }
 
         stoppingPids.insert(pid)
-        print("🛑 Attempting to stop process \(pid)")
+        print("🛑 Attempting to slay process \(pid)")
 
         // Mark as stopping in UI immediately
         if let index = processes.firstIndex(where: { $0.pid == pid }) {
@@ -830,30 +830,51 @@ final class MenuViewModel: ObservableObject {
             )
         }
 
-        // Simple process termination using SIGKILL for immediate effect
+        // Enhanced process termination with verification
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
 
-            let process = Process()
-            process.launchPath = "/bin/kill"
-            process.arguments = ["-9", "\(pid)"] // SIGKILL - immediate termination
+            self.waitForCompleteShutdown(pid: pid)
+        }
+    }
 
+    private func waitForCompleteShutdown(pid: Int32) {
+        let killer = ProcessKiller()
+
+        Task {
             do {
-                try process.run()
-                process.waitUntilExit()
+                // Use ProcessKiller for graceful termination
+                try await killer.terminate(pid: pid, forceAfter: 1.5)
+                print("✅ Process \(pid) termination command sent")
 
-                DispatchQueue.main.async {
+                // Wait for complete shutdown (process + ports)
+                let shutdownComplete = await waitForProcessAndPortsShutdown(pid: pid)
+
+                await MainActor.run {
                     self.stoppingPids.remove(pid)
 
-                    // Remove from UI regardless of success (process might already be dead)
-                    self.processes.removeAll { $0.pid == pid }
-                    self.lastUpdated = Date()
-                    print("✅ Process \(pid) terminated")
+                    if shutdownComplete {
+                        // Add a small delay for visual feedback before removing
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            self.processes.removeAll { $0.pid == pid }
+                            self.lastUpdated = Date()
+                            print("🎉 Process \(pid) and ports fully shutdown - removing from UI")
+                        }
+                    } else {
+                        // Timeout reached, remove anyway but show warning
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            self.processes.removeAll { $0.pid == pid }
+                            self.lastUpdated = Date()
+                            self.lastError = "Process \(pid) shutdown incomplete (timeout)"
+                            print("⚠️ Process \(pid) removal after timeout")
+                        }
+                    }
                 }
+
             } catch {
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.stoppingPids.remove(pid)
-                    self.lastError = "Failed to terminate process \(pid)"
+                    self.lastError = "Failed to terminate process \(pid): \(error.localizedDescription)"
                     print("❌ Failed to terminate process \(pid): \(error)")
 
                     // Reset stopping state on failure
@@ -878,6 +899,89 @@ final class MenuViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    private func waitForProcessAndPortsShutdown(pid: Int32, timeoutSeconds: TimeInterval = 10.0) async -> Bool {
+        let startTime = Date()
+        let timeout = Date().addingTimeInterval(timeoutSeconds)
+
+        // Get ports to monitor from the process
+        let portsToMonitor = getPortsForProcess(pid: pid)
+
+        while Date() < timeout {
+            // Check if process is still running
+            let processIsRunning = isProcessRunning(pid: pid)
+
+            // Check if all ports are free
+            var allPortsFree = true
+            for port in portsToMonitor {
+                if !isPortFree(port: port) {
+                    allPortsFree = false
+                    break
+                }
+            }
+
+            // If both process and ports are down, we're done!
+            if !processIsRunning && allPortsFree {
+                let elapsed = Date().timeIntervalSince(startTime)
+                print("🎯 Process \(pid) and ports fully shutdown in \(String(format: "%.2f", elapsed))s")
+                return true
+            }
+
+            // Poll every 500ms
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
+
+        print("⏰ Timeout waiting for process \(pid) shutdown")
+        return false
+    }
+
+    private func isProcessRunning(pid: Int32) -> Bool {
+        // Use kill(pid, 0) to check if process exists
+        let result = kill(pid, 0)
+        return result == 0
+    }
+
+    private func isPortFree(port: Int) -> Bool {
+        let task = Process()
+        task.launchPath = "/usr/sbin/lsof"
+        task.arguments = ["-i", ":\(port)"]
+
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = FileHandle.nullDevice
+
+        do {
+            try task.run()
+            task.waitUntilExit()
+
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8) ?? ""
+
+            // If output is empty, port is free
+            return output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        } catch {
+            // If command fails, assume port is free
+            return true
+        }
+    }
+
+    private func getPortsForProcess(pid: Int32) -> [Int] {
+        guard let process = processes.first(where: { $0.pid == pid }) else { return [] }
+
+        // Extract ports from port badges
+        let portStrings = process.portBadges.map { $0.text }
+        var ports: [Int] = []
+
+        for portString in portStrings {
+            // Remove ":" prefix and convert to Int
+            let cleanPort = portString.replacingOccurrences(of: ":", with: "")
+            if let port = Int(cleanPort) {
+                ports.append(port)
+            }
+        }
+
+        return ports
     }
 
     
