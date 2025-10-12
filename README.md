@@ -68,7 +68,7 @@ Click the menu bar icon to reveal the enhanced process management interface:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/slaynode.git
+   git clone https://github.com/mastertyko/slaynode.git
    cd slaynode
    ```
 
@@ -289,7 +289,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support
 
 - 📧 Email: support@slaynode.app
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/slaynode/issues)
+- 🐛 Issues: [GitHub Issues](https://github.com/mastertyko/slaynode/issues)
 - 💬 Discord: [Join our community](https://discord.gg/slaynode)
 
 ---
@@ -298,6 +298,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ for the Node.js community**
 
-[⭐ Star this repo](https://github.com/yourusername/slaynode) • [🐛 Report Issues](https://github.com/yourusername/slaynode/issues) • [💬 Start Discussion](https://github.com/yourusername/slaynode/discussions)
+[⭐ Star this repo](https://github.com/mastertyko/slaynode) • [🐛 Report Issues](https://github.com/mastertyko/slaynode/issues)
 
 </div>
