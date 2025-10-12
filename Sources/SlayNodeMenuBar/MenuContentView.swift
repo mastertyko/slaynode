@@ -44,9 +44,14 @@ struct MenuContentView: View {
                     Text("Development Servers")
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(Color.white.opacity(0.92))
-                    Text(statusText)
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(Color.white.opacity(0.75))
+                    HStack(spacing: 4) {
+                        Image(systemName: statusIcon)
+                            .font(.caption2)
+                            .foregroundStyle(Color.white.opacity(0.75))
+                        Text(statusText)
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(Color.white.opacity(0.75))
+                    }
                 }
                 
                 Spacer()
@@ -144,22 +149,38 @@ struct MenuContentView: View {
         let now = Date()
         let timeInterval = now.timeIntervalSince(updated)
 
-        // Handle very recent updates (less than 1 second)
-        if timeInterval < 1 {
-            return "Updated now"
+        // Show countdown for the first 5 seconds after update
+        if timeInterval < 5 {
+            let secondsUntilNext = 5 - Int(timeInterval)
+            return "Next update in \(secondsUntilNext)s"
         }
 
-        // Use abbreviated style for better readability
+        // Use abbreviated style for updates older than 5 seconds
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         let relative = formatter.localizedString(for: updated, relativeTo: now)
+        return "Updated \(relative)"
+    }
 
-        // Make sure it doesn't show "0 sec"
-        if relative.contains("0 sec") || relative.contains("0s") {
-            return "Updated now"
+    private var statusIcon: String {
+        guard let updated = viewModel.lastUpdated else {
+            return "clock"
         }
 
-        return "Updated \(relative)"
+        let now = Date()
+        let timeInterval = now.timeIntervalSince(updated)
+
+        // Show timer icon for countdown
+        if timeInterval < 5 {
+            return "timer"
+        }
+
+        // Show checkmark for recent updates, clock for older ones
+        if timeInterval < 30 {
+            return "checkmark.circle.fill"
+        }
+
+        return "clock"
     }
     
     private var headerGradient: LinearGradient {
