@@ -64,7 +64,12 @@ final class MenuViewModel: ObservableObject {
         // Trigger immediate refresh to show real data
         refresh()
 
-        // No automatic refresh binding - user controls refresh with button
+        // Add silent automatic refresh every 5 seconds
+        Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.refresh()
+            }
+        }
     }
 
     func refresh() {
