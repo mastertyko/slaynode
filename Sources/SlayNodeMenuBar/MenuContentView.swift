@@ -172,10 +172,11 @@ private struct ProcessRowView: View {
             HStack(alignment: .center, spacing: 10) {
                 VStack(alignment: .leading, spacing: 6) {
                     // Title and category
-                    HStack(alignment: .center, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(process.title)
                             .font(.headline)
                             .foregroundStyle(.primary)
+                            .lineLimit(1)
 
                         if let category = process.categoryBadge {
                             CapsuleLabel(text: category, icon: iconForCategory(category))
@@ -316,13 +317,14 @@ private struct CapsuleLabel: View {
             Text(text)
                 .font(.caption2.weight(.semibold))
                 .lineLimit(1)
+                .minimumScaleFactor(0.9)
         }
-        .fixedSize(horizontal: true, vertical: false)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(categoryBackground)
         .clipShape(Capsule())
         .foregroundStyle(categoryForeground)
+        .allowsTightening(true)
     }
 
     private var categoryBackground: Color {
