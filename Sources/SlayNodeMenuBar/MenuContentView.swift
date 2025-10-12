@@ -35,7 +35,7 @@ struct MenuContentView: View {
             footer
         }
         .padding(22)
-        .frame(width: 360, alignment: .leading)
+        .frame(width: 380, alignment: .leading)
         .glassPanel(cornerRadius: panelCornerRadius)
         .animation(.easeInOut(duration: 0.25), value: viewModel.isLoading)
     }
@@ -108,7 +108,7 @@ struct MenuContentView: View {
                     .padding(.vertical, 4)
                 }
                 .scrollIndicators(.hidden)
-                .frame(maxHeight: 280)
+                .frame(maxHeight: 600)
             }
         }
     }
@@ -170,12 +170,22 @@ private struct ProcessRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(process.title)
-                        .font(.headline)
-                    Text(process.details)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Text(process.title)
+                            .font(.headline)
+                        if let category = process.categoryBadge {
+                            CapsuleLabel(text: category)
+                        }
+                    }
+
+                    if !process.portBadges.isEmpty {
+                        HStack(spacing: 6) {
+                            ForEach(process.portBadges, id: \.self) { badge in
+                                PortBadgeView(badge: badge)
+                            }
+                        }
+                    }
                 }
                 Spacer()
                 if process.isStopping {
@@ -192,23 +202,33 @@ private struct ProcessRowView: View {
                     .buttonStyle(.borderedProminent)
                 }
             }
-            
-            if !process.portsDescription.isEmpty {
-                Text(process.portsDescription)
-                    .font(.caption)
+
+            if !process.subtitle.isEmpty {
+                Text(process.subtitle)
+                    .font(.caption.monospaced())
+                    .lineLimit(1)
                     .foregroundStyle(.secondary)
             }
-            
-            Text(process.subtitle)
-                .font(.caption.monospaced())
-                .lineLimit(2)
-                .foregroundStyle(.secondary)
-            
+
+            if !process.infoChips.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(process.infoChips, id: \.self) { chip in
+                        InfoChipView(chip: chip)
+                    }
+                }
+            }
+
             HStack(spacing: 12) {
+                Label("PID \(process.pid)", systemImage: "number")
+                    .font(.caption2)
                 Label(process.uptimeDescription, systemImage: "timer")
                     .font(.caption2)
                 Label(process.startTimeDescription, systemImage: "clock")
                     .font(.caption2)
+                if let name = process.projectName {
+                    Label(name, systemImage: "folder")
+                        .font(.caption2)
+                }
             }
             .foregroundStyle(.secondary)
         }
@@ -235,6 +255,66 @@ private struct ProcessRowView: View {
     private func openDirectory(_ path: String) {
         let url = URL(fileURLWithPath: path)
         NSWorkspace.shared.open(url)
+    }
+}
+
+private struct PortBadgeView: View {
+    let badge: NodeProcessItemViewModel.PortBadge
+
+    var body: some View {
+        Text(badgeText)
+            .font(.caption2.monospacedDigit())
+            .padding(.vertical, 4)
+            .padding(.horizontal, 8)
+            .background(portBackground)
+            .foregroundStyle(portForeground)
+            .clipShape(Capsule())
+    }
+
+    private var badgeText: String {
+        badge.isLikely ? "≈ \(badge.text)" : badge.text
+    }
+
+    private var portBackground: Color {
+        badge.isLikely ? Color.orange.opacity(0.12) : Color.accentColor.opacity(0.18)
+    }
+
+    private var portForeground: Color {
+        badge.isLikely ? Color.orange : Color.accentColor
+    }
+}
+
+private struct CapsuleLabel: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.secondary.opacity(0.15))
+            .clipShape(Capsule())
+            .foregroundStyle(Color.secondary)
+    }
+}
+
+private struct InfoChipView: View {
+    let chip: NodeProcessItemViewModel.InfoChip
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if let systemImage = chip.systemImage {
+                Image(systemName: systemImage)
+                    .font(.caption2)
+            }
+            Text(chip.text)
+                .font(.caption2)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.primary.opacity(0.06))
+        .clipShape(Capsule())
+        .foregroundStyle(Color.secondary)
     }
 }
 

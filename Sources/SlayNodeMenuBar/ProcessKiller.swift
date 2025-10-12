@@ -19,7 +19,7 @@ enum ProcessTerminationError: Error, LocalizedError {
 }
 
 struct ProcessKiller {
-    func terminate(pid: Int32, forceAfter gracePeriod: TimeInterval = 1.5) throws {
+    func terminate(pid: Int32, forceAfter gracePeriod: TimeInterval = 1.5) async throws {
         guard pid > 0 else { throw ProcessTerminationError.invalidPid }
 
         if kill(pid, SIGTERM) != 0 {
@@ -36,7 +36,7 @@ struct ProcessKiller {
             if kill(pid, 0) == -1 && errno == ESRCH {
                 return
             }
-            Thread.sleep(forTimeInterval: 0.1)
+            try await Task.sleep(nanoseconds: 100_000_000)
         }
 
         if kill(pid, SIGKILL) != 0 {

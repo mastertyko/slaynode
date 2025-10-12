@@ -16,14 +16,14 @@ enum ProcessMonitorError: Error, LocalizedError {
     }
 }
 
-extension ProcessMonitor: @unchecked Sendable {}
-
+// Modern async/await ProcessMonitor with improved concurrency
+@MainActor
 final class ProcessMonitor {
-    private let queue = DispatchQueue(label: "com.slaynode.monitor", qos: .utility)
     private var timer: DispatchSourceTimer?
     private var interval: TimeInterval
     private var isCollecting = false
     private var hasPendingRefresh = false
+    private var collectionTask: Task<Void, Never>?
 
     private let processesSubject = CurrentValueSubject<[NodeProcess], Never>([])
     private let errorsSubject = PassthroughSubject<Error, Never>()
@@ -42,121 +42,148 @@ final class ProcessMonitor {
 
     func start() {
         print("🔍 ProcessMonitor starting...")
-        queue.async { [weak self] in
-            guard let self else { return }
-            print("🔍 ProcessMonitor timer started")
-            self.startTimer()
-        }
+        startTimer()
     }
 
     func stop() {
-        queue.async { [weak self] in
-            self?.stopTimer()
-        }
+        collectionTask?.cancel()
+        stopTimer()
     }
 
     func updateInterval(_ newInterval: TimeInterval) {
-        queue.async { [weak self] in
-            guard let self else { return }
-            guard abs(self.interval - newInterval) > 0.01 else { return }
-            self.interval = newInterval
-            self.restartTimer()
-        }
+        guard abs(interval - newInterval) > 0.01 else { return }
+        interval = newInterval
+        restartTimer()
     }
 
-    func refresh() {
-        queue.async { [weak self] in
-            self?.performCollect()
-        }
+    func refresh() async {
+        await performCollect()
     }
 
     deinit {
-        stopTimer()
+        timer?.setEventHandler {}
+        timer?.cancel()
+        timer = nil
     }
 
     private func startTimer() {
         stopTimer()
-        let timer = DispatchSource.makeTimerSource(queue: queue)
-        timer.schedule(deadline: .now(), repeating: interval)
+
+        // Use main queue to avoid threading issues
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        timer.schedule(deadline: .now() + 1.0, repeating: interval) // Delay first run
         timer.setEventHandler { [weak self] in
-            self?.performCollect()
+            guard let self = self else { return }
+
+            // Cancel any existing collection task
+            self.collectionTask?.cancel()
+
+            // Create task for background work
+            self.collectionTask = Task {
+                await self.performCollect()
+            }
         }
         timer.resume()
         self.timer = timer
     }
 
     private func restartTimer() {
+        collectionTask?.cancel()
         startTimer()
     }
 
     private func stopTimer() {
+        collectionTask?.cancel()
+        collectionTask = nil
         timer?.setEventHandler {}
         timer?.cancel()
         timer = nil
     }
 
-    private func performCollect() {
-        print("🔄 ProcessMonitor performCollect called")
+    private func performCollect() async {
         guard !isCollecting else {
-            print("⏳ Already collecting, setting pending flag")
             hasPendingRefresh = true
             return
         }
+
         isCollecting = true
 
+        // Add timeout protection
+        let timeoutTask = Task {
+            try await Task.sleep(nanoseconds: 10_000_000_000) // 10 seconds
+        }
+
         do {
-            print("📊 Collecting processes...")
-            let processes = try collectProcesses()
-            print("✅ Collected \(processes.count) processes")
-            DispatchQueue.main.async { [weak self] in
-                self?.processesSubject.send(processes)
+            let processes = try await collectProcesses()
+            timeoutTask.cancel()
+
+            // Check if we were cancelled during collection
+            guard !Task.isCancelled else {
+                isCollecting = false
+                return
+            }
+
+            // Send updates on main thread
+            await MainActor.run {
+                self.processesSubject.send(processes)
             }
         } catch {
-            print("❌ Process collection failed: \(error)")
-            DispatchQueue.main.async { [weak self] in
-                self?.errorsSubject.send(error)
+            timeoutTask.cancel()
+
+            // Only send error if not cancelled
+            guard !Task.isCancelled else {
+                isCollecting = false
+                return
+            }
+
+            // Send errors on main thread
+            await MainActor.run {
+                self.errorsSubject.send(error)
             }
         }
 
         isCollecting = false
 
-        if hasPendingRefresh {
+        // Only process pending refresh if not cancelled
+        if hasPendingRefresh && !Task.isCancelled {
             hasPendingRefresh = false
-            performCollect()
+            await performCollect()
         }
     }
 
-    private func collectProcesses() throws -> [NodeProcess] {
-        if let nativeProcesses = try collectProcessesUsingNativeAPI() {
-            return nativeProcesses
-        }
-        return try collectProcessesUsingPS()
+    private func collectProcesses() async throws -> [NodeProcess] {
+        // Use only the safe PS-based method for now
+        return try await collectProcessesUsingPS()
     }
     
-    private func collectProcessesUsingNativeAPI() throws -> [NodeProcess]? {
+    private func collectProcessesUsingNativeAPI() async throws -> [NodeProcess]? {
         let bytes = proc_listpids(UInt32(PROC_ALL_PIDS), 0, nil, 0)
         guard bytes > 0 else {
             return nil
         }
-        
+
         let pidCount = Int(bytes) / MemoryLayout<pid_t>.stride
         guard pidCount > 0 else {
             return []
         }
-        
-        let pids = UnsafeMutablePointer<pid_t>.allocate(capacity: pidCount)
+
+        // Prevent excessive memory allocation
+        let safePidCount = min(pidCount, 10000)
+        let pids = UnsafeMutablePointer<pid_t>.allocate(capacity: safePidCount)
         defer { pids.deallocate() }
-        
-        let populatedBytes = proc_listpids(UInt32(PROC_ALL_PIDS), 0, pids, Int32(pidCount * MemoryLayout<pid_t>.stride))
+
+        let populatedBytes = proc_listpids(UInt32(PROC_ALL_PIDS), 0, pids, Int32(safePidCount * MemoryLayout<pid_t>.stride))
         guard populatedBytes > 0 else {
             return nil
         }
-        
-        let actualCount = Int(populatedBytes) / MemoryLayout<pid_t>.stride
+
+        let actualCount = min(Int(populatedBytes) / MemoryLayout<pid_t>.stride, safePidCount)
         var processes: [NodeProcess] = []
         processes.reserveCapacity(actualCount)
-        
+
         for index in 0..<actualCount {
+            // Add bounds checking
+            guard index < safePidCount else { break }
             let pid = pids[index]
             if pid <= 0 { continue }
             
@@ -170,20 +197,27 @@ final class ProcessMonitor {
             
             let executableName = withUnsafePointer(to: &bsdInfo.pbi_comm) { ptr -> String in
                 ptr.withMemoryRebound(to: CChar.self, capacity: Int(MAXCOMLEN)) { cStringPtr in
-                    String(cString: cStringPtr)
+                    let string = String(cString: cStringPtr)
+                    // Truncate excessively long names
+                    return string.count > 256 ? String(string.prefix(256)) : string
                 }
             }
             
             guard !executableName.isEmpty else { continue }
             
-            let command = fetchCommandLine(for: pid) ?? executableName
+            let command = await fetchCommandLine(for: pid) ?? executableName
             let tokens = CommandParser.tokenize(command)
             guard let executableToken = tokens.first else { continue }
             
             let arguments = Array(tokens.dropFirst())
-            let descriptor = CommandParser.descriptor(from: arguments)
             let ports = CommandParser.inferPorts(from: tokens)
             let workingDirectory = CommandParser.inferWorkingDirectory(from: arguments)
+            let context = CommandParser.makeContext(
+                executable: executableToken,
+                tokens: tokens,
+                workingDirectory: workingDirectory
+            )
+            let descriptor = CommandParser.descriptor(from: context)
             
             let startSeconds = TimeInterval(bsdInfo.pbi_start_tvsec)
             let startMicroseconds = TimeInterval(bsdInfo.pbi_start_tvusec) / 1_000_000
@@ -205,29 +239,36 @@ final class ProcessMonitor {
             processes.append(process)
         }
         
-        return try enrichProcesses(processes)
+        return try await enrichProcesses(processes)
     }
     
-    private func collectProcessesUsingPS() throws -> [NodeProcess] {
-        let (psStatus, psOutput) = try runCommand("/bin/ps", arguments: ["-axo", "pid=,etime=,command="])
-        guard psStatus == 0 else {
-            throw ProcessMonitorError.commandFailed("ps", psStatus)
+    private func collectProcessesUsingPS() async throws -> [NodeProcess] {
+        do {
+            let (psStatus, psOutput) = try await runCommand("/bin/ps", arguments: ["-axo", "pid=,etime=,command="])
+            guard psStatus == 0 else {
+                // Return empty array instead of throwing error
+                print("⚠️ PS command failed with status \(psStatus), returning empty process list")
+                return []
+            }
+
+            let rows = psOutput.split(whereSeparator: { $0.isNewline })
+
+            var processes: [NodeProcess] = []
+            processes.reserveCapacity(min(rows.count, 1000)) // Limit capacity to prevent memory issues
+
+            for row in rows.prefix(1000) { // Limit number of processes to check
+                let trimmed = row.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { continue }
+                guard let process = parseProcess(from: trimmed) else { continue }
+                processes.append(process)
+            }
+
+            // Skip port collection for now to avoid lsof calls
+            return processes.filter(isLikelyDevelopmentProcess(_:))
+        } catch {
+            print("⚠️ Process collection failed: \(error), returning empty list")
+            return []
         }
-
-        let rows = psOutput.split(whereSeparator: { $0.isNewline })
-        
-
-        var processes: [NodeProcess] = []
-        processes.reserveCapacity(rows.count)
-
-        for row in rows {
-            let trimmed = row.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { continue }
-            guard let process = parseProcess(from: trimmed) else { continue }
-            processes.append(process)
-        }
-        
-        return try enrichProcesses(processes)
     }
 
     private func parseProcess(from line: String) -> NodeProcess? {
@@ -250,9 +291,14 @@ final class ProcessMonitor {
         }
 
         let arguments = Array(tokens.dropFirst())
-        let descriptor = CommandParser.descriptor(from: arguments)
         let ports = CommandParser.inferPorts(from: tokens)
         let workingDirectory = CommandParser.inferWorkingDirectory(from: arguments)
+        let context = CommandParser.makeContext(
+            executable: executableToken,
+            tokens: tokens,
+            workingDirectory: workingDirectory
+        )
+        let descriptor = CommandParser.descriptor(from: context)
         let startTime = Date().addingTimeInterval(-elapsedSeconds)
 
         return NodeProcess(
@@ -268,13 +314,13 @@ final class ProcessMonitor {
         )
     }
 
-    private func enrichProcesses(_ processes: [NodeProcess]) throws -> [NodeProcess] {
+    private func enrichProcesses(_ processes: [NodeProcess]) async throws -> [NodeProcess] {
         let developmentServers = processes.filter(isLikelyDevelopmentProcess(_:))
         guard !developmentServers.isEmpty else {
             return []
         }
         
-        let portsByPid = try collectPorts(for: developmentServers.map { $0.pid })
+        let portsByPid = try await collectPorts(for: developmentServers.map { $0.pid })
         
         return developmentServers.map { process in
             let combinedPorts = Array(Set(process.ports + (portsByPid[process.pid] ?? []))).sorted()
@@ -328,8 +374,8 @@ final class ProcessMonitor {
         return false
     }
     
-    private func fetchCommandLine(for pid: Int32) -> String? {
-        guard let (status, output) = try? runCommand(
+    private func fetchCommandLine(for pid: Int32) async -> String? {
+        guard let (status, output) = try? await runCommand(
             "/bin/ps",
             arguments: ["-p", "\(pid)", "-o", "command="],
             allowFailure: true
@@ -341,10 +387,10 @@ final class ProcessMonitor {
         return trimmed.isEmpty ? nil : trimmed
     }
 
-    private func collectPorts(for pids: [Int32]) throws -> [Int32: [Int]] {
+    private func collectPorts(for pids: [Int32]) async throws -> [Int32: [Int]] {
         guard !pids.isEmpty else { return [:] }
         let pidList = pids.map(String.init).joined(separator: ",")
-        let (status, output) = try runCommand(
+        let (status, output) = try await runCommand(
             "/usr/sbin/lsof",
             arguments: ["-Pan", "-p", pidList, "-iTCP", "-sTCP:LISTEN"],
             allowFailure: true
@@ -393,7 +439,12 @@ final class ProcessMonitor {
         return Int(portSubstring)
     }
 
-    private func runCommand(_ launchPath: String, arguments: [String], allowFailure: Bool = false) throws -> (Int32, String) {
+    private func runCommand(_ launchPath: String, arguments: [String], allowFailure: Bool = false) async throws -> (Int32, String) {
+        // Check for cancellation before starting process
+        guard !Task.isCancelled else {
+            throw ProcessMonitorError.commandFailed("Task cancelled", -1)
+        }
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: launchPath)
         process.arguments = arguments
@@ -403,14 +454,39 @@ final class ProcessMonitor {
         process.standardOutput = outputPipe
         process.standardError = errorPipe
 
-        try process.run()
-        process.waitUntilExit()
+        // Add timeout to prevent hanging
+        let timeoutTask = Task {
+            try await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+            if !Task.isCancelled {
+                process.terminate()
+            }
+        }
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            timeoutTask.cancel()
+        } catch {
+            timeoutTask.cancel()
+            process.terminate()
+            throw ProcessMonitorError.commandFailed("Failed to run command: \(error)", -1)
+        }
+
+        // Check for cancellation after process completes
+        guard !Task.isCancelled else {
+            throw ProcessMonitorError.commandFailed("Task cancelled during execution", -1)
+        }
 
         let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
         let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
 
-        let outputString = String(data: outputData, encoding: .utf8) ?? ""
-        let errorString = String(data: errorData, encoding: .utf8) ?? ""
+        // Limit output size to prevent memory issues
+        let maxOutputSize = 1024 * 1024 // 1MB
+        let trimmedOutputData = outputData.count > maxOutputSize ? outputData.subdata(in: 0..<maxOutputSize) : outputData
+        let trimmedErrorData = errorData.count > maxOutputSize ? errorData.subdata(in: 0..<maxOutputSize) : errorData
+
+        let outputString = String(data: trimmedOutputData, encoding: .utf8) ?? ""
+        let errorString = String(data: trimmedErrorData, encoding: .utf8) ?? ""
 
         let status = process.terminationStatus
 

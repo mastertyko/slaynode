@@ -1,6 +1,21 @@
 import Foundation
 
 enum CommandParser {
+    struct CommandContext {
+        let executable: String
+        let tokens: [String]
+        let arguments: [String]
+        let workingDirectory: String?
+
+        var lowercasedTokens: [String] {
+            tokens.map { $0.lowercased() }
+        }
+
+        var lowercasedArguments: [String] {
+            arguments.map { $0.lowercased() }
+        }
+    }
+
     static func tokenize(_ command: String) -> [String] {
         var tokens: [String] = []
         var current = ""
@@ -47,57 +62,17 @@ enum CommandParser {
         return tokens
     }
 
-    static func descriptor(from tokens: [String]) -> ServerDescriptor {
-        guard !tokens.isEmpty else { return .unknown }
+    static func makeContext(executable: String, tokens: [String], workingDirectory: String?) -> CommandContext {
+        CommandContext(
+            executable: executable,
+            tokens: tokens,
+            arguments: Array(tokens.dropFirst()),
+            workingDirectory: workingDirectory
+        )
+    }
 
-        let lowered = tokens.map { $0.lowercased() }
-
-        if containsKeyword(in: lowered, keywords: ["next", "next.js"]) {
-            let mode = lowered.first(where: { $0 == "dev" || $0 == "start" })
-            let details = mode.map { "Mode: \($0.uppercased())" }
-            return ServerDescriptor(name: "Next.js", details: details)
-        }
-
-        if containsKeyword(in: lowered, keywords: ["vite"]) {
-            let mode = lowered.first(where: { $0 == "dev" || $0 == "preview" || $0 == "build" })
-            let details = mode.map { "Mode: \($0.capitalized)" }
-            return ServerDescriptor(name: "Vite", details: details)
-        }
-
-        if containsKeyword(in: lowered, keywords: ["nuxt", "nuxt.js"]) {
-            return ServerDescriptor(name: "Nuxt", details: nil)
-        }
-
-        if containsKeyword(in: lowered, keywords: ["svelte-kit", "sveltekit"]) {
-            return ServerDescriptor(name: "SvelteKit", details: nil)
-        }
-
-        if containsKeyword(in: lowered, keywords: ["remix"]){
-            return ServerDescriptor(name: "Remix", details: nil)
-        }
-
-        if containsKeyword(in: lowered, keywords: ["astro"]) {
-            return ServerDescriptor(name: "Astro", details: nil)
-        }
-
-        if containsKeyword(in: lowered, keywords: ["nest", "nestcli", "@nestjs"]){
-            return ServerDescriptor(name: "NestJS", details: nil)
-        }
-
-        if containsKeyword(in: lowered, keywords: ["express"]) {
-            return ServerDescriptor(name: "Express", details: nil)
-        }
-
-        if containsKeyword(in: lowered, keywords: ["webpack-dev-server"]){
-            return ServerDescriptor(name: "Webpack Dev Server", details: nil)
-        }
-
-        if let script = firstScriptToken(from: tokens) {
-            let name = (script as NSString).lastPathComponent
-            return ServerDescriptor(name: name, details: nil)
-        }
-
-        return .unknown
+    static func descriptor(from context: CommandContext) -> ServerDescriptor {
+        ProcessClassifier.classify(context: context)
     }
 
     static func inferPorts(from tokens: [String]) -> [Int] {
@@ -161,7 +136,7 @@ enum CommandParser {
         return nil
     }
 
-    private static func firstScriptToken(from tokens: [String]) -> String? {
+    static func firstScriptToken(from tokens: [String]) -> String? {
         return tokens.first(where: { token in
             guard !token.hasPrefix("-") else { return false }
             if token.contains("node_modules/.bin") { return true }

@@ -15,9 +15,14 @@ final class CommandParserTests: XCTestCase {
     }
 
     func testDescriptorDetectsNextJS() {
-        let descriptor = CommandParser.descriptor(from: ["node_modules/.bin/next", "dev"])
-        XCTAssertEqual(descriptor.name, "Next.js")
-        XCTAssertEqual(descriptor.details, "Läge: DEV")
+        let tokens = ["node_modules/.bin/next", "dev"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+        XCTAssertEqual(descriptor.displayName, "Next.js")
+        XCTAssertEqual(descriptor.details, "Mode: DEV")
+        XCTAssertEqual(descriptor.runtime, "Node.js")
+        XCTAssertEqual(descriptor.category, .webFramework)
+        XCTAssertEqual(descriptor.portHints, [3000])
     }
 
     func testInferPortsFromFlagsAndUrls() {
@@ -29,6 +34,46 @@ final class CommandParserTests: XCTestCase {
     func testInferWorkingDirectoryFromFlag() {
         let path = CommandParser.inferWorkingDirectory(from: ["--cwd", "~/Projects/demo"])
         XCTAssertTrue(path?.hasSuffix("Projects/demo") ?? false)
+    }
+}
+extension CommandParserTests {
+    func testPackageManagerWrapperAddsMetadata() {
+        let tokens = ["pnpm", "exec", "next", "dev"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.displayName, "Next.js")
+        XCTAssertEqual(descriptor.packageManager, "pnpm")
+        XCTAssertEqual(descriptor.script, "next")
+        XCTAssertEqual(descriptor.details, "Mode: DEV")
+        XCTAssertEqual(descriptor.category, .webFramework)
+        XCTAssertEqual(descriptor.portHints, [3000])
+
+        let summaries = descriptor.summaryDetails()
+        XCTAssertTrue(summaries.contains("pnpm next"))
+        XCTAssertTrue(summaries.contains("Node.js"))
+        XCTAssertTrue(summaries.contains(ServerDescriptor.Category.webFramework.displayName))
+    }
+
+    func testViteCommandIsDetected() {
+        let tokens = ["node", "/Users/demo/node_modules/.bin/vite", "preview", "--port", "4173"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.displayName, "Vite")
+        XCTAssertEqual(descriptor.details, "Mode: PREVIEW")
+        XCTAssertEqual(descriptor.category, .bundler)
+        XCTAssertEqual(descriptor.portHints, [5173])
+    }
+
+    func testNodemonClassifiedAsTool() {
+        let tokens = ["nodemon", "server.js"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.displayName, "Nodemon")
+        XCTAssertEqual(descriptor.category, .utility)
+        XCTAssertEqual(descriptor.portHints, [3000, 4000])
     }
 }
 #endif

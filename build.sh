@@ -53,7 +53,7 @@ cat > "${APP_DIR}/Contents/Info.plist" <<'EOF'
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
-    <false/>
+    <true/>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>CFBundleIconFile</key>
