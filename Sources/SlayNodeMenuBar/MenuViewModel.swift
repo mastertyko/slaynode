@@ -122,12 +122,15 @@ final class MenuViewModel: ObservableObject {
                         infoChips.append(.init(text: "http://localhost:\(mainPort)", systemImage: "link"))
                     }
 
+                    // Extract a meaningful category based on the command
+                    let category = self.extractSimpleCategory(from: command)
+
                     let processVM = NodeProcessItemViewModel(
                         id: pid,
                         pid: pid,
                         title: title,
                         subtitle: command.count > 50 ? String(command.prefix(50)) + "..." : command,
-                        categoryBadge: "Development",
+                        categoryBadge: category,
                         portBadges: portBadges,
                         infoChips: infoChips,
                         projectName: self.extractSimpleProjectName(from: command),
@@ -249,6 +252,27 @@ final class MenuViewModel: ObservableObject {
             }
         }
         return nil
+    }
+
+    // Simple category extraction for dynamic detection
+    private func extractSimpleCategory(from command: String) -> String? {
+        let lowercase = command.lowercased()
+
+        if lowercase.contains("next") || lowercase.contains("nuxt") {
+            return "Web Framework"
+        } else if lowercase.contains("vite") || lowercase.contains("webpack") {
+            return "Bundler"
+        } else if lowercase.contains("react-scripts") {
+            return "Framework"
+        } else if lowercase.contains("nodemon") {
+            return "Utility"
+        } else if lowercase.contains("http-server") || lowercase.contains("live-server") {
+            return "Server"
+        } else if lowercase.contains("browser-sync") {
+            return "Tool"
+        }
+
+        return nil // No category badge if we can't identify it meaningfully
     }
 
     private func safeParseProcessesFromBackground(_ output: String) async -> [NodeProcessItemViewModel] {
