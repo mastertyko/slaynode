@@ -107,7 +107,18 @@ final class MenuViewModel: ObservableObject {
                     // Create a simple process VM - we know the UI logic works
                     let title = self.extractSimpleTitle(from: command)
                     let ports = self.extractSimplePorts(from: command)
-                    let mainPort = ports.first ?? 3000
+                    let mainPort = ports.first ?? 0 // 0 means no port detected
+
+                    // Create port badges and info chips only if port is detected
+                    let portBadges: [NodeProcessItemViewModel.PortBadge] = mainPort > 0 ? [.init(text: ":\(mainPort)", isLikely: false)] : []
+
+                    var infoChips: [NodeProcessItemViewModel.InfoChip] = [
+                        .init(text: "Node.js", systemImage: "cpu")
+                    ]
+
+                    if mainPort > 0 {
+                        infoChips.append(.init(text: "http://localhost:\(mainPort)", systemImage: "link"))
+                    }
 
                     let processVM = NodeProcessItemViewModel(
                         id: pid,
@@ -115,11 +126,8 @@ final class MenuViewModel: ObservableObject {
                         title: title,
                         subtitle: command.count > 50 ? String(command.prefix(50)) + "..." : command,
                         categoryBadge: "Development",
-                        portBadges: [.init(text: ":\(mainPort)", isLikely: false)],
-                        infoChips: [
-                            .init(text: "http://localhost:\(mainPort)", systemImage: "link"),
-                            .init(text: "Node.js", systemImage: "cpu")
-                        ],
+                        portBadges: portBadges,
+                        infoChips: infoChips,
                         projectName: self.extractSimpleProjectName(from: command),
                         uptimeDescription: "Running",
                         startTimeDescription: "Active",
@@ -133,7 +141,7 @@ final class MenuViewModel: ObservableObject {
                             packageManager: nil,
                             script: "server",
                             details: "PID: \(pid)",
-                            portHints: [mainPort]
+                            portHints: mainPort > 0 ? [mainPort] : []
                         ),
                         isStopping: false
                     )
@@ -183,18 +191,50 @@ final class MenuViewModel: ObservableObject {
         }
     }
 
-    // Simple port extraction
+    // Simple port extraction - improved with multiple patterns
     private func extractSimplePorts(from command: String) -> [Int] {
-        let pattern = #":(\d{3,5})"#
-        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        var ports: Set<Int> = []
 
-        let matches = regex.matches(in: command, range: NSRange(command.startIndex..., in: command))
-        return matches.compactMap { match in
-            if let range = Range(match.range(at: 1), in: command) {
-                return Int(command[range])
+        // Pattern 1: Traditional :3000 syntax
+        let patterns = [
+            #":(\d{3,5})"#,           // :3000, :8080, etc.
+            #"--port[ =](\d{3,5})"#,  // --port 3000, --port=3000
+            #"-p[ =](\d{3,5})"#,      // -p 3000, -p=3000
+            #"listen\((\d{3,5})"#,    // listen(3000)
+            #"PORT[ =](\d{3,5})"#,    // PORT=3000, PORT 3000
+            #"port[ =](\d{3,5})"#     // port=3000, port 3000
+        ]
+
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { continue }
+
+            let matches = regex.matches(in: command, range: NSRange(command.startIndex..., in: command))
+            for match in matches {
+                if let range = Range(match.range(at: 1), in: command),
+                   let port = Int(command[range]) {
+                    // Validate port range (1-65535, but we focus on common dev ports)
+                    if port >= 1 && port <= 65535 {
+                        ports.insert(port)
+                    }
+                }
             }
-            return nil
         }
+
+        // If no ports found and it's a common framework, try to infer default ports
+        if ports.isEmpty {
+            let lowercase = command.lowercased()
+            if lowercase.contains("next") && lowercase.contains("dev") {
+                ports.insert(3000) // Next.js default
+            } else if lowercase.contains("vite") && (lowercase.contains("dev") || lowercase.contains("serve")) {
+                ports.insert(5173) // Vite default
+            } else if lowercase.contains("react-scripts") {
+                ports.insert(3000) // Create React App default
+            } else if lowercase.contains("nuxt") && lowercase.contains("dev") {
+                ports.insert(3000) // Nuxt.js default
+            }
+        }
+
+        return Array(ports).sorted()
     }
 
     // Simple project name extraction
