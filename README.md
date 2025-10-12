@@ -14,21 +14,47 @@
 
 ## ✨ Features
 
-- 🎯 **Process Monitoring** - Real-time monitoring of all Node.js processes
-- ⚡ **Quick Actions** - Kill, restart, or inspect processes with one click
-- 🎨 **Beautiful Interface** - Native macOS design with smooth animations
-- 🔔 **Smart Notifications** - Get notified about process changes
-- 🌙 **Menu Bar Integration** - Always accessible from your menu bar
-- 🌐 **English Localization** - Full English language support
-- 🔒 **Secure & Private** - No telemetry, your data stays on your Mac
+- 🎯 **Real-time Process Detection** - Automatically detects all running Node.js development servers (npm, yarn, pnpm, npx)
+- ⚡ **One-Click Process Management** - Stop development servers instantly with visual feedback
+- 🎨 **Enhanced UI** - Large, scroll-free interface showing up to 15+ processes in a single view
+- 🔍 **Process Intelligence** - Extracts port numbers, project names, and commands automatically
+- 📊 **Live Updates** - Configurable refresh intervals (2-30 seconds) for real-time monitoring
+- 🌙 **Menu Bar Integration** - Native macOS menu bar app with beautiful popover interface
+- 🔒 **Secure & Private** - All processing happens locally, no network requests or telemetry
 
 ## 📸 Screenshots
 
 ### Menu Bar Interface
-*(Add screenshot of the menu bar interface)*
+The app appears as a sleek icon in your macOS menu bar:
 
-### Process Management
-*(Add screenshot of process management view)*
+![Menu Bar Icon](icon-iOS-Default-1024x1024@1x.png)
+
+### Process Management View
+Click the menu bar icon to reveal the enhanced process management interface:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Development Servers                    Updated now  │
+│  8 active servers                                   │
+│                                                     │
+│  🔵 my-app-server                    :3000  [Stop]  │
+│      PID: 12345 • Running • http://localhost:3000   │
+│      npm run dev • /Users/tyko/projects/my-app      │
+│                                                     │
+│  🔵 api-backend                      :8080  [Stop]  │
+│      PID: 12347 • Running • http://localhost:8080   │
+│      yarn start • /Users/tyko/projects/api         │
+│                                                     │
+│  [Refresh]                                      [Quit] │
+└─────────────────────────────────────────────────────┘
+```
+
+*Features shown:*
+- ✅ Large 380×700px interface for maximum visibility
+- ✅ Up to 600px scroll height for 15+ processes
+- ✅ Port badges and project information
+- ✅ One-click process termination
+- ✅ Real-time status updates
 
 ## 🚀 Quick Start
 
@@ -67,20 +93,23 @@ Slaynode/
 ├── Sources/
 │   └── SlayNodeMenuBar/
 │       ├── Resources/
-│       │   ├── AppIcon.iconset/             # Liquid Glass app icon sources
-│       │   ├── Assets.xcassets/             # Template menu bar glyph + misc assets
+│       │   ├── AppIcon.iconset/                    # Liquid Glass app icon sources
+│       │   ├── Assets.xcassets/                    # Template menu bar glyph + misc assets
 │       │   └── icon-iOS-Default-1024x1024@1x.png
-│       ├── SlayNodeMenuBarApp.swift        # Main app entry point + AppKit bridge
-│       ├── StatusItemController.swift      # Menu bar integration (popover)
-│       ├── ProcessMonitor.swift          # Process monitoring logic
-│       ├── MenuViewModel.swift           # UI state management
-│       ├── MenuContentView.swift         # Main UI view
-│       └── ...                           # Other components
-├── generate-icons.swift                 # Utility to regenerate app/menu bar icons
-├── Tests/                                # Unit tests
-├── build.sh                            # Build script
-├── Package.swift                       # Swift Package Manager
-└── README.md                           # This file
+│       ├── SlayNodeMenuBarApp.swift               # Main app entry point + AppKit bridge
+│       ├── StatusItemController.swift             # Menu bar integration (380×700px popover)
+│       ├── ProcessMonitor.swift                   # Process monitoring logic
+│       ├── MenuViewModel.swift                    # Dynamic process detection & UI state
+│       ├── MenuContentView.swift                  # Enhanced UI with 600px scroll height
+│       ├── ProcessKiller.swift                    # Process termination management
+│       ├── ProcessClassifier.swift                # Process categorization logic
+│       ├── CommandParsing.swift                   # Command parsing and port extraction
+│       └── NodeProcess.swift                      # Node.js process data models
+├── generate-icons.swift                          # Utility to regenerate app/menu bar icons
+├── Tests/                                        # Unit tests
+├── build.sh                                     # Build script with LSUIElement=true
+├── Package.swift                                # Swift Package Manager
+└── README.md                                    # This file
 ```
 
 ### Building from Source
@@ -165,13 +194,58 @@ Category: SlayNodeMenuBar
 Process: SlayNodeMenuBar
 ```
 
+## 🔧 Technical Implementation
+
+### Dynamic Process Detection
+
+The app uses a robust process detection system that identifies Node.js development servers in real-time:
+
+```swift
+// Core detection algorithm in MenuViewModel.swift
+func refresh() {
+    DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        let task = Process()
+        task.launchPath = "/bin/bash"
+        task.arguments = ["-c", "ps -axo pid=,command= | grep -E '^[ ]*[0-9]+ (node |npm |yarn |pnpm |npx )' | head -15"]
+
+        // Process output and extract information
+        // - PID extraction
+        // - Command parsing for title extraction
+        // - Port number detection using regex patterns
+        // - Project name inference from working directory
+    }
+}
+```
+
+### Key Features
+
+- **Process Classification**: Automatically categorizes processes as web frameworks, build tools, or package managers
+- **Port Detection**: Uses regex patterns to extract port numbers from command arguments
+- **Project Inference**: Intelligently extracts project names from command paths and arguments
+- **Error Handling**: Comprehensive error handling with fallback mechanisms
+- **Threading**: Proper MainActor isolation for UI updates with background processing
+
+### UI Architecture
+
+- **StatusItemController**: Manages NSStatusBar integration and popover display
+- **Enhanced Dimensions**: 380×700px popover with 600px scrollable content area
+- **Real-time Updates**: Configurable refresh intervals with visual loading states
+- **Process Management**: One-click process termination with immediate UI feedback
+
+### Performance Optimizations
+
+- **Efficient Process Listing**: Uses `ps` command with output limiting to prevent system overload
+- **Background Processing**: All heavy operations run on background queues
+- **UI Threading**: Proper MainActor usage for thread-safe UI updates
+- **Memory Management**: Weak references and proper cleanup to prevent memory leaks
+
 ## 🧪 Visual Verification Checklist
 
 After regenerating icons or tweaking the Liquid Glass UI, validate the experience on a macOS 26 machine:
 
 1. **Wallpaper Sweep** – Toggle between light, dark, and vivid HDR wallpapers. In *System Settings ▸ Appearance ▸ Menu Bar*, switch between transparent and backed styles and confirm the menu bar glyph remains legible.
 2. **Control Center Roundtrip** – Command-drag the Slaynode icon off the menu bar, re-enable it via *System Settings ▸ Control Center ▸ Menu Bar Only Apps*, and verify the app state survives the cycle.
-3. **Transparency Toggle** – Enable/disable “Automatically hide and show the menu bar” and observe hover/pressed states, panel shadows, and blur fidelity in both configurations.
+3. **Transparency Toggle** – Enable/disable "Automatically hide and show the menu bar" and observe hover/pressed states, panel shadows, and blur fidelity in both configurations.
 4. **Appearance Modes** – Switch between Light, Dark, and Auto; spot-check header/secondary text contrast with Digital Color Meter to keep ≥4.5:1 against underlying wallpapers.
 5. **Multi-Display** – Open the extra on a secondary display and ensure the panel shadow and blur adapt to each wallpaper without clipping.
 6. **Menu Bar Height Variants** – Increase menu bar size in *System Settings ▸ Accessibility ▸ Display*; the 22 pt template glyph should scale crisply (macOS will pick the 2× asset automatically).
