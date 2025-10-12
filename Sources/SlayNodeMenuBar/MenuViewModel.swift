@@ -809,6 +809,7 @@ final class MenuViewModel: ObservableObject {
         guard !stoppingPids.contains(pid) else { return }
 
         stoppingPids.insert(pid)
+        print("🛑 Attempting to stop process \(pid)")
 
         // Mark as stopping in UI immediately
         if let index = processes.firstIndex(where: { $0.pid == pid }) {
@@ -830,28 +831,38 @@ final class MenuViewModel: ObservableObject {
             )
         }
 
-        // Simple and safe process termination
+        // Enhanced process termination with multiple approaches
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
 
-            let process = Process()
-            process.launchPath = "/bin/kill"
-            process.arguments = ["TERM", "\(pid)"]
+            // First try: SIGTERM (graceful shutdown)
+            var terminationSuccessful = self.killProcess(pid, signal: "TERM")
 
-            do {
-                try process.run()
-                process.waitUntilExit()
+            if terminationSuccessful {
+                // Wait a moment and verify process is actually dead
+                Thread.sleep(forTimeInterval: 1.0)
 
-                DispatchQueue.main.async {
-                    // Remove from stopping set and update processes
-                    self.stoppingPids.remove(pid)
+                if self.isProcessRunning(pid) {
+                    print("⚠️ Process \(pid) still running after TERM, trying KILL")
+                    // Second try: SIGKILL (forceful shutdown)
+                    terminationSuccessful = self.killProcess(pid, signal: "KILL")
+                    Thread.sleep(forTimeInterval: 0.5)
+                }
+            }
+
+            DispatchQueue.main.async {
+                self.stoppingPids.remove(pid)
+
+                if terminationSuccessful && !self.isProcessRunning(pid) {
+                    // Process successfully terminated
                     self.processes.removeAll { $0.pid == pid }
                     self.lastUpdated = Date()
                     print("✅ Process \(pid) terminated successfully")
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.stoppingPids.remove(pid)
+                } else {
+                    // Failed to terminate process
+                    self.lastError = "Failed to terminate process \(pid). Process may require manual termination."
+                    print("❌ Failed to terminate process \(pid)")
+
                     // Reset stopping state on failure
                     if let index = self.processes.firstIndex(where: { $0.pid == pid }) {
                         self.processes[index] = NodeProcessItemViewModel(
@@ -871,10 +882,37 @@ final class MenuViewModel: ObservableObject {
                             isStopping: false
                         )
                     }
-                    self.lastError = "Failed to terminate process: \(error.localizedDescription)"
-                    print("❌ Failed to terminate process \(pid): \(error)")
                 }
             }
+        }
+    }
+
+    private func killProcess(_ pid: Int32, signal: String) -> Bool {
+        let process = Process()
+        process.launchPath = "/bin/kill"
+        process.arguments = [signal, "\(pid)"]
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        } catch {
+            print("❌ Failed to send \(signal) to process \(pid): \(error)")
+            return false
+        }
+    }
+
+    private func isProcessRunning(_ pid: Int32) -> Bool {
+        let process = Process()
+        process.launchPath = "/bin/ps"
+        process.arguments = ["-p", "\(pid)"]
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        } catch {
+            return false
         }
     }
 
