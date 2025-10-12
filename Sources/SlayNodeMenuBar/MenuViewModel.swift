@@ -832,90 +832,102 @@ final class MenuViewModel: ObservableObject {
         }
 
         // Enhanced process termination with multiple approaches
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
+        Task {
+            await stopProcessInBackground(pid: pid)
+        }
+    }
 
-            // First try: SIGTERM (graceful shutdown)
-            var terminationSuccessful = self.killProcess(pid, signal: "TERM")
+    @MainActor
+    private func stopProcessInBackground(pid: Int32) async {
+        // First try: SIGTERM (graceful shutdown)
+        var terminationSuccessful = await killProcessInBackground(pid, signal: "TERM")
 
-            if terminationSuccessful {
-                // Wait a moment and verify process is actually dead
-                Thread.sleep(forTimeInterval: 1.0)
+        if terminationSuccessful {
+            // Wait a moment and verify process is actually dead
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
 
-                if self.isProcessRunning(pid) {
-                    print("⚠️ Process \(pid) still running after TERM, trying KILL")
-                    // Second try: SIGKILL (forceful shutdown)
-                    terminationSuccessful = self.killProcess(pid, signal: "KILL")
-                    Thread.sleep(forTimeInterval: 0.5)
-                }
-            }
-
-            DispatchQueue.main.async {
-                self.stoppingPids.remove(pid)
-
-                if terminationSuccessful && !self.isProcessRunning(pid) {
-                    // Process successfully terminated
-                    self.processes.removeAll { $0.pid == pid }
-                    self.lastUpdated = Date()
-                    print("✅ Process \(pid) terminated successfully")
-                } else {
-                    // Failed to terminate process
-                    self.lastError = "Failed to terminate process \(pid). Process may require manual termination."
-                    print("❌ Failed to terminate process \(pid)")
-
-                    // Reset stopping state on failure
-                    if let index = self.processes.firstIndex(where: { $0.pid == pid }) {
-                        self.processes[index] = NodeProcessItemViewModel(
-                            id: self.processes[index].id,
-                            pid: self.processes[index].pid,
-                            title: self.processes[index].title,
-                            subtitle: self.processes[index].subtitle,
-                            categoryBadge: self.processes[index].categoryBadge,
-                            portBadges: self.processes[index].portBadges,
-                            infoChips: self.processes[index].infoChips,
-                            projectName: self.processes[index].projectName,
-                            uptimeDescription: self.processes[index].uptimeDescription,
-                            startTimeDescription: self.processes[index].startTimeDescription,
-                            command: self.processes[index].command,
-                            workingDirectory: self.processes[index].workingDirectory,
-                            descriptor: self.processes[index].descriptor,
-                            isStopping: false
-                        )
-                    }
-                }
+            let isStillRunning = await isProcessRunningInBackground(pid)
+            if isStillRunning {
+                print("⚠️ Process \(pid) still running after TERM, trying KILL")
+                // Second try: SIGKILL (forceful shutdown)
+                terminationSuccessful = await killProcessInBackground(pid, signal: "KILL")
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             }
         }
-    }
 
-    private func killProcess(_ pid: Int32, signal: String) -> Bool {
-        let process = Process()
-        process.launchPath = "/bin/kill"
-        process.arguments = [signal, "\(pid)"]
+        stoppingPids.remove(pid)
 
-        do {
-            try process.run()
-            process.waitUntilExit()
-            return process.terminationStatus == 0
-        } catch {
-            print("❌ Failed to send \(signal) to process \(pid): \(error)")
-            return false
+        let finalIsRunning = await isProcessRunningInBackground(pid)
+        if terminationSuccessful && !finalIsRunning {
+            // Process successfully terminated
+            processes.removeAll { $0.pid == pid }
+            lastUpdated = Date()
+            print("✅ Process \(pid) terminated successfully")
+        } else {
+            // Failed to terminate process
+            lastError = "Failed to terminate process \(pid). Process may require manual termination."
+            print("❌ Failed to terminate process \(pid)")
+
+            // Reset stopping state on failure
+            if let index = processes.firstIndex(where: { $0.pid == pid }) {
+                processes[index] = NodeProcessItemViewModel(
+                    id: processes[index].id,
+                    pid: processes[index].pid,
+                    title: processes[index].title,
+                    subtitle: processes[index].subtitle,
+                    categoryBadge: processes[index].categoryBadge,
+                    portBadges: processes[index].portBadges,
+                    infoChips: processes[index].infoChips,
+                    projectName: processes[index].projectName,
+                    uptimeDescription: processes[index].uptimeDescription,
+                    startTimeDescription: processes[index].startTimeDescription,
+                    command: processes[index].command,
+                    workingDirectory: processes[index].workingDirectory,
+                    descriptor: processes[index].descriptor,
+                    isStopping: false
+                )
+            }
         }
     }
 
-    private func isProcessRunning(_ pid: Int32) -> Bool {
-        let process = Process()
-        process.launchPath = "/bin/ps"
-        process.arguments = ["-p", "\(pid)"]
+    private func killProcessInBackground(_ pid: Int32, signal: String) async -> Bool {
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let process = Process()
+                process.launchPath = "/bin/kill"
+                process.arguments = [signal, "\(pid)"]
 
-        do {
-            try process.run()
-            process.waitUntilExit()
-            return process.terminationStatus == 0
-        } catch {
-            return false
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    continuation.resume(returning: process.terminationStatus == 0)
+                } catch {
+                    print("❌ Failed to send \(signal) to process \(pid): \(error)")
+                    continuation.resume(returning: false)
+                }
+            }
         }
     }
 
+    private func isProcessRunningInBackground(_ pid: Int32) async -> Bool {
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let process = Process()
+                process.launchPath = "/bin/ps"
+                process.arguments = ["-p", "\(pid)"]
+
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    continuation.resume(returning: process.terminationStatus == 0)
+                } catch {
+                    continuation.resume(returning: false)
+                }
+            }
+        }
+    }
+
+    
     private func bindMonitor() {
         monitor.processesPublisher
             .receive(on: DispatchQueue.main)
