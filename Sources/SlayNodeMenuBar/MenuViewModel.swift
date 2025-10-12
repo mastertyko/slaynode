@@ -258,18 +258,52 @@ final class MenuViewModel: ObservableObject {
     private func extractSimpleCategory(from command: String) -> String? {
         let lowercase = command.lowercased()
 
+        // Web Frameworks
         if lowercase.contains("next") || lowercase.contains("nuxt") {
             return "Web Framework"
-        } else if lowercase.contains("vite") || lowercase.contains("webpack") {
+
+        // Bundlers and Build Tools
+        } else if lowercase.contains("vite") || lowercase.contains("webpack") || lowercase.contains("parcel") || lowercase.contains("rollup") {
             return "Bundler"
-        } else if lowercase.contains("react-scripts") {
+
+        // Frameworks
+        } else if lowercase.contains("react-scripts") || lowercase.contains("angular") || lowercase.contains("vue") {
             return "Framework"
-        } else if lowercase.contains("nodemon") {
+
+        // Development Utilities
+        } else if lowercase.contains("nodemon") || lowercase.contains("pm2") || lowercase.contains("ts-node") {
             return "Utility"
-        } else if lowercase.contains("http-server") || lowercase.contains("live-server") {
+
+        // Servers
+        } else if lowercase.contains("http-server") || lowercase.contains("live-server") ||
+                  lowercase.contains("listen(") || lowercase.contains("express") ||
+                  lowercase.contains("koa") || lowercase.contains("fastify") {
             return "Server"
-        } else if lowercase.contains("browser-sync") {
+
+        // Development Tools
+        } else if lowercase.contains("browser-sync") || lowercase.contains("eslint") ||
+                  lowercase.contains("prettier") || lowercase.contains("jest") {
             return "Tool"
+
+        // MCP (Model Context Protocol) Tools - based on your actual processes
+        } else if lowercase.contains("chrome-devtools") || lowercase.contains("context7") ||
+                  lowercase.contains("zai-mcp") || lowercase.contains("mcp") {
+            return "MCP Tool"
+
+        // Package Manager Scripts
+        } else if lowercase.hasPrefix("npm run") || lowercase.hasPrefix("yarn") ||
+                  lowercase.hasPrefix("pnpm") || lowercase.contains("npm exec") {
+            return "Development"
+
+        // Generic Node.js servers
+        } else if lowercase.hasPrefix("node ") && (lowercase.contains("server") ||
+                                                     lowercase.contains("app") ||
+                                                     lowercase.contains("api")) {
+            return "Server"
+
+        // Generic Node.js processes
+        } else if lowercase.hasPrefix("node ") {
+            return "Node.js"
         }
 
         return nil // No category badge if we can't identify it meaningfully
