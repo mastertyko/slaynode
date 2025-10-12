@@ -1,4 +1,4 @@
-# Slaynode
+# SlayNode
 
 <div align="center">
 
@@ -12,25 +12,25 @@
 
 </div>
 
-## ✨ Features
+## ✨ What It Does
 
-- 🎯 **Real-time Process Detection** - Automatically detects all running Node.js development servers (npm, yarn, pnpm, npx)
-- ⚡ **One-Click Process Management** - Stop development servers instantly with visual feedback
-- 🎨 **Enhanced UI** - Large, scroll-free interface showing up to 15+ processes in a single view
-- 🔍 **Process Intelligence** - Extracts port numbers, project names, and commands automatically
-- 📊 **Live Updates** - Configurable refresh intervals (2-30 seconds) for real-time monitoring
-- 🌙 **Menu Bar Integration** - Native macOS menu bar app with beautiful popover interface
-- 🔒 **Secure & Private** - All processing happens locally, no network requests or telemetry
+- 🎯 **Auto-Detects Node.js Servers** - Finds npm, yarn, pnpm, and npx processes automatically
+- ⚡ **One-Click Stop** - Instantly stop development servers with visual feedback
+- 🎨 **Clean Interface** - Large, scroll-free view showing all your servers
+- 🔍 **Smart Details** - Shows port numbers, project names, and commands
+- 📊 **Live Updates** - Configurable refresh intervals (2-30 seconds)
+- 🌙 **Menu Bar App** - Always accessible from your macOS menu bar
+- 🔒 **Private & Secure** - Everything happens locally, no network requests
 
-## 📸 Screenshots
+## 📸 How It Looks
 
-### Menu Bar Interface
-The app appears as a sleek icon in your macOS menu bar:
+### Menu Bar
+The app appears as a clean icon in your macOS menu bar:
 
 ![Menu Bar Icon](icon-iOS-Default-1024x1024@1x.png)
 
-### Process Management View
-Click the menu bar icon to reveal the enhanced process management interface:
+### Process Management
+Click the menu bar icon to see your running servers:
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -49,17 +49,9 @@ Click the menu bar icon to reveal the enhanced process management interface:
 └─────────────────────────────────────────────────────┘
 ```
 
-*Features shown:*
-- ✅ Large 380×700px interface for maximum visibility
-- ✅ Up to 600px scroll height for 15+ processes
-- ✅ Port badges and project information
-- ✅ One-click process termination
-- ✅ Real-time status updates
-
 ## 🚀 Quick Start
 
-### Prerequisites
-
+### Requirements
 - macOS 13.0 or later
 - Xcode Command Line Tools
 - Swift 5.9+
@@ -72,192 +64,54 @@ Click the menu bar icon to reveal the enhanced process management interface:
    cd slaynode
    ```
 
-2. **Build the application**
+2. **Build the app**
    ```bash
    ./build.sh
    ```
 
-3. **Launch the app**
+3. **Launch it**
    ```bash
    open Slaynode.app
    ```
 
-That's it! 🎉 The app will appear in your menu bar and start monitoring Node.js processes automatically.
+That's it! 🎉 The app appears in your menu bar and starts monitoring Node.js processes automatically.
 
-## 🛠️ Development
+## 🔧 How It Works
 
-### Project Structure
+**Automatic Detection:** SlayNode continuously scans for Node.js development servers running on your system.
 
-```
-Slaynode/
-├── Sources/
-│   └── SlayNodeMenuBar/
-│       ├── Resources/
-│       │   ├── AppIcon.iconset/                    # App icon sources
-│       │   ├── Assets.xcassets/                    # Template menu bar glyph + misc assets
-│       │   └── icon-iOS-Default-1024x1024@1x.png
-│       ├── SlayNodeMenuBarApp.swift               # Main app entry point + AppKit bridge
-│       ├── StatusItemController.swift             # Menu bar integration (380×700px popover)
-│       ├── ProcessMonitor.swift                   # Process monitoring logic
-│       ├── MenuViewModel.swift                    # Dynamic process detection & UI state
-│       ├── MenuContentView.swift                  # Enhanced UI with 600px scroll height
-│       ├── ProcessKiller.swift                    # Process termination management
-│       ├── ProcessClassifier.swift                # Process categorization logic
-│       ├── CommandParsing.swift                   # Command parsing and port extraction
-│       └── NodeProcess.swift                      # Node.js process data models
-├── generate-icons.swift                          # Utility to regenerate app/menu bar icons
-├── Tests/                                        # Unit tests
-├── build.sh                                     # Build script with LSUIElement=true
-├── Package.swift                                # Swift Package Manager
-└── README.md                                    # This file
-```
+**Smart Recognition:** It identifies different types of processes:
+- Next.js, Vite, React development servers
+- npm, yarn, pnpm, npx processes
+- Custom Node.js applications
 
-### Building from Source
-
-The project uses **Swift Package Manager** for dependency management.
-
-#### Development Build
-```bash
-swift build
-```
-
-#### Release Build with .app Bundle
-```bash
-./build.sh release
-```
-
-#### Running Tests
-```bash
-swift test
-```
-
-## 🔧 Configuration
-
-### Preferences
-
-The app stores preferences in:
-```bash
-~/Library/Containers/com.slaynode.menubar/Data/Library/Preferences/
-```
-
-### Supported Commands
-
-- **Refresh**: `⌘R` - Refresh process list
-- **Preferences**: `⌘,` - Open settings
-- **Quit**: `⌘Q` - Quit application
+**One-Click Management:** Click the "Stop" button next to any server to instantly terminate it.
 
 ## 🐛 Troubleshooting
 
-### Common Issues
-
-**Q: App shows "damaged" error**
+**App won't start?**
 ```bash
 # Fix permissions and code sign
 chmod +x Slaynode.app/Contents/MacOS/SlayNodeMenuBar
 codesign --force --sign - Slaynode.app
 ```
 
-**Q: Menu bar icon doesn't appear**
-- Check that the app is running in Activity Monitor
-- Try restarting the app: `killall SlaynodeMenuBar && open Slaynode.app`
+**Menu bar icon missing?**
+- Check Activity Monitor for "SlayNodeMenuBar" process
+- Restart the app: `killall SlayNodeMenuBar && open Slaynode.app`
 
-**Q: No Node.js processes detected**
-- Ensure Node.js processes are actually running
-- Check app permissions in System Settings > Privacy & Security
+**No servers showing?**
+- Make sure Node.js processes are actually running
+- Check System Settings > Privacy & Security for app permissions
 
-### Logs
+## 📞 Need Help?
 
-Debug logs are available in Console.app:
-```
-Category: SlayNodeMenuBar
-Process: SlayNodeMenuBar
-```
-
-## 🔧 Technical Implementation
-
-### Dynamic Process Detection
-
-The app uses a robust process detection system that identifies Node.js development servers in real-time:
-
-```swift
-// Core detection algorithm in MenuViewModel.swift
-func refresh() {
-    DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-        let task = Process()
-        task.launchPath = "/bin/bash"
-        task.arguments = ["-c", "ps -axo pid=,command= | grep -E '^[ ]*[0-9]+ (node |npm |yarn |pnpm |npx )' | head -15"]
-
-        // Process output and extract information
-        // - PID extraction
-        // - Command parsing for title extraction
-        // - Port number detection using regex patterns
-        // - Project name inference from working directory
-    }
-}
-```
-
-### Key Features
-
-- **Process Classification**: Automatically categorizes processes as web frameworks, build tools, or package managers
-- **Port Detection**: Uses regex patterns to extract port numbers from command arguments
-- **Project Inference**: Intelligently extracts project names from command paths and arguments
-- **Error Handling**: Comprehensive error handling with fallback mechanisms
-- **Threading**: Proper MainActor isolation for UI updates with background processing
-
-### UI Architecture
-
-- **StatusItemController**: Manages NSStatusBar integration and popover display
-- **Enhanced Dimensions**: 380×700px popover with 600px scrollable content area
-- **Real-time Updates**: Configurable refresh intervals with visual loading states
-- **Process Management**: One-click process termination with immediate UI feedback
-
-### Performance Optimizations
-
-- **Efficient Process Listing**: Uses `ps` command with output limiting to prevent system overload
-- **Background Processing**: All heavy operations run on background queues
-- **UI Threading**: Proper MainActor usage for thread-safe UI updates
-- **Memory Management**: Weak references and proper cleanup to prevent memory leaks
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how you can help:
-
-1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. **Commit your changes**
-   ```bash
-   git commit -m "feat: Add amazing feature"
-   ```
-4. **Push to the branch**
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-5. **Open a Pull Request**
-
-### Development Guidelines
-
-- Follow Swift coding conventions
-- Write unit tests for new features
-- Update documentation as needed
-- Ensure icons work in both light and dark mode
+- 🐛 **Report Issues**: [GitHub Issues](https://github.com/mastertyko/slaynode/issues)
+- 📖 **Documentation**: Check the `docs/` folder for detailed guides
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Thanks to the Swift community for excellent tools and libraries
-- Icon design inspired by modern macOS design principles
-- Built with ❤️ for developers worldwide
-
-## 📞 Support
-
-- 🐛 **Issues**: [Report bugs or request features on GitHub Issues](https://github.com/mastertyko/slaynode/issues)
-- 📖 **Documentation**: Check the [README.md](README.md) and [INSTALL.md](INSTALL.md) for usage guides
 
 ---
 
