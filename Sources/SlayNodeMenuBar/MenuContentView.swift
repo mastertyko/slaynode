@@ -174,7 +174,7 @@ private struct ProcessRowView: View {
                         Text(process.title)
                             .font(.headline)
                         if let category = process.categoryBadge {
-                            CapsuleLabel(text: category)
+                            CapsuleLabel(text: category, icon: iconForCategory(category))
                         }
                     }
 
@@ -285,15 +285,103 @@ private struct PortBadgeView: View {
 
 private struct CapsuleLabel: View {
     let text: String
+    let icon: String?
+
+    init(text: String, icon: String? = nil) {
+        self.text = text
+        self.icon = icon
+    }
 
     var body: some View {
-        Text(text)
-            .font(.caption2.weight(.semibold))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.secondary.opacity(0.15))
-            .clipShape(Capsule())
-            .foregroundStyle(Color.secondary)
+        HStack(spacing: 4) {
+            if let icon = icon {
+                Image(systemName: icon)
+                    .font(.caption2)
+            }
+            Text(text)
+                .font(.caption2.weight(.semibold))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(categoryBackground)
+        .clipShape(Capsule())
+        .foregroundStyle(categoryForeground)
+    }
+
+    private var categoryBackground: Color {
+        switch text {
+        case "Web Framework":
+            return Color.blue.opacity(0.15)
+        case "Bundler":
+            return Color.orange.opacity(0.15)
+        case "Framework":
+            return Color.cyan.opacity(0.15)
+        case "Server":
+            return Color.green.opacity(0.15)
+        case "Utility":
+            return Color.purple.opacity(0.15)
+        case "Tool":
+            return Color.mint.opacity(0.15)
+        case "MCP Tool":
+            return Color.pink.opacity(0.15)
+        case "Development":
+            return Color.indigo.opacity(0.15)
+        case "Node.js":
+            return Color.green.opacity(0.1)
+        default:
+            return Color.secondary.opacity(0.15)
+        }
+    }
+
+    private var categoryForeground: Color {
+        switch text {
+        case "Web Framework":
+            return Color.blue
+        case "Bundler":
+            return Color.orange
+        case "Framework":
+            return Color.cyan
+        case "Server":
+            return Color.green
+        case "Utility":
+            return Color.purple
+        case "Tool":
+            return Color.mint
+        case "MCP Tool":
+            return Color.pink
+        case "Development":
+            return Color.indigo
+        case "Node.js":
+            return Color.green
+        default:
+            return Color.secondary
+        }
+    }
+}
+
+// Helper function to get appropriate icon for each category
+private func iconForCategory(_ category: String) -> String {
+    switch category {
+    case "Web Framework":
+        return "globe"
+    case "Bundler":
+        return "cube.box"
+    case "Framework":
+        return "square.stack.3d.up"
+    case "Server":
+        return "server.rack"
+    case "Utility":
+        return "wrench.and.screwdriver"
+    case "Tool":
+        return "hammer"
+    case "MCP Tool":
+        return "brain.head.profile"
+    case "Development":
+        return "hammer.circle"
+    case "Node.js":
+        return "hexagon"
+    default:
+        return "tag"
     }
 }
 
