@@ -63,6 +63,8 @@ final class MenuViewModel: ObservableObject {
 
         // Trigger immediate refresh to show real data
         refresh()
+
+        // No automatic refresh binding - user controls refresh with button
     }
 
     func refresh() {
@@ -833,15 +835,7 @@ final class MenuViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
-    private func bindPreferences() {
-        preferences.$refreshInterval
-            .removeDuplicates()
-            .sink { [weak self] newValue in
-                self?.monitor.updateInterval(newValue)
-            }
-            .store(in: &cancellables)
-    }
-
+    
     private func publishLatest() {
         processes = buildViewModels(from: latestProcesses)
     }

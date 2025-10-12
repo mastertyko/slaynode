@@ -29,9 +29,6 @@ struct MenuContentView: View {
                 .padding(.horizontal, -12)
                 .overlay(Color.white.opacity(0.08))
             
-            PreferencesSectionView(preferences: viewModel.preferences)
-                .padding(.top, 4)
-            
             footer
         }
         .padding(22)
@@ -384,38 +381,6 @@ private struct EmptyStateView: View {
     }
 }
 
-private struct PreferencesSectionView: View {
-    @ObservedObject var preferences: PreferencesStore
-    
-    private var intervalBinding: Binding<Double> {
-        Binding<Double>(
-            get: { preferences.refreshInterval },
-            set: { preferences.setRefreshInterval($0) }
-        )
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Refresh Interval")
-                    .font(.subheadline.weight(.semibold))
-                Spacer()
-                Text("\(Int(preferences.refreshInterval))s")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-            
-            Slider(value: intervalBinding, in: 2...30, step: 1)
-                .tint(.accentColor)
-            
-            Text("Slaynode scans for new servers on this cadence. Lower values keep the list fresher at the cost of more system I/O.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(16)
-        .glassTile(cornerRadius: 16)
-    }
-}
 
 private struct ErrorBanner: View {
     let text: String
