@@ -315,7 +315,9 @@ private struct CapsuleLabel: View {
             }
             Text(text)
                 .font(.caption2.weight(.semibold))
+                .lineLimit(1)
         }
+        .fixedSize(horizontal: true, vertical: false)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(categoryBackground)
