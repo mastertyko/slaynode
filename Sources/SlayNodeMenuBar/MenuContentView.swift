@@ -140,9 +140,25 @@ struct MenuContentView: View {
         guard let updated = viewModel.lastUpdated else {
             return "Waiting for first refresh"
         }
+
+        let now = Date()
+        let timeInterval = now.timeIntervalSince(updated)
+
+        // Handle very recent updates (less than 1 second)
+        if timeInterval < 1 {
+            return "Updated now"
+        }
+
+        // Use abbreviated style for better readability
         let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        let relative = formatter.localizedString(for: updated, relativeTo: Date())
+        formatter.unitsStyle = .abbreviated
+        let relative = formatter.localizedString(for: updated, relativeTo: now)
+
+        // Make sure it doesn't show "0 sec"
+        if relative.contains("0 sec") || relative.contains("0s") {
+            return "Updated now"
+        }
+
         return "Updated \(relative)"
     }
     
