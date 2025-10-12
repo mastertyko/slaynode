@@ -93,7 +93,7 @@ Slaynode/
 ├── Sources/
 │   └── SlayNodeMenuBar/
 │       ├── Resources/
-│       │   ├── AppIcon.iconset/                    # Liquid Glass app icon sources
+│       │   ├── AppIcon.iconset/                    # App icon sources
 │       │   ├── Assets.xcassets/                    # Template menu bar glyph + misc assets
 │       │   └── icon-iOS-Default-1024x1024@1x.png
 │       ├── SlayNodeMenuBarApp.swift               # Main app entry point + AppKit bridge
@@ -130,27 +130,6 @@ swift build
 ```bash
 swift test
 ```
-
-## 🎨 Icon System
-
-Slaynode’s visual identity is now aligned with the macOS 26 “Liquid Glass” aesthetic:
-
-### App Icon
-- **Source**: `Sources/SlayNodeMenuBar/Resources/SlayNodeIcon.png` (1024² master artwork)
-- **Pipeline**: `swift generate-icons.swift` downscales the master image into the full `.iconset` (16×16 → 512×512 + Retina).
-- **Sizes**: 16×16 → 512×512 with @2× Retina variants, plus 1024×1024 marketing size.
-
-### Menu Bar Icon
-- **Asset**: `Sources/SlayNodeMenuBar/Resources/Assets.xcassets/MenuBarIcon.imageset`
-- **Format**: 22 pt monochrome template PNG (1×/2×) derived from `SlayNodeIcon.png` for automatic system tinting.
-- **Regeneration**: `swift generate-icons.swift`
-
-### Icon Refresh Workflow
-1. Run `swift generate-icons.swift` to rebuild all PNG variants.
-2. (Optional) Export an `.icns` for external use:  
-   `iconutil -c icns Sources/SlayNodeMenuBar/Resources/AppIcon.iconset`
-3. Build the project (`./build.sh` or `xcodebuild`) to bundle the refreshed assets.
-4. Launch the app and confirm tinting/contrast in both light and dark wallpapers.
 
 ## 🔧 Configuration
 
@@ -238,17 +217,6 @@ func refresh() {
 - **Background Processing**: All heavy operations run on background queues
 - **UI Threading**: Proper MainActor usage for thread-safe UI updates
 - **Memory Management**: Weak references and proper cleanup to prevent memory leaks
-
-## 🧪 Visual Verification Checklist
-
-After regenerating icons or tweaking the Liquid Glass UI, validate the experience on a macOS 26 machine:
-
-1. **Wallpaper Sweep** – Toggle between light, dark, and vivid HDR wallpapers. In *System Settings ▸ Appearance ▸ Menu Bar*, switch between transparent and backed styles and confirm the menu bar glyph remains legible.
-2. **Control Center Roundtrip** – Command-drag the Slaynode icon off the menu bar, re-enable it via *System Settings ▸ Control Center ▸ Menu Bar Only Apps*, and verify the app state survives the cycle.
-3. **Transparency Toggle** – Enable/disable "Automatically hide and show the menu bar" and observe hover/pressed states, panel shadows, and blur fidelity in both configurations.
-4. **Appearance Modes** – Switch between Light, Dark, and Auto; spot-check header/secondary text contrast with Digital Color Meter to keep ≥4.5:1 against underlying wallpapers.
-5. **Multi-Display** – Open the extra on a secondary display and ensure the panel shadow and blur adapt to each wallpaper without clipping.
-6. **Menu Bar Height Variants** – Increase menu bar size in *System Settings ▸ Accessibility ▸ Display*; the 22 pt template glyph should scale crisply (macOS will pick the 2× asset automatically).
 
 ## 🤝 Contributing
 
