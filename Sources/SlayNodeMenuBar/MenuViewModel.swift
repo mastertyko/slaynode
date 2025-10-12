@@ -975,7 +975,7 @@ final class MenuViewModel: ObservableObject {
                 uptimeDescription: "15m 42s",
                 startTimeDescription: "2 min ago",
                 command: "next dev",
-                workingDirectory: "/Users/tyko/Dev/my-next-app",
+                workingDirectory: "/Users/username/Dev/my-next-app",
                 descriptor: .init(
                     name: "Next.js",
                     displayName: "Next.js",
@@ -1005,7 +1005,7 @@ final class MenuViewModel: ObservableObject {
                 uptimeDescription: "8m 15s",
                 startTimeDescription: "8 min ago",
                 command: "npm run dev",
-                workingDirectory: "/Users/tyko/Dev/react-app",
+                workingDirectory: "/Users/username/Dev/react-app",
                 descriptor: .init(
                     name: "Vite",
                     displayName: "Vite",

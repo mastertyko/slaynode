@@ -39,11 +39,11 @@ Click the menu bar icon to reveal the enhanced process management interface:
 │                                                     │
 │  🔵 my-app-server                    :3000  [Stop]  │
 │      PID: 12345 • Running • http://localhost:3000   │
-│      npm run dev • /Users/tyko/projects/my-app      │
+│      npm run dev • /Users/username/projects/my-app   │
 │                                                     │
 │  🔵 api-backend                      :8080  [Stop]  │
 │      PID: 12347 • Running • http://localhost:8080   │
-│      yarn start • /Users/tyko/projects/api         │
+│      yarn start • /Users/username/projects/api      │
 │                                                     │
 │  [Refresh]                                      [Quit] │
 └─────────────────────────────────────────────────────┘
