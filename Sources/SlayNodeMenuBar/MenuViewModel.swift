@@ -53,13 +53,16 @@ final class MenuViewModel: ObservableObject {
         self.preferences = preferences
         self.monitor = monitor
 
-        // Start with mock processes for stability
-        isLoading = false
-        processes = createMockProcesses()
+        // Start with loading state and trigger real process detection immediately
+        isLoading = true
+        processes = []
         lastError = nil
         lastUpdated = Date()
 
-        print("🚀 MenuViewModel initialized - showing demo processes (real detection disabled)")
+        print("🚀 MenuViewModel initialized - starting real process detection")
+
+        // Trigger immediate refresh to show real data
+        refresh()
     }
 
     func refresh() {
@@ -149,12 +152,11 @@ final class MenuViewModel: ObservableObject {
                 self.lastUpdated = Date()
 
                 // Always show the dynamically found processes
+                self.processes = realProcesses
                 if realProcesses.isEmpty {
-                    self.processes = self.createMockProcesses()
-                    print("📝 No real processes found, showing demo")
+                    print("📝 No Node.js processes found")
                 } else {
-                    self.processes = realProcesses
-                    print("🎉 Showing \(realProcesses.count) dynamic processes!")
+                    print("🎉 Showing \(realProcesses.count) Node.js processes!")
                 }
             }
         }
@@ -255,11 +257,11 @@ final class MenuViewModel: ObservableObject {
                 print("✅ Found \(realProcesses.count) real Node.js processes")
 
                 await MainActor.run {
+                    // Always show the dynamically found processes
+                    self.processes = realProcesses
                     if realProcesses.isEmpty {
-                        self.processes = self.createMockProcesses()
-                        print("📝 No real processes found, showing demo")
+                        print("📝 No Node.js processes found")
                     } else {
-                        self.processes = realProcesses
                         print("🎉 Showing \(realProcesses.count) real processes!")
                     }
                 }
@@ -267,7 +269,8 @@ final class MenuViewModel: ObservableObject {
         } catch {
             print("⚠️ Process detection failed: \(error)")
             await MainActor.run {
-                self.processes = self.createMockProcesses()
+                self.processes = []
+                self.lastError = "Failed to detect processes: \(error.localizedDescription)"
             }
         }
     }
@@ -955,69 +958,4 @@ final class MenuViewModel: ObservableObject {
         return formatter
     }()
 
-    // Mock processes for testing
-    private func createMockProcesses() -> [NodeProcessItemViewModel] {
-        return [
-            NodeProcessItemViewModel(
-                id: 1234,
-                pid: 1234,
-                title: "Next.js Development Server",
-                subtitle: "next dev",
-                categoryBadge: "Web Framework",
-                portBadges: [
-                    .init(text: "3000", isLikely: false)
-                ],
-                infoChips: [
-                    .init(text: "Node.js", systemImage: "cpu"),
-                    .init(text: "dev", systemImage: "terminal")
-                ],
-                projectName: "my-next-app",
-                uptimeDescription: "15m 42s",
-                startTimeDescription: "2 min ago",
-                command: "next dev",
-                workingDirectory: "/Users/username/Dev/my-next-app",
-                descriptor: .init(
-                    name: "Next.js",
-                    displayName: "Next.js",
-                    category: .webFramework,
-                    runtime: "Node.js",
-                    packageManager: nil,
-                    script: "dev",
-                    details: "Mode: DEV",
-                    portHints: [3000]
-                ),
-                isStopping: false
-            ),
-            NodeProcessItemViewModel(
-                id: 5678,
-                pid: 5678,
-                title: "Vite Development Server",
-                subtitle: "npm run dev",
-                categoryBadge: "Bundler",
-                portBadges: [
-                    .init(text: "5173", isLikely: false)
-                ],
-                infoChips: [
-                    .init(text: "Node.js", systemImage: "cpu"),
-                    .init(text: "Vite", systemImage: "bolt")
-                ],
-                projectName: "react-app",
-                uptimeDescription: "8m 15s",
-                startTimeDescription: "8 min ago",
-                command: "npm run dev",
-                workingDirectory: "/Users/username/Dev/react-app",
-                descriptor: .init(
-                    name: "Vite",
-                    displayName: "Vite",
-                    category: .bundler,
-                    runtime: "Node.js",
-                    packageManager: "npm",
-                    script: "dev",
-                    details: nil,
-                    portHints: [5173]
-                ),
-                isStopping: false
-            )
-        ]
-    }
-}
+  }
