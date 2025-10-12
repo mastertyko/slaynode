@@ -53,32 +53,35 @@ swift test
 
 ### Dynamic Process Detection
 
-The app uses a robust process detection system that identifies Node.js development servers in real-time:
+The app uses a robust process detection system that identifies Node.js development servers in real-time using modern Swift concurrency:
 
 ```swift
 // Core detection algorithm in MenuViewModel.swift
 func refresh() {
-    DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-        let task = Process()
-        task.launchPath = "/bin/bash"
-        task.arguments = ["-c", "ps -axo pid=,command= | grep -E '^[ ]*[0-9]+ (node |npm |yarn |pnpm |npx )' | head -15"]
-
-        // Process output and extract information
-        // - PID extraction
-        // - Command parsing for title extraction
-        // - Port number detection using regex patterns
-        // - Project name inference from working directory
+    Task { @MainActor [weak self] in
+        let processes = await self.performProcessDetection()
+        // Update UI on main thread
+        self.processes = processes
     }
+}
+
+private func performProcessDetection() async -> [NodeProcessItemViewModel] {
+    // Uses unified process parsing with comprehensive error handling
+    let processInfo = parseProcessInfo(from: command)
+    // Extracts title, ports, category, and project name in one pass
 }
 ```
 
 ### Key Features
 
-- **Process Classification**: Automatically categorizes processes as web frameworks, build tools, or package managers
-- **Port Detection**: Uses regex patterns to extract port numbers from command arguments
+- **Process Classification**: Automatically categorizes processes as web frameworks, build tools, package managers, and MCP tools
+- **Unified Process Parsing**: Single `parseProcessInfo()` function extracts all process information in one pass
+- **Port Detection**: Uses multiple regex patterns to extract port numbers from command arguments with framework-specific defaults
 - **Project Inference**: Intelligently extracts project names from command paths and arguments
-- **Error Handling**: Comprehensive error handling with fallback mechanisms
-- **Threading**: Proper MainActor isolation for UI updates with background processing
+- **Comprehensive Error Handling**: Standardized error types with localized descriptions and proper error propagation
+- **Modern Threading**: Uses Swift concurrency (Task, async/await) with MainActor isolation for thread-safe UI updates
+- **Race Condition Prevention**: Proper synchronization for process termination and port verification
+- **Memory Management**: Automatic cleanup of timers and resources to prevent memory leaks
 
 ### UI Architecture
 
@@ -90,9 +93,20 @@ func refresh() {
 ### Performance Optimizations
 
 - **Efficient Process Listing**: Uses `ps` command with output limiting to prevent system overload
-- **Background Processing**: All heavy operations run on background queues
-- **UI Threading**: Proper MainActor usage for thread-safe UI updates
-- **Memory Management**: Weak references and proper cleanup to prevent memory leaks
+- **Modern Concurrency**: Task-based background processing replacing DispatchQueue patterns
+- **UI Threading**: MainActor isolation for thread-safe UI updates
+- **Memory Management**: Weak references, automatic timer cleanup, and proper resource management
+- **Code Optimization**: Eliminated ~500+ lines of duplicate code through unified process parsing
+- **Error Resilience**: Graceful degradation and comprehensive error recovery mechanisms
+
+### Recent Improvements (v2.0)
+
+- **Threading Standardization**: Migrated from DispatchQueue to modern Swift concurrency
+- **Error Handling Enhancement**: Implemented comprehensive error type system with localized descriptions
+- **Code Consolidation**: Unified duplicate process parsing functions into single, maintainable solution
+- **Race Condition Fixes**: Solved synchronization issues in process termination and port verification
+- **Memory Leak Prevention**: Fixed timer cleanup issues and improved resource management
+- **Architecture Improvements**: Better separation of concerns and more maintainable code structure
 
 ## 🤝 Contributing
 

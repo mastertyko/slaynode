@@ -21,6 +21,8 @@
 - 📊 **Live Updates** - Configurable refresh intervals (2-30 seconds)
 - 🌙 **Menu Bar App** - Always accessible from your macOS menu bar
 - 🔒 **Private & Secure** - Everything happens locally, no network requests
+- 🛡️ **Robust Error Handling** - Comprehensive error reporting and graceful recovery
+- 🚀 **Modern Architecture** - Built with Swift concurrency and memory-safe patterns
 
 ## 📸 How It Looks
 

@@ -19,11 +19,11 @@ enum ProcessMonitorError: Error, LocalizedError {
 // Modern async/await ProcessMonitor with improved concurrency
 @MainActor
 final class ProcessMonitor {
-    private var timer: DispatchSourceTimer?
     private var interval: TimeInterval
     private var isCollecting = false
     private var hasPendingRefresh = false
     private var collectionTask: Task<Void, Never>?
+    private var timerTask: Task<Void, Never>?
 
     private let processesSubject = CurrentValueSubject<[NodeProcess], Never>([])
     private let errorsSubject = PassthroughSubject<Error, Never>()
@@ -61,30 +61,36 @@ final class ProcessMonitor {
     }
 
     deinit {
-        timer?.setEventHandler {}
-        timer?.cancel()
-        timer = nil
+        // Clean up tasks without calling MainActor methods
+        timerTask?.cancel()
+        timerTask = nil
+        collectionTask?.cancel()
+        collectionTask = nil
     }
 
     private func startTimer() {
         stopTimer()
 
-        // Use main queue to avoid threading issues
-        let timer = DispatchSource.makeTimerSource(queue: .main)
-        timer.schedule(deadline: .now() + 1.0, repeating: interval) // Delay first run
-        timer.setEventHandler { [weak self] in
+        // Use Timer instead of DispatchSourceTimer for consistency
+        timerTask = Task { @MainActor [weak self] in
             guard let self = self else { return }
 
-            // Cancel any existing collection task
-            self.collectionTask?.cancel()
+            // Initial delay
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
 
-            // Create task for background work
-            self.collectionTask = Task {
-                await self.performCollect()
+            while !Task.isCancelled {
+                // Cancel any existing collection task
+                self.collectionTask?.cancel()
+
+                // Create task for background work
+                self.collectionTask = Task {
+                    await self.performCollect()
+                }
+
+                // Wait for next interval
+                try? await Task.sleep(nanoseconds: UInt64(self.interval * 1_000_000_000))
             }
         }
-        timer.resume()
-        self.timer = timer
     }
 
     private func restartTimer() {
@@ -93,11 +99,10 @@ final class ProcessMonitor {
     }
 
     private func stopTimer() {
+        timerTask?.cancel()
+        timerTask = nil
         collectionTask?.cancel()
         collectionTask = nil
-        timer?.setEventHandler {}
-        timer?.cancel()
-        timer = nil
     }
 
     private func performCollect() async {

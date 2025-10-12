@@ -5,6 +5,7 @@ struct MenuContentView: View {
     @StateObject private var viewModel: MenuViewModel
     @ObservedObject var preferences: PreferencesStore
     @State private var currentTime = Date()
+    @State private var timer: Timer?
 
     private let panelCornerRadius: CGFloat = 24
     private let headerCornerRadius: CGFloat = 18
@@ -38,11 +39,16 @@ struct MenuContentView: View {
         .animation(.easeInOut(duration: 0.25), value: viewModel.isLoading)
         .onAppear {
             // Start a timer to update currentTime every second
-            Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
                 Task { @MainActor in
                     currentTime = Date()
                 }
             }
+        }
+        .onDisappear {
+            // Clean up timer to prevent memory leaks
+            timer?.invalidate()
+            timer = nil
         }
     }
     
