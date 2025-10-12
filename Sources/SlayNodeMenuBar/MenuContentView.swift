@@ -248,7 +248,7 @@ private struct ProcessRowView: View {
                     Button(role: .destructive) {
                         stopAction()
                     } label: {
-                        Label("Stop", systemImage: "stop.fill")
+                        Label("Slay", systemImage: "xmark.square.fill")
                             .labelStyle(.titleAndIcon)
                     }
                     .controlSize(.small)
