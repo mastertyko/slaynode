@@ -20,6 +20,8 @@ final class StatusItemController: NSObject {
         if popover.isShown {
             popover.performClose(sender)
         } else {
+            // Ensure content is created before showing
+            ensurePopoverContent()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
@@ -34,22 +36,51 @@ final class StatusItemController: NSObject {
         button.appearsDisabled = false
         button.isBordered = false
         button.focusRingType = .none
-        if let icon = Bundle.main.image(forResource: "MenuBarIcon") {
-            icon.size = NSSize(width: 22, height: 22)
-            icon.isTemplate = true
-            button.image = icon
-        } else if let symbol = NSImage(systemSymbolName: "bolt.horizontal.fill", accessibilityDescription: "Slaynode") {
+        // Try sword-like or kill-related SF symbols
+        if let symbol = NSImage(systemSymbolName: "staroflife.fill", accessibilityDescription: "Slaynode") {
             symbol.size = NSSize(width: 20, height: 20)
             symbol.isTemplate = true
             button.image = symbol
+        } else if let symbol = NSImage(systemSymbolName: "cross.fill", accessibilityDescription: "Slaynode") {
+            symbol.size = NSSize(width: 20, height: 20)
+            symbol.isTemplate = true
+            button.image = symbol
+        } else if let symbol = NSImage(systemSymbolName: "xmark.shield.fill", accessibilityDescription: "Slaynode") {
+            symbol.size = NSSize(width: 20, height: 20)
+            symbol.isTemplate = true
+            button.image = symbol
+        } else if let symbol = NSImage(systemSymbolName: "poweroff", accessibilityDescription: "Slaynode") {
+            symbol.size = NSSize(width: 20, height: 20)
+            symbol.isTemplate = true
+            button.image = symbol
+        } else if let symbol = NSImage(systemSymbolName: "stop.circle.fill", accessibilityDescription: "Slaynode") {
+            symbol.size = NSSize(width: 20, height: 20)
+            symbol.isTemplate = true
+            button.image = symbol
+        } else {
+            // Fallback: Use the working X symbol
+            if let symbol = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: "Slaynode") {
+                symbol.size = NSSize(width: 20, height: 20)
+                symbol.isTemplate = true
+                button.image = symbol
+            } else {
+                button.title = "S"
+            }
         }
-        button.image?.isTemplate = true
     }
     
     private func configurePopover() {
         popover.behavior = .transient
         popover.animates = true
-        popover.contentSize = NSSize(width: 360, height: 440)
-        popover.contentViewController = NSHostingController(rootView: MenuContentView(preferences: preferences))
+        popover.contentSize = NSSize(width: 380, height: 700)
+        // Defer view creation until popover is shown
+    }
+
+    private func ensurePopoverContent() {
+        if popover.contentViewController == nil {
+            // Create a simplified MenuContentView with minimal MenuViewModel
+            let contentView = MenuContentView(preferences: preferences)
+            popover.contentViewController = NSHostingController(rootView: contentView)
+        }
     }
 }
