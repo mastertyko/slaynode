@@ -165,31 +165,40 @@ struct MenuContentView: View {
 private struct ProcessRowView: View {
     let process: NodeProcessItemViewModel
     let stopAction: () -> Void
-    
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
+            // Main info row with title, category, ports, and stop button
+            HStack(alignment: .center, spacing: 10) {
+                VStack(alignment: .leading, spacing: 6) {
+                    // Title and category
+                    HStack(alignment: .center, spacing: 8) {
                         Text(process.title)
                             .font(.headline)
+                            .foregroundStyle(.primary)
+
                         if let category = process.categoryBadge {
                             CapsuleLabel(text: category, icon: iconForCategory(category))
                         }
                     }
 
+                    // Port badges
                     if !process.portBadges.isEmpty {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 4) {
                             ForEach(process.portBadges, id: \.self) { badge in
                                 PortBadgeView(badge: badge)
                             }
                         }
                     }
                 }
+
                 Spacer()
+
+                // Stop button
                 if process.isStopping {
                     ProgressView()
                         .controlSize(.small)
+                        .tint(.secondary)
                 } else {
                     Button(role: .destructive) {
                         stopAction()
@@ -202,22 +211,27 @@ private struct ProcessRowView: View {
                 }
             }
 
+            // Subtitle (command)
             if !process.subtitle.isEmpty {
                 Text(process.subtitle)
                     .font(.caption.monospaced())
                     .lineLimit(1)
                     .foregroundStyle(.secondary)
+                    .padding(.top, 2)
             }
 
+            // Info chips (URL, Node.js, etc.)
             if !process.infoChips.isEmpty {
-                HStack(spacing: 6) {
+                HStack(spacing: 4) {
                     ForEach(process.infoChips, id: \.self) { chip in
                         InfoChipView(chip: chip)
                     }
                 }
+                .padding(.top, 4)
             }
 
-            HStack(spacing: 12) {
+            // Metadata row
+            HStack(spacing: 16) {
                 Label("PID \(process.pid)", systemImage: "number")
                     .font(.caption2)
                 Label(process.uptimeDescription, systemImage: "timer")
@@ -230,6 +244,7 @@ private struct ProcessRowView: View {
                 }
             }
             .foregroundStyle(.secondary)
+            .padding(.top, 6)
         }
         .padding(16)
         .glassTile(cornerRadius: 16)
