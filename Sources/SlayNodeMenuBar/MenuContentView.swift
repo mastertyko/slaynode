@@ -304,19 +304,50 @@ private struct InfoChipView: View {
     let chip: NodeProcessItemViewModel.InfoChip
 
     var body: some View {
-        HStack(spacing: 4) {
-            if let systemImage = chip.systemImage {
-                Image(systemName: systemImage)
-                    .font(.caption2)
+        Group {
+            if isURL(chip.text) {
+                Button(action: { openURL(chip.text) }) {
+                    HStack(spacing: 4) {
+                        if let systemImage = chip.systemImage {
+                            Image(systemName: systemImage)
+                                .font(.caption2)
+                        }
+                        Text(chip.text)
+                            .font(.caption2)
+                            .underline()
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.blue.opacity(0.15))
+                    .clipShape(Capsule())
+                    .foregroundStyle(Color.blue)
+                }
+                .buttonStyle(.plain)
+            } else {
+                HStack(spacing: 4) {
+                    if let systemImage = chip.systemImage {
+                        Image(systemName: systemImage)
+                            .font(.caption2)
+                    }
+                    Text(chip.text)
+                        .font(.caption2)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.primary.opacity(0.06))
+                .clipShape(Capsule())
+                .foregroundStyle(Color.secondary)
             }
-            Text(chip.text)
-                .font(.caption2)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color.primary.opacity(0.06))
-        .clipShape(Capsule())
-        .foregroundStyle(Color.secondary)
+    }
+
+    private func isURL(_ text: String) -> Bool {
+        return text.hasPrefix("http://") || text.hasPrefix("https://")
+    }
+
+    private func openURL(_ urlString: String) {
+        guard let url = URL(string: urlString) else { return }
+        NSWorkspace.shared.open(url)
     }
 }
 
