@@ -1,10 +1,4 @@
 import SwiftUI
 
-struct ContentView: View {
-    @EnvironmentObject private var preferences: PreferencesStore
-    
-    var body: some View {
-        MenuContentView(preferences: preferences)
-            .frame(minWidth: 420, minHeight: 520)
-    }
-}
+// DEPRECATED: This view is not used. MenuContentView is created directly in StatusItemController.
+// Keeping file to avoid breaking any potential SwiftUI previews.

@@ -10,9 +10,9 @@ struct MenuContentView: View {
     private let panelCornerRadius: CGFloat = 24
     private let headerCornerRadius: CGFloat = 18
 
-    init(preferences: PreferencesStore) {
+    init(preferences: PreferencesStore, monitor: ProcessMonitor) {
         self.preferences = preferences
-        self._viewModel = StateObject(wrappedValue: MenuViewModel(preferences: preferences))
+        self._viewModel = StateObject(wrappedValue: MenuViewModel(preferences: preferences, monitor: monitor))
     }
     
     var body: some View {
@@ -159,7 +159,7 @@ struct MenuContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.vertical, 32)
             } else if viewModel.processes.isEmpty {
-                EmptyStateView(refreshAction: viewModel.refresh)
+                EmptyStateView(refreshAction: { viewModel.refresh() })
                     .frame(maxHeight: .infinity)
             } else {
                 ScrollView {

@@ -72,23 +72,18 @@ final class ProcessMonitor {
     private func startTimer() {
         stopTimer()
 
-        // Use Timer instead of DispatchSourceTimer for consistency
         timerTask = Task { @MainActor [weak self] in
             guard let self = self else { return }
 
-            // Initial delay
-            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
 
             while !Task.isCancelled {
-                // Cancel any existing collection task
                 self.collectionTask?.cancel()
 
-                // Create task for background work
                 self.collectionTask = Task {
                     await self.performCollect()
                 }
 
-                // Wait for next interval
                 try? await Task.sleep(nanoseconds: UInt64(self.interval * 1_000_000_000))
             }
         }
@@ -114,9 +109,8 @@ final class ProcessMonitor {
 
         isCollecting = true
 
-        // Add timeout protection
         let timeoutTask = Task {
-            try await Task.sleep(nanoseconds: 10_000_000_000) // 10 seconds
+            try await Task.sleep(nanoseconds: 10_000_000_000)
         }
 
         do {
@@ -129,10 +123,8 @@ final class ProcessMonitor {
                 return
             }
 
-            // Send updates on main thread
-            await MainActor.run {
-                self.processesSubject.send(processes)
-            }
+            // Already on MainActor, send directly
+            self.processesSubject.send(processes)
         } catch {
             timeoutTask.cancel()
 
@@ -142,10 +134,8 @@ final class ProcessMonitor {
                 return
             }
 
-            // Send errors on main thread
-            await MainActor.run {
-                self.errorsSubject.send(error)
-            }
+            // Already on MainActor, send directly
+            self.errorsSubject.send(error)
         }
 
         isCollecting = false
@@ -229,9 +219,11 @@ final class ProcessMonitor {
             let startMicroseconds = TimeInterval(bsdInfo.pbi_start_tvusec) / 1_000_000
             let startTime = Date(timeIntervalSince1970: startSeconds + startMicroseconds)
             let uptime = max(0, Date().timeIntervalSince(startTime))
+            let ppid = Int32(bsdInfo.pbi_ppid)
             
             let process = NodeProcess(
                 pid: pid,
+                ppid: ppid,
                 executable: executableToken,
                 command: command,
                 arguments: arguments,
@@ -251,19 +243,18 @@ final class ProcessMonitor {
     
     private func collectProcessesUsingPS() async throws -> [NodeProcess] {
         do {
-            let (psStatus, psOutput) = try await runCommand("/bin/ps", arguments: ["-axo", "pid=,etime=,command="])
+            let (psStatus, psOutput) = try await runCommand("/bin/ps", arguments: ["-axo", "pid=,ppid=,etime=,command="])
+            
             guard psStatus == 0 else {
-                // Return empty array instead of throwing error
-                print("⚠️ PS command failed with status \(psStatus), returning empty process list")
                 return []
             }
 
             let rows = psOutput.split(whereSeparator: { $0.isNewline })
 
             var processes: [NodeProcess] = []
-            processes.reserveCapacity(min(rows.count, 1000)) // Limit capacity to prevent memory issues
+            processes.reserveCapacity(min(rows.count, 2000))
 
-            for row in rows.prefix(1000) { // Limit number of processes to check
+            for row in rows {
                 let trimmed = row.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else { continue }
                 guard let process = parseProcess(from: trimmed) else { continue }
@@ -272,25 +263,25 @@ final class ProcessMonitor {
 
             return try await enrichProcesses(processes)
         } catch {
-            print("⚠️ Process collection failed: \(error), returning empty list")
             return []
         }
     }
 
     private func parseProcess(from line: String) -> NodeProcess? {
-        let components = line.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
-        guard components.count == 3,
-              let pidValue = Int32(components[0]) else {
+        let components = line.split(separator: " ", maxSplits: 3, omittingEmptySubsequences: true)
+        guard components.count == 4,
+              let pidValue = Int32(components[0]),
+              let ppidValue = Int32(components[1]) else {
             return nil
         }
         
         // Parse elapsed time from format like "15:42" or "2:15:42"
-        let elapsedSeconds = parseEtime(String(components[1]))
+        let elapsedSeconds = parseEtime(String(components[2]))
         guard elapsedSeconds > 0 else {
             return nil
         }
 
-        let command = String(components[2])
+        let command = String(components[3])
         let tokens = CommandParser.tokenize(command)
         guard let executableToken = tokens.first else {
             return nil
@@ -309,6 +300,7 @@ final class ProcessMonitor {
 
         return NodeProcess(
             pid: pidValue,
+            ppid: ppidValue,
             executable: executableToken,
             command: command,
             arguments: arguments,
@@ -323,31 +315,64 @@ final class ProcessMonitor {
 
     private func enrichProcesses(_ processes: [NodeProcess]) async throws -> [NodeProcess] {
         let developmentServers = processes.filter(isLikelyDevelopmentProcess(_:))
+        
         guard !developmentServers.isEmpty else {
             return []
         }
         
         let portsByPid = await portResolver.resolvePorts(for: developmentServers.map { $0.pid })
+        let processByPid = Dictionary(uniqueKeysWithValues: developmentServers.map { ($0.pid, $0) })
         
-        return developmentServers.map { process in
-            let combinedPorts = Array(Set(process.ports + (portsByPid[process.pid] ?? []))).sorted()
-            return NodeProcess(
+        var childPortsByParentPid: [Int32: [Int]] = [:]
+        var hiddenChildPids: Set<Int32> = []
+        
+        for process in developmentServers {
+            let childPorts = portsByPid[process.pid] ?? []
+            if !childPorts.isEmpty, process.ppid > 1, processByPid[process.ppid] != nil {
+                childPortsByParentPid[process.ppid, default: []].append(contentsOf: childPorts)
+                hiddenChildPids.insert(process.pid)
+            }
+        }
+        
+        var result: [NodeProcess] = []
+        
+        for process in developmentServers {
+            if hiddenChildPids.contains(process.pid) {
+                continue
+            }
+            
+            var allPorts = Set(process.ports + (portsByPid[process.pid] ?? []))
+            
+            if let childPorts = childPortsByParentPid[process.pid] {
+                allPorts.formUnion(childPorts)
+            }
+            
+            result.append(NodeProcess(
                 pid: process.pid,
+                ppid: process.ppid,
                 executable: process.executable,
                 command: process.command,
                 arguments: process.arguments,
-                ports: combinedPorts,
+                ports: Array(allPorts).sorted(),
                 uptime: process.uptime,
                 startTime: process.startTime,
                 workingDirectory: process.workingDirectory,
                 descriptor: process.descriptor,
                 commandHash: process.commandHash
-            )
+            ))
         }
+        
+        return result
     }
     
     private func isLikelyDevelopmentProcess(_ process: NodeProcess) -> Bool {
         let executableLower = process.executable.lowercased()
+        let commandLower = process.command.lowercased()
+        
+        // EXCLUSIONS: System processes and app bundles should never be shown
+        if isSystemOrAppBundleProcess(command: commandLower, executable: executableLower) {
+            return false
+        }
         
         if executableLower.contains("node") || executableLower.contains("nodejs") {
             return true
@@ -368,7 +393,6 @@ final class ProcessMonitor {
             return true
         }
         
-        let commandLower = process.command.lowercased()
         if commandLower.contains(" dev ") || commandLower.contains(" start ") ||
             commandLower.contains(" serve ") || commandLower.contains(" run dev") ||
             commandLower.contains("run start") || commandLower.contains("run serve") {
@@ -376,6 +400,49 @@ final class ProcessMonitor {
         }
         
         if commandLower.contains("node_modules/.bin/") {
+            return true
+        }
+        
+        return false
+    }
+    
+    private func isSystemOrAppBundleProcess(command: String, executable: String) -> Bool {
+        // macOS system paths (command is already lowercased)
+        if command.hasPrefix("/system/") ||
+           command.hasPrefix("/usr/sbin/") ||
+           command.hasPrefix("/usr/libexec/") ||
+           command.hasPrefix("/library/") ||
+           command.hasPrefix("/sbin/") {
+            return true
+        }
+        
+        // App bundle helper processes (Electron apps like VSCode, Discord, etc.)
+        if command.contains(".app/contents/") {
+            return true
+        }
+        
+        // Electron/Chromium internal node services
+        if command.contains("node.mojom.nodeservice") ||
+           command.contains("--type=utility") ||
+           command.contains("--type=renderer") ||
+           command.contains("--type=gpu-process") {
+            return true
+        }
+        
+        // XPC services (system daemons)
+        if executable.hasSuffix("xpc") || executable.contains("serverxpc") {
+            return true
+        }
+        
+        // Build tool child processes (not user-facing servers)
+        if command.contains("esbuild --service") ||
+           command.contains("esbuild --ping") ||
+           executable == "esbuild" {
+            return true
+        }
+        
+        // SlayNode itself
+        if executable.contains("slaynodemenuba") || command.contains("slaynodemenuba") {
             return true
         }
         
@@ -408,63 +475,61 @@ final class ProcessMonitor {
             throw ProcessMonitorError.commandFailed("Task cancelled", -1)
         }
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: launchPath)
-        process.arguments = arguments
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: launchPath)
+                process.arguments = arguments
 
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
+                let outputPipe = Pipe()
+                let errorPipe = Pipe()
+                process.standardOutput = outputPipe
+                process.standardError = errorPipe
 
-        // Add timeout to prevent hanging
-        let timeoutTask = Task {
-            try await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
-            if !Task.isCancelled {
-                process.terminate()
+                // Timeout using DispatchWorkItem (5 seconds) - works even when thread is blocked
+                let timeoutWork = DispatchWorkItem { [weak process] in
+                    process?.terminate()
+                }
+                DispatchQueue.global().asyncAfter(deadline: .now() + 5.0, execute: timeoutWork)
+
+                do {
+                    try process.run()
+                    
+                    // CRITICAL: Drain BOTH pipes BEFORE waitUntilExit to avoid deadlock
+                    // If subprocess writes >64KB to either pipe, it blocks waiting for read
+                    let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                    
+                    process.waitUntilExit()
+                    timeoutWork.cancel()
+
+                    let status = process.terminationStatus
+                    
+                    // Limit output size to prevent memory issues
+                    let maxOutputSize = 1024 * 1024 // 1MB
+                    let trimmedOutputData = outputData.count > maxOutputSize ? outputData.subdata(in: 0..<maxOutputSize) : outputData
+                    let outputString = String(data: trimmedOutputData, encoding: .utf8) ?? ""
+
+                    #if DEBUG
+                    if status != 0 && allowFailure && !errorData.isEmpty {
+                        let errorString = String(data: errorData, encoding: .utf8) ?? ""
+                        print("[ProcessMonitor] \(launchPath) returned status \(status): \(errorString)")
+                    }
+                    #endif
+
+                    if status != 0 && !allowFailure {
+                        continuation.resume(throwing: ProcessMonitorError.commandFailed("\(launchPath) \(arguments.joined(separator: " "))", status))
+                        return
+                    }
+
+                    continuation.resume(returning: (status, outputString))
+                } catch {
+                    timeoutWork.cancel()
+                    process.terminate()
+                    continuation.resume(throwing: ProcessMonitorError.commandFailed("Failed to run command: \(error)", -1))
+                }
             }
         }
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-            timeoutTask.cancel()
-        } catch {
-            timeoutTask.cancel()
-            process.terminate()
-            throw ProcessMonitorError.commandFailed("Failed to run command: \(error)", -1)
-        }
-
-        // Check for cancellation after process completes
-        guard !Task.isCancelled else {
-            throw ProcessMonitorError.commandFailed("Task cancelled during execution", -1)
-        }
-
-        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-
-        // Limit output size to prevent memory issues
-        let maxOutputSize = 1024 * 1024 // 1MB
-        let trimmedOutputData = outputData.count > maxOutputSize ? outputData.subdata(in: 0..<maxOutputSize) : outputData
-        let trimmedErrorData = errorData.count > maxOutputSize ? errorData.subdata(in: 0..<maxOutputSize) : errorData
-
-        let outputString = String(data: trimmedOutputData, encoding: .utf8) ?? ""
-        let errorString = String(data: trimmedErrorData, encoding: .utf8) ?? ""
-
-        let status = process.terminationStatus
-
-        if status != 0 && !allowFailure {
-            throw ProcessMonitorError.commandFailed("\(launchPath) \(arguments.joined(separator: " "))", status)
-        }
-
-        #if DEBUG
-        if status != 0 && allowFailure && !errorString.isEmpty {
-            // Provide context to caller while still allowing execution to continue
-            print("[ProcessMonitor] \(launchPath) returned status \(status): \(errorString)")
-        }
-        #endif
-
-        return (status, outputString)
     }
     
     private func parseEtime(_ etime: String) -> TimeInterval {
@@ -507,34 +572,5 @@ final class ProcessMonitor {
         default:
             return 0
         }
-    }
-    
-    private func createProcessFromPID(_ pid: Int32) -> NodeProcess? {
-        // Use ps to get details for specific PID
-        let task = Process()
-        task.launchPath = "/bin/ps"
-        task.arguments = ["-p", "\(pid)", "-o", "pid=,etime=,command="]
-        
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        
-        do {
-            try task.run()
-            task.waitUntilExit()
-            
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: data, encoding: .utf8) ?? ""
-            
-            let lines = output.split(whereSeparator: { $0.isNewline })
-            for line in lines {
-                let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty else { continue }
-                return parseProcess(from: trimmed)
-            }
-        } catch {
-            print("❌ Failed to get process details for PID \(pid): \(error)")
-        }
-        
-        return nil
     }
 }

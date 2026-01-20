@@ -2,6 +2,7 @@ import Foundation
 
 struct NodeProcess: Identifiable, Equatable, Sendable {
     let pid: Int32
+    let ppid: Int32
     let executable: String
     let command: String
     let arguments: [String]

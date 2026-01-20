@@ -18,40 +18,46 @@ struct PortResolver {
             let output = try await runLsofWithTimeout(pidList: pidList)
             return parseLsofOutput(output)
         } catch {
-            // Return empty on timeout or any error - don't propagate
             return [:]
         }
     }
     
     private func runLsofWithTimeout(pidList: String) async throws -> String {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
-        process.arguments = ["-Pan", "-p", pidList, "-iTCP", "-sTCP:LISTEN"]
-        
-        let outputPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = FileHandle.nullDevice
-        
-        // Timeout task
-        let timeoutTask = Task {
-            try await Task.sleep(nanoseconds: timeoutNanoseconds)
-            if !Task.isCancelled {
-                process.terminate()
+        try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
+                process.arguments = ["-Pan", "-p", pidList, "-iTCP", "-sTCP:LISTEN"]
+                
+                let outputPipe = Pipe()
+                process.standardOutput = outputPipe
+                process.standardError = FileHandle.nullDevice
+                
+                // Timeout using DispatchWorkItem (2 seconds)
+                let timeoutWork = DispatchWorkItem { [weak process] in
+                    process?.terminate()
+                }
+                DispatchQueue.global().asyncAfter(deadline: .now() + 2.0, execute: timeoutWork)
+                
+                do {
+                    try process.run()
+                    let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                    process.waitUntilExit()
+                    timeoutWork.cancel()
+                    
+                    if process.terminationReason == .uncaughtSignal {
+                        continuation.resume(throwing: NSError(domain: "PortResolver", code: -1, userInfo: [NSLocalizedDescriptionKey: "Timeout"]))
+                        return
+                    }
+                    
+                    let output = String(data: outputData, encoding: .utf8) ?? ""
+                    continuation.resume(returning: output)
+                } catch {
+                    timeoutWork.cancel()
+                    continuation.resume(throwing: error)
+                }
             }
         }
-        
-        defer { timeoutTask.cancel() }
-        
-        try process.run()
-        process.waitUntilExit()
-        
-        // Check if we timed out (process was terminated)
-        if process.terminationReason == .uncaughtSignal {
-            throw NSError(domain: "PortResolver", code: -1, userInfo: [NSLocalizedDescriptionKey: "Timeout"])
-        }
-        
-        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        return String(data: outputData, encoding: .utf8) ?? ""
     }
     
     private func parseLsofOutput(_ output: String) -> [Int32: [Int]] {
@@ -65,14 +71,20 @@ struct PortResolver {
             guard !trimmed.isEmpty, !trimmed.hasPrefix("COMMAND") else { continue }
             
             let tokens = trimmed.split(omittingEmptySubsequences: true, whereSeparator: { $0.isWhitespace })
-            guard tokens.count >= 8,
-                  let pid = Int32(tokens[1]),
-                  let port = extractPort(from: String(tokens.last ?? "")) else { continue }
+            guard tokens.count >= 9,
+                  let pid = Int32(tokens[1]) else { continue }
             
+            let nameToken: String
+            if tokens[tokens.count - 1] == "(LISTEN)" && tokens.count >= 10 {
+                nameToken = String(tokens[tokens.count - 2])
+            } else {
+                nameToken = String(tokens.last ?? "")
+            }
+            
+            guard let port = extractPort(from: nameToken) else { continue }
             result[pid, default: []].append(port)
         }
         
-        // De-duplicate and sort ports per PID
         for key in result.keys {
             result[key] = Array(Set(result[key]!)).sorted()
         }

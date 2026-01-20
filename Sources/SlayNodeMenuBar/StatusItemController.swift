@@ -6,9 +6,11 @@ final class StatusItemController: NSObject {
     private let statusItem: NSStatusItem
     private let popover = NSPopover()
     private let preferences: PreferencesStore
+    private let monitor: ProcessMonitor
     
-    init(preferences: PreferencesStore) {
+    init(preferences: PreferencesStore, monitor: ProcessMonitor) {
         self.preferences = preferences
+        self.monitor = monitor
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
         configureStatusItem()
@@ -73,13 +75,13 @@ final class StatusItemController: NSObject {
         popover.behavior = .transient
         popover.animates = true
         popover.contentSize = NSSize(width: 380, height: 700)
-        // Defer view creation until popover is shown
+        // Create content eagerly so ProcessMonitor starts immediately
+        ensurePopoverContent()
     }
 
     private func ensurePopoverContent() {
         if popover.contentViewController == nil {
-            // Create a simplified MenuContentView with minimal MenuViewModel
-            let contentView = MenuContentView(preferences: preferences)
+            let contentView = MenuContentView(preferences: preferences, monitor: monitor)
             popover.contentViewController = NSHostingController(rootView: contentView)
         }
     }

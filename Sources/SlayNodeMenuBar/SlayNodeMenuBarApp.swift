@@ -16,6 +16,7 @@ struct SlayNodeMenuBarApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let preferences = PreferencesStore()
+    let processMonitor = ProcessMonitor()
     private var statusController: StatusItemController?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -23,7 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            let appIcon = NSImage(contentsOf: iconURL) {
             NSApp.applicationIconImage = appIcon
         }
-        statusController = StatusItemController(preferences: preferences)
+        processMonitor.start()
+        statusController = StatusItemController(preferences: preferences, monitor: processMonitor)
         NSApp.activate(ignoringOtherApps: true)
     }
 }

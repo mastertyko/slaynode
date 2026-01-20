@@ -86,7 +86,7 @@ final class MenuViewModel: ObservableObject {
         print("SlayNode: \(message)")
     }
 
-    init(preferences: PreferencesStore = PreferencesStore(), monitor: ProcessMonitor = ProcessMonitor()) {
+    init(preferences: PreferencesStore, monitor: ProcessMonitor) {
         self.preferences = preferences
         self.monitor = monitor
 
@@ -95,20 +95,13 @@ final class MenuViewModel: ObservableObject {
         lastError = nil
         lastUpdated = Date()
 
-        print("🚀 MenuViewModel initialized - binding to ProcessMonitor")
-
         bindMonitor()
-        monitor.start()
     }
 
     func refresh() {
         print("🔄 Refreshing process list via ProcessMonitor")
         isLoading = true
-
-        Task { @MainActor [weak self] in
-            guard let self = self else { return }
-            await self.monitor.refresh()
-        }
+        Task { await monitor.refresh() }
     }
 
     func stopProcess(_ pid: Int32) {
@@ -267,7 +260,7 @@ final class MenuViewModel: ObservableObject {
             // Check if all ports are free
             var allPortsFree = true
             for port in portsToMonitor {
-                if !isPortFree(port: port) {
+                if await !isPortFree(port: port) {
                     allPortsFree = false
                     break
                 }
@@ -294,42 +287,40 @@ final class MenuViewModel: ObservableObject {
         return result == 0
     }
 
-    private func isPortFree(port: Int) -> Bool {
-        // Input validation
+    private func isPortFree(port: Int) async -> Bool {
         guard port > 0 && port <= 65535 else {
             print("⚠️ Invalid port number: \(port)")
-            return true // Consider invalid ports as "free"
+            return true
         }
 
-        let task = Process()
-        task.launchPath = "/usr/sbin/lsof"
-        task.arguments = ["-i", ":\(port)"]
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let task = Process()
+                task.launchPath = "/usr/sbin/lsof"
+                task.arguments = ["-i", ":\(port)"]
 
-        let pipe = Pipe()
-        let errorPipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = errorPipe
+                let pipe = Pipe()
+                task.standardOutput = pipe
+                task.standardError = FileHandle.nullDevice
 
-        do {
-            try task.run()
-            task.waitUntilExit()
+                do {
+                    try task.run()
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    task.waitUntilExit()
 
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: data, encoding: .utf8) ?? ""
+                    let output = String(data: data, encoding: .utf8) ?? ""
+                    let isFree = output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
-            // If output is empty, port is free
-            let isFree = output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    if !isFree {
+                        print("🔌 Port \(port) is in use")
+                    }
 
-            // Log port status for debugging
-            if !isFree {
-                print("🔌 Port \(port) is in use")
+                    continuation.resume(returning: isFree)
+                } catch {
+                    print("⚠️ Failed to check port \(port): \(error)")
+                    continuation.resume(returning: true)
+                }
             }
-
-            return isFree
-        } catch {
-            // Log the error but assume port is free for safety
-            print("⚠️ Failed to check port \(port): \(error)")
-            return true
         }
     }
 
@@ -353,26 +344,23 @@ final class MenuViewModel: ObservableObject {
 
     
     private func bindMonitor() {
-        Task { @MainActor [weak self] in
-            guard let self = self else { return }
-
-            // Observe process changes
-            for await processes in self.monitor.processesPublisher.values {
+        monitor.processesPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] processes in
+                guard let self = self else { return }
                 self.latestProcesses = processes
                 self.lastUpdated = Date()
                 self.isLoading = false
                 self.publishLatest()
             }
-        }
+            .store(in: &cancellables)
 
-        Task { @MainActor [weak self] in
-            guard let self = self else { return }
-
-            // Observe errors
-            for await error in self.monitor.errorsPublisher.values {
-                self.lastError = error.localizedDescription
+        monitor.errorsPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] error in
+                self?.lastError = error.localizedDescription
             }
-        }
+            .store(in: &cancellables)
     }
 
     

@@ -118,26 +118,34 @@ struct ProcessGroupKiller {
     }
     
     private func findChildProcesses(parentPid: Int32) async -> [Int32] {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
-        process.arguments = ["-P", String(parentPid)]
-        
-        let outputPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = FileHandle.nullDevice
-        
-        do {
-            try process.run()
-            process.waitUntilExit()
-            
-            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-            guard let output = String(data: outputData, encoding: .utf8) else { return [] }
-            
-            return output
-                .split(whereSeparator: { $0.isNewline })
-                .compactMap { Int32($0.trimmingCharacters(in: .whitespaces)) }
-        } catch {
-            return []
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
+                process.arguments = ["-P", String(parentPid)]
+                
+                let outputPipe = Pipe()
+                process.standardOutput = outputPipe
+                process.standardError = FileHandle.nullDevice
+                
+                do {
+                    try process.run()
+                    let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                    process.waitUntilExit()
+                    
+                    guard let output = String(data: outputData, encoding: .utf8) else {
+                        continuation.resume(returning: [])
+                        return
+                    }
+                    
+                    let pids = output
+                        .split(whereSeparator: { $0.isNewline })
+                        .compactMap { Int32($0.trimmingCharacters(in: .whitespaces)) }
+                    continuation.resume(returning: pids)
+                } catch {
+                    continuation.resume(returning: [])
+                }
+            }
         }
     }
 }
