@@ -11,26 +11,29 @@ enum MenuViewModelError: Error, LocalizedError {
     case timeoutWaitingForShutdown(Int32)
     case permissionDenied(Int32)
     case commandExecutionFailed(String, Int32)
+    case processIdentityChanged(Int32)
     case unknownError(String)
 
     var errorDescription: String? {
         switch self {
-        case .processDetectionFailed(let details):
-            return "Process detection failed: \(details)"
+        case .processDetectionFailed:
+            return "Could not detect running processes. Try refreshing."
         case .processTerminationFailed(let pid, let details):
-            return "Failed to terminate process \(pid): \(details)"
+            return "Could not stop process \(pid): \(details)"
         case .invalidProcessId(let pid):
-            return "Invalid process ID: \(pid)"
+            return "Process \(pid) is no longer valid."
         case .processNotFound(let pid):
-            return "Process not found: \(pid)"
+            return "Process \(pid) has already stopped."
         case .timeoutWaitingForShutdown(let pid):
-            return "Timeout waiting for process \(pid) to shutdown"
+            return "Process \(pid) is taking longer than expected to stop. It may still be shutting down."
         case .permissionDenied(let pid):
-            return "Permission denied when accessing process \(pid)"
-        case .commandExecutionFailed(let command, let status):
-            return "Command '\(command)' failed with status \(status)"
+            return "Permission denied for process \(pid). Try running as administrator."
+        case .commandExecutionFailed:
+            return "A system command failed. Try again."
+        case .processIdentityChanged(let pid):
+            return "Process \(pid) changed since detection. Refresh and try again."
         case .unknownError(let message):
-            return "Unknown error: \(message)"
+            return message
         }
     }
 }
@@ -178,7 +181,7 @@ final class MenuViewModel: ObservableObject {
             if let expectedHash = expectedHash {
                 let isVerified = await monitor.verifyProcess(pid: pid, expectedHash: expectedHash)
                 if !isVerified {
-                    throw MenuViewModelError.processTerminationFailed(pid, "Process has changed since detection")
+                    throw MenuViewModelError.processIdentityChanged(pid)
                 }
             }
             
@@ -433,11 +436,13 @@ final class MenuViewModel: ObservableObject {
     }
 
     private func makePortBadges(for process: NodeProcess) -> [NodeProcessItemViewModel.PortBadge] {
-        var badges = process.ports.map { NodeProcessItemViewModel.PortBadge(text: ":\($0)", isLikely: false) }
-        if badges.isEmpty {
-            badges = process.descriptor.portHints.map { NodeProcessItemViewModel.PortBadge(text: ":\($0)", isLikely: true) }
+        if !process.ports.isEmpty {
+            return process.ports.map { NodeProcessItemViewModel.PortBadge(text: ":\($0)", isLikely: false) }
         }
-        return badges
+        if !process.descriptor.portHints.isEmpty {
+            return process.descriptor.portHints.map { NodeProcessItemViewModel.PortBadge(text: ":\($0)", isLikely: true) }
+        }
+        return [NodeProcessItemViewModel.PortBadge(text: "No port", isLikely: true)]
     }
 
     private func makeCommandSummary(for process: NodeProcess) -> String {
