@@ -24,6 +24,7 @@ final class ProcessMonitor {
     private var hasPendingRefresh = false
     private var collectionTask: Task<Void, Never>?
     private var timerTask: Task<Void, Never>?
+    private let portResolver = PortResolver()
 
     private let processesSubject = CurrentValueSubject<[NodeProcess], Never>([])
     private let errorsSubject = PassthroughSubject<Error, Never>()
@@ -268,8 +269,7 @@ final class ProcessMonitor {
                 processes.append(process)
             }
 
-            // Skip port collection for now to avoid lsof calls
-            return processes.filter(isLikelyDevelopmentProcess(_:))
+            return try await enrichProcesses(processes)
         } catch {
             print("⚠️ Process collection failed: \(error), returning empty list")
             return []
@@ -325,7 +325,7 @@ final class ProcessMonitor {
             return []
         }
         
-        let portsByPid = try await collectPorts(for: developmentServers.map { $0.pid })
+        let portsByPid = await portResolver.resolvePorts(for: developmentServers.map { $0.pid })
         
         return developmentServers.map { process in
             let combinedPorts = Array(Set(process.ports + (portsByPid[process.pid] ?? []))).sorted()
@@ -390,58 +390,6 @@ final class ProcessMonitor {
         
         let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
-    }
-
-    private func collectPorts(for pids: [Int32]) async throws -> [Int32: [Int]] {
-        guard !pids.isEmpty else { return [:] }
-        let pidList = pids.map(String.init).joined(separator: ",")
-        let (status, output) = try await runCommand(
-            "/usr/sbin/lsof",
-            arguments: ["-Pan", "-p", pidList, "-iTCP", "-sTCP:LISTEN"],
-            allowFailure: true
-        )
-
-        guard status == 0 || status == 1 else {
-            throw ProcessMonitorError.commandFailed("lsof", status)
-        }
-
-        guard !output.isEmpty else { return [:] }
-
-        var result: [Int32: [Int]] = [:]
-        let lines = output.split(whereSeparator: { $0.isNewline })
-
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            guard !trimmed.isEmpty else { continue }
-            if trimmed.hasPrefix("COMMAND") { continue }
-
-            let tokens = trimmed.split(omittingEmptySubsequences: true, whereSeparator: { $0.isWhitespace })
-            guard tokens.count >= 8,
-                  let pid = Int32(tokens[1]) else { continue }
-
-            guard let port = extractPort(from: tokens.last.map(String.init) ?? "") else { continue }
-            result[pid, default: []].append(port)
-        }
-
-        for key in result.keys {
-            result[key] = Array(Set(result[key]!)).sorted()
-        }
-
-        return result
-    }
-
-    private func extractPort(from token: String) -> Int? {
-        let cleaned: String
-        if let range = token.range(of: "->") {
-            cleaned = String(token[..<range.lowerBound])
-        } else {
-            cleaned = token
-        }
-
-        let withoutSuffix = cleaned.replacingOccurrences(of: "(LISTEN)", with: "")
-        guard let colonIndex = withoutSuffix.lastIndex(of: ":") else { return nil }
-        let portSubstring = withoutSuffix[withoutSuffix.index(after: colonIndex)...].trimmingCharacters(in: .whitespacesAndNewlines)
-        return Int(portSubstring)
     }
 
     private func runCommand(_ launchPath: String, arguments: [String], allowFailure: Bool = false) async throws -> (Int32, String) {
