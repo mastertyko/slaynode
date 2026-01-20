@@ -33,10 +33,11 @@ final class ProcessMonitorAsyncTests: XCTestCase {
     }
     
     func testNodeProcessSendable() {
+        let command = "node server.js"
         let process = NodeProcess(
             pid: 1234,
             executable: "node",
-            command: "node server.js",
+            command: command,
             arguments: ["server.js"],
             ports: [3000],
             uptime: 60.0,
@@ -51,11 +52,12 @@ final class ProcessMonitorAsyncTests: XCTestCase {
                 script: nil,
                 details: nil,
                 portHints: []
-            )
+            ),
+            commandHash: command.hashValue
         )
         
         // Verify NodeProcess is Sendable (should compile without error)
-        let boxed = Box(process)
+        let boxed = Box(value: process)
         XCTAssertEqual(boxed.value.pid, 1234)
     }
     

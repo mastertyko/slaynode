@@ -239,7 +239,8 @@ final class ProcessMonitor {
                 uptime: uptime,
                 startTime: startTime,
                 workingDirectory: workingDirectory,
-                descriptor: descriptor
+                descriptor: descriptor,
+                commandHash: command.hashValue
             )
             
             processes.append(process)
@@ -315,7 +316,8 @@ final class ProcessMonitor {
             uptime: elapsedSeconds,
             startTime: startTime,
             workingDirectory: workingDirectory,
-            descriptor: descriptor
+            descriptor: descriptor,
+            commandHash: command.hashValue
         )
     }
 
@@ -338,7 +340,8 @@ final class ProcessMonitor {
                 uptime: process.uptime,
                 startTime: process.startTime,
                 workingDirectory: process.workingDirectory,
-                descriptor: process.descriptor
+                descriptor: process.descriptor,
+                commandHash: process.commandHash
             )
         }
     }
@@ -390,6 +393,13 @@ final class ProcessMonitor {
         
         let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    func verifyProcess(pid: Int32, expectedHash: Int) async -> Bool {
+        guard let currentCommand = await fetchCommandLine(for: pid) else {
+            return false
+        }
+        return currentCommand.hashValue == expectedHash
     }
 
     private func runCommand(_ launchPath: String, arguments: [String], allowFailure: Bool = false) async throws -> (Int32, String) {

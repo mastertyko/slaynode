@@ -10,6 +10,7 @@ struct NodeProcess: Identifiable, Equatable, Sendable {
     let startTime: Date
     let workingDirectory: String?
     let descriptor: ServerDescriptor
+    let commandHash: Int
 
     var id: Int32 { pid }
 }
