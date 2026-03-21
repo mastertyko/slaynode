@@ -82,8 +82,7 @@ final class MenuViewModel: ObservableObject {
     private var latestProcesses: [NodeProcess] = []
     
     private func writeToLogFile(_ message: String) {
-        // Use simple console logging to avoid threading issues
-        print("SlayNode: \(message)")
+        Log.general.info("\(message)")
     }
 
     init(preferences: PreferencesStore, monitor: ProcessMonitor) {
@@ -99,7 +98,7 @@ final class MenuViewModel: ObservableObject {
     }
 
     func refresh() {
-        print("🔄 Refreshing process list via ProcessMonitor")
+        Log.ui.debug("Refreshing process list via ProcessMonitor")
         isLoading = true
         Task { await monitor.refresh() }
     }
@@ -112,7 +111,7 @@ final class MenuViewModel: ObservableObject {
         }
 
         guard !stoppingPids.contains(pid) else {
-            print("⚠️ Process \(pid) is already being stopped")
+            Log.process.warning("Process \(pid) is already being stopped")
             return
         }
 
@@ -122,7 +121,7 @@ final class MenuViewModel: ObservableObject {
         }
 
         stoppingPids.insert(pid)
-        print("🛑 Attempting to slay process \(pid)")
+        Log.process.info("Attempting to stop process \(pid)")
 
         // Mark as stopping in UI immediately
         if let index = processes.firstIndex(where: { $0.pid == pid }) {
@@ -162,7 +161,7 @@ final class MenuViewModel: ObservableObject {
         }
 
         lastError = errorMessage
-        print("❌ Error: \(errorMessage)")
+        Log.general.error("\(errorMessage)")
     }
 
     private func waitForCompleteShutdown(pid: Int32, portsToMonitor: [Int]) async {
@@ -180,7 +179,7 @@ final class MenuViewModel: ObservableObject {
             
             // Use ProcessGroupKiller for complete termination (parent + children)
             try await groupKiller.terminateGroup(pid: pid, gracePeriod: 1.5)
-            print("✅ Process group \(pid) termination command sent")
+            Log.process.info("Process group \(pid) termination command sent")
 
             // Wait for complete shutdown (process + ports)
             let shutdownComplete = await waitForProcessAndPortsShutdown(pid: pid, portsToMonitor: portsToMonitor)
@@ -189,18 +188,16 @@ final class MenuViewModel: ObservableObject {
             self.stoppingPids.remove(pid)
 
             if shutdownComplete {
-                // Add a small delay for visual feedback before removing
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                try? await Task.sleep(nanoseconds: 500_000_000)
                 self.processes.removeAll { $0.pid == pid }
                 self.lastUpdated = Date()
-                print("🎉 Process \(pid) and ports fully shutdown - removing from UI")
+                Log.process.info("Process \(pid) and ports fully shutdown - removing from UI")
             } else {
-                // Timeout reached, remove anyway but show warning
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                try? await Task.sleep(nanoseconds: 500_000_000)
                 self.processes.removeAll { $0.pid == pid }
                 self.lastUpdated = Date()
                 handleError(MenuViewModelError.timeoutWaitingForShutdown(pid))
-                print("⚠️ Process \(pid) removal after timeout")
+                Log.process.warning("Process \(pid) removal after timeout")
             }
 
         } catch {
@@ -266,18 +263,16 @@ final class MenuViewModel: ObservableObject {
                 }
             }
 
-            // If both process and ports are down, we're done!
             if !processIsRunning && allPortsFree {
                 let elapsed = Date().timeIntervalSince(startTime)
-                print("🎯 Process \(pid) and ports fully shutdown in \(String(format: "%.2f", elapsed))s")
+                Log.process.info("Process \(pid) and ports fully shutdown in \(String(format: "%.2f", elapsed))s")
                 return true
             }
 
-            // Poll every 500ms
             try? await Task.sleep(nanoseconds: 500_000_000)
         }
 
-        print("⏰ Timeout waiting for process \(pid) shutdown")
+        Log.process.warning("Timeout waiting for process \(pid) shutdown")
         return false
     }
 
@@ -289,7 +284,7 @@ final class MenuViewModel: ObservableObject {
 
     private func isPortFree(port: Int) async -> Bool {
         guard port > 0 && port <= 65535 else {
-            print("⚠️ Invalid port number: \(port)")
+            Log.network.warning("Invalid port number: \(port)")
             return true
         }
 
@@ -312,12 +307,12 @@ final class MenuViewModel: ObservableObject {
                     let isFree = output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
                     if !isFree {
-                        print("🔌 Port \(port) is in use")
+                        Log.network.debug("Port \(port) is in use")
                     }
 
                     continuation.resume(returning: isFree)
                 } catch {
-                    print("⚠️ Failed to check port \(port): \(error)")
+                    Log.network.warning("Failed to check port \(port): \(error.localizedDescription)")
                     continuation.resume(returning: true)
                 }
             }

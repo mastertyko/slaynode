@@ -47,9 +47,9 @@ cat > "${APP_DIR}/Contents/Info.plist" <<'EOF'
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.2.0</string>
+    <string>1.3.0</string>
     <key>CFBundleVersion</key>
-    <string>12</string>
+    <string>13</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -62,6 +62,10 @@ cat > "${APP_DIR}/Contents/Info.plist" <<'EOF'
     <string>Slaynode needs to monitor running development servers for process management.</string>
     <key>NSSystemAdministrationUsageDescription</key>
     <string>Slaynode needs to inspect system processes to detect development servers.</string>
+    <key>SUFeedURL</key>
+    <string>https://raw.githubusercontent.com/mastertyko/slaynode/main/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string></string>
 </dict>
 </plist>
 EOF

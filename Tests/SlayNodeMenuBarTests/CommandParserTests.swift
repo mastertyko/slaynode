@@ -7,11 +7,13 @@ final class CommandParserTests: XCTestCase {
         let command = "node ./server.js --name=\"My App\" --flag 'other value'"
         let tokens = CommandParser.tokenize(command)
 
-        XCTAssertEqual(tokens.count, 6)
+        // Expected tokens: ["node", "./server.js", "--name=My App", "--flag", "other value"]
+        XCTAssertEqual(tokens.count, 5)
         XCTAssertEqual(tokens[0], "node")
         XCTAssertEqual(tokens[1], "./server.js")
         XCTAssertEqual(tokens[2], "--name=My App")
-        XCTAssertEqual(tokens[5], "other value")
+        XCTAssertEqual(tokens[3], "--flag")
+        XCTAssertEqual(tokens[4], "other value")
     }
 
     func testDescriptorDetectsNextJS() {

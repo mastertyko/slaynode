@@ -9,14 +9,13 @@ enum ProcessMonitorError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case let .commandFailed(command, status):
-            return "Kommando \(command) misslyckades med status \(status)."
+            return "Command \(command) failed with status \(status)."
         case .malformedOutput:
-            return "Kunde inte tolka processlistan."
+            return "Could not parse process list."
         }
     }
 }
 
-// Modern async/await ProcessMonitor with improved concurrency
 @MainActor
 final class ProcessMonitor {
     private var interval: TimeInterval
@@ -25,6 +24,7 @@ final class ProcessMonitor {
     private var collectionTask: Task<Void, Never>?
     private var timerTask: Task<Void, Never>?
     private let portResolver = PortResolver()
+    private let shell: ShellExecuting
 
     private let processesSubject = CurrentValueSubject<[NodeProcess], Never>([])
     private let errorsSubject = PassthroughSubject<Error, Never>()
@@ -37,12 +37,13 @@ final class ProcessMonitor {
         errorsSubject.eraseToAnyPublisher()
     }
 
-    init(interval: TimeInterval = 5) {
+    init(interval: TimeInterval = 5, shell: ShellExecuting = SystemShellExecutor()) {
         self.interval = interval
+        self.shell = shell
     }
 
     func start() {
-        print("🔍 ProcessMonitor starting...")
+        Log.process.info("ProcessMonitor starting...")
         startTimer()
     }
 
@@ -263,6 +264,7 @@ final class ProcessMonitor {
 
             return try await enrichProcesses(processes)
         } catch {
+            Log.process.error("Failed to collect processes using PS: \(error.localizedDescription)")
             return []
         }
     }
@@ -470,65 +472,22 @@ final class ProcessMonitor {
     }
 
     private func runCommand(_ launchPath: String, arguments: [String], allowFailure: Bool = false) async throws -> (Int32, String) {
-        // Check for cancellation before starting process
         guard !Task.isCancelled else {
             throw ProcessMonitorError.commandFailed("Task cancelled", -1)
         }
 
-        return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                let process = Process()
-                process.executableURL = URL(fileURLWithPath: launchPath)
-                process.arguments = arguments
-
-                let outputPipe = Pipe()
-                let errorPipe = Pipe()
-                process.standardOutput = outputPipe
-                process.standardError = errorPipe
-
-                // Timeout using DispatchWorkItem (5 seconds) - works even when thread is blocked
-                let timeoutWork = DispatchWorkItem { [weak process] in
-                    process?.terminate()
-                }
-                DispatchQueue.global().asyncAfter(deadline: .now() + 5.0, execute: timeoutWork)
-
-                do {
-                    try process.run()
-                    
-                    // CRITICAL: Drain BOTH pipes BEFORE waitUntilExit to avoid deadlock
-                    // If subprocess writes >64KB to either pipe, it blocks waiting for read
-                    let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                    
-                    process.waitUntilExit()
-                    timeoutWork.cancel()
-
-                    let status = process.terminationStatus
-                    
-                    // Limit output size to prevent memory issues
-                    let maxOutputSize = 1024 * 1024 // 1MB
-                    let trimmedOutputData = outputData.count > maxOutputSize ? outputData.subdata(in: 0..<maxOutputSize) : outputData
-                    let outputString = String(data: trimmedOutputData, encoding: .utf8) ?? ""
-
-                    #if DEBUG
-                    if status != 0 && allowFailure && !errorData.isEmpty {
-                        let errorString = String(data: errorData, encoding: .utf8) ?? ""
-                        print("[ProcessMonitor] \(launchPath) returned status \(status): \(errorString)")
-                    }
-                    #endif
-
-                    if status != 0 && !allowFailure {
-                        continuation.resume(throwing: ProcessMonitorError.commandFailed("\(launchPath) \(arguments.joined(separator: " "))", status))
-                        return
-                    }
-
-                    continuation.resume(returning: (status, outputString))
-                } catch {
-                    timeoutWork.cancel()
-                    process.terminate()
-                    continuation.resume(throwing: ProcessMonitorError.commandFailed("Failed to run command: \(error)", -1))
-                }
+        do {
+            let (status, output) = try await shell.run(launchPath, arguments: arguments, timeout: Constants.Timeout.commandTimeout)
+            
+            if status != 0 && !allowFailure {
+                throw ProcessMonitorError.commandFailed("\(launchPath) \(arguments.joined(separator: " "))", status)
             }
+            
+            return (status, output)
+        } catch let error as ProcessMonitorError {
+            throw error
+        } catch {
+            throw ProcessMonitorError.commandFailed("Failed to run command: \(error)", -1)
         }
     }
     

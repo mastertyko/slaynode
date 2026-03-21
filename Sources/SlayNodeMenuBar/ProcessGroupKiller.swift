@@ -10,13 +10,13 @@ enum ProcessGroupTerminationError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidPid:
-            return "Ogiltigt process-id."
+            return "Invalid process ID."
         case .permissionDenied:
-            return "Saknar behörighet att stoppa processen."
+            return "Permission denied to stop process."
         case let .terminationFailed(status):
-            return "Kunde inte stoppa processen (errno: \(status))."
+            return "Could not stop process (errno: \(status))."
         case .processGroupNotFound:
-            return "Kunde inte hitta processgruppen."
+            return "Could not find process group."
         }
     }
 }
@@ -143,6 +143,7 @@ struct ProcessGroupKiller {
                         .compactMap { Int32($0.trimmingCharacters(in: .whitespaces)) }
                     continuation.resume(returning: pids)
                 } catch {
+                    Log.process.warning("Failed to find child processes for PID \(parentPid): \(error.localizedDescription)")
                     continuation.resume(returning: [])
                 }
             }

@@ -18,6 +18,7 @@ struct PortResolver {
             let output = try await runLsofWithTimeout(pidList: pidList)
             return parseLsofOutput(output)
         } catch {
+            Log.network.warning("Port resolution failed: \(error.localizedDescription)")
             return [:]
         }
     }

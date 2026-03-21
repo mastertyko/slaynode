@@ -7,7 +7,7 @@ struct SlayNodeMenuBarApp: App {
     
     var body: some Scene {
         Settings {
-            SettingsView(preferences: appDelegate.preferences)
+            SettingsView(preferences: appDelegate.preferences, updateController: appDelegate.updateController)
                 .padding(24)
         }
     }
@@ -17,9 +17,12 @@ struct SlayNodeMenuBarApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let preferences = PreferencesStore()
     let processMonitor = ProcessMonitor()
+    let updateController = UpdateController()
     private var statusController: StatusItemController?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        CrashReporter.start()
+        
         if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
            let appIcon = NSImage(contentsOf: iconURL) {
             NSApp.applicationIconImage = appIcon
@@ -27,5 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         processMonitor.start()
         statusController = StatusItemController(preferences: preferences, monitor: processMonitor)
         NSApp.activate(ignoringOtherApps: true)
+        
+        updateController.checkForUpdatesInBackground()
     }
 }

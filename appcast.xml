@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <channel>
+        <title>Slaynode Updates</title>
+        <link>https://github.com/mastertyko/slaynode</link>
+        <description>Most recent updates to Slaynode</description>
+        <language>en</language>
+        
+        <!-- Latest Release -->
+        <item>
+            <title>Version 1.3.0</title>
+            <pubDate>Mon, 20 Jan 2026 12:00:00 +0000</pubDate>
+            <sparkle:version>13</sparkle:version>
+            <sparkle:shortVersionString>1.3.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+                <h2>What's New in 1.3.0</h2>
+                <ul>
+                    <li>Added automatic update support via Sparkle</li>
+                    <li>Added crash reporting for better stability</li>
+                    <li>Improved accessibility with VoiceOver support</li>
+                    <li>Better performance with TimelineView</li>
+                    <li>Enhanced logging with OSLog</li>
+                </ul>
+            ]]></description>
+            <enclosure 
+                url="https://github.com/mastertyko/slaynode/releases/download/v1.3.0/Slaynode-v1.3.0.zip"
+                sparkle:edSignature="SIGNATURE_HERE"
+                length="0"
+                type="application/octet-stream" />
+        </item>
+        
+        <!-- Previous Release -->
+        <item>
+            <title>Version 1.2.0</title>
+            <pubDate>Sat, 12 Oct 2024 12:00:00 +0000</pubDate>
+            <sparkle:version>12</sparkle:version>
+            <sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+                <h2>What's New in 1.2.0</h2>
+                <ul>
+                    <li>Initial release</li>
+                    <li>Node.js process detection</li>
+                    <li>One-click process termination</li>
+                    <li>Port detection</li>
+                </ul>
+            ]]></description>
+            <enclosure 
+                url="https://github.com/mastertyko/slaynode/releases/download/v1.2.0/Slaynode-v1.2.0.zip"
+                sparkle:edSignature=""
+                length="0"
+                type="application/octet-stream" />
+        </item>
+    </channel>
+</rss>

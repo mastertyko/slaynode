@@ -9,6 +9,7 @@
 [![Swift](https://img.shields.io/badge/Swift-5.9+-FA7343?style=for-the-badge&logo=swift)](https://swift.org)
 [![macOS](https://img.shields.io/badge/macOS-13%2B-000000?style=for-the-badge&logo=apple)](https://apple.com/macos)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/mastertyko/slaynode/ci.yml?style=for-the-badge&label=CI)](https://github.com/mastertyko/slaynode/actions)
 
 </div>
 
@@ -23,6 +24,8 @@
 - 🔒 **Private & Secure** - Everything happens locally, no network requests
 - 🛡️ **Robust Error Handling** - Comprehensive error reporting and graceful recovery
 - 🚀 **Modern Architecture** - Built with Swift concurrency and memory-safe patterns
+- 🔄 **Auto Updates** - Built-in Sparkle integration keeps the app current
+- 📡 **Crash Reporting** - Optional Sentry integration for stability insights
 
 ## 📸 How It Looks
 
@@ -129,6 +132,51 @@ codesign --force --sign - Slaynode.app
 
 - 🐛 **Report Issues**: [GitHub Issues](https://github.com/mastertyko/slaynode/issues)
 - 📖 **Documentation**: Check the `docs/` folder for detailed guides
+- 🌐 **Website**: [SlayNode Landing Page](https://mastertyko.github.io/slaynode/)
+
+## 🔧 Development
+
+### Building from Source
+
+```bash
+# Clone and build
+git clone https://github.com/mastertyko/slaynode.git
+cd slaynode
+./build.sh
+
+# Run tests
+swift test
+
+# Create release DMG
+./release.sh 1.3.0
+```
+
+### CI/CD Configuration
+
+The project uses GitHub Actions for CI/CD. To enable full release automation with notarization, configure these repository secrets:
+
+| Secret | Description |
+|--------|-------------|
+| `CERTIFICATE_BASE64` | Base64-encoded Developer ID Application certificate (.p12) |
+| `CERTIFICATE_PASSWORD` | Password for the .p12 certificate |
+| `SIGNING_IDENTITY` | Full signing identity, e.g., `Developer ID Application: Name (TEAM_ID)` |
+| `APPLE_ID` | Your Apple ID email for notarization |
+| `APPLE_APP_PASSWORD` | App-specific password from appleid.apple.com |
+| `APPLE_TEAM_ID` | Your 10-character Apple Team ID |
+| `SENTRY_DSN` | (Optional) Sentry DSN for crash reporting |
+
+### Sparkle Auto-Update Setup
+
+1. Generate EdDSA keys:
+   ```bash
+   .build/artifacts/sparkle/Sparkle/bin/generate_keys
+   ```
+
+2. Add the public key to `build.sh` (SUPublicEDKey in Info.plist)
+
+3. Store the private key securely for signing releases
+
+4. Update `appcast.xml` with each release
 
 ## 📄 License
 

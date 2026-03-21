@@ -36,6 +36,7 @@ final class ProcessMonitorAsyncTests: XCTestCase {
         let command = "node server.js"
         let process = NodeProcess(
             pid: 1234,
+            ppid: 1,
             executable: "node",
             command: command,
             arguments: ["server.js"],

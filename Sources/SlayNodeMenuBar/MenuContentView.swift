@@ -4,8 +4,6 @@ import SwiftUI
 struct MenuContentView: View {
     @StateObject private var viewModel: MenuViewModel
     @ObservedObject var preferences: PreferencesStore
-    @State private var currentTime = Date()
-    @State private var timer: Timer?
 
     private let panelCornerRadius: CGFloat = 24
     private let headerCornerRadius: CGFloat = 18
@@ -16,8 +14,15 @@ struct MenuContentView: View {
     }
     
     var body: some View {
+        TimelineView(.periodic(from: .now, by: 1.0)) { context in
+            mainContent(currentTime: context.date)
+        }
+    }
+    
+    @ViewBuilder
+    private func mainContent(currentTime: Date) -> some View {
         VStack(alignment: .leading, spacing: 20) {
-            header
+            header(currentTime: currentTime)
 
             if let error = viewModel.lastError {
                 ErrorBanner(text: error)
@@ -37,19 +42,6 @@ struct MenuContentView: View {
         .frame(width: 380, alignment: .leading)
         .glassPanel(cornerRadius: panelCornerRadius)
         .animation(.easeInOut(duration: 0.25), value: viewModel.isLoading)
-        .onAppear {
-            // Start a timer to update currentTime every second
-            timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-                Task { @MainActor in
-                    currentTime = Date()
-                }
-            }
-        }
-        .onDisappear {
-            // Clean up timer to prevent memory leaks
-            timer?.invalidate()
-            timer = nil
-        }
     }
 
     private func showAboutDialog() {
@@ -88,7 +80,7 @@ struct MenuContentView: View {
         }
     }
 
-    private var header: some View {
+    private func header(currentTime: Date) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -96,12 +88,13 @@ struct MenuContentView: View {
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(Color.white.opacity(0.92))
                     HStack(spacing: 4) {
-                        Image(systemName: statusIcon)
+                        Image(systemName: statusIcon(currentTime: currentTime))
                             .font(.caption2)
-                            .foregroundStyle(Color.white.opacity(0.75))
-                        Text(statusText)
+                            .foregroundStyle(Color.white.opacity(0.85))
+                            .accessibilityHidden(true)
+                        Text(statusText(currentTime: currentTime))
                             .font(.caption.monospacedDigit())
-                            .foregroundStyle(Color.white.opacity(0.75))
+                            .foregroundStyle(Color.white.opacity(0.85))
                     }
                 }
 
@@ -117,12 +110,14 @@ struct MenuContentView: View {
                     }
                     .buttonStyle(.plain)
                     .help("About SlayNode")
+                    .accessibilityLabel("About SlayNode")
 
                     if viewModel.isLoading {
                         ProgressView()
                             .progressViewStyle(.circular)
                             .controlSize(.small)
                             .tint(.white.opacity(0.9))
+                            .accessibilityLabel("Refreshing processes")
                     }
                 }
             }
@@ -152,6 +147,7 @@ struct MenuContentView: View {
             if viewModel.isLoading && viewModel.processes.isEmpty {
                 VStack(alignment: .center, spacing: 12) {
                     ProgressView()
+                        .accessibilityLabel("Scanning for servers")
                     Text("Searching for development servers…")
                         .font(.callout)
                         .foregroundStyle(.secondary)
@@ -202,42 +198,39 @@ struct MenuContentView: View {
             }
             .buttonStyle(.bordered)
             .controlSize(.large)
+            .accessibilityLabel("Quit SlayNode")
         }
     }
     
-    private var statusText: String {
+    private func statusText(currentTime: Date) -> String {
         guard let updated = viewModel.lastUpdated else {
             return "Waiting for first refresh"
         }
 
         let timeInterval = currentTime.timeIntervalSince(updated)
 
-        // Show countdown for the first 5 seconds after update
         if timeInterval < 5 {
             let secondsUntilNext = 5 - Int(timeInterval)
             return "Next update in \(secondsUntilNext)s"
         }
 
-        // Use abbreviated style for updates older than 5 seconds
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         let relative = formatter.localizedString(for: updated, relativeTo: currentTime)
         return "Updated \(relative)"
     }
 
-    private var statusIcon: String {
+    private func statusIcon(currentTime: Date) -> String {
         guard let updated = viewModel.lastUpdated else {
             return "clock"
         }
 
         let timeInterval = currentTime.timeIntervalSince(updated)
 
-        // Show timer icon for countdown
         if timeInterval < 5 {
             return "timer"
         }
 
-        // Show checkmark for recent updates, clock for older ones
         if timeInterval < 30 {
             return "checkmark.circle.fill"
         }
@@ -300,6 +293,7 @@ private struct ProcessRowView: View {
                         ProgressView()
                             .controlSize(.small)
                             .tint(.secondary)
+                            .accessibilityLabel("Stopping \(process.title)")
                         Text("Slaying...")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -317,6 +311,7 @@ private struct ProcessRowView: View {
                     }
                     .controlSize(.small)
                     .buttonStyle(.borderedProminent)
+                    .accessibilityLabel("Stop process \(process.title)")
                 }
             }
 
@@ -424,6 +419,7 @@ private struct CapsuleLabel: View {
             if let icon = icon {
                 Image(systemName: icon)
                     .font(.caption2)
+                    .accessibilityHidden(true)
             }
             Text(text)
                 .font(.caption2.weight(.semibold))
@@ -526,6 +522,7 @@ private struct InfoChipView: View {
                         if let systemImage = chip.systemImage {
                             Image(systemName: systemImage)
                                 .font(.caption2)
+                                .accessibilityHidden(true)
                         }
                         Text(chip.text)
                             .font(.caption2)
@@ -538,11 +535,13 @@ private struct InfoChipView: View {
                     .foregroundStyle(Color.blue)
                 }
                 .buttonStyle(.plain)
+                .accessibilityHint("Opens in browser")
             } else {
                 HStack(spacing: 4) {
                     if let systemImage = chip.systemImage {
                         Image(systemName: systemImage)
                             .font(.caption2)
+                            .accessibilityHidden(true)
                     }
                     Text(chip.text)
                         .font(.caption2)
@@ -576,6 +575,7 @@ private struct EmptyStateView: View {
             Image(systemName: "server.rack")
                 .font(.system(size: 42, weight: .regular, design: .rounded))
                 .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
 
             Text("No Development Servers Found")
                 .font(.headline)
@@ -607,6 +607,7 @@ private struct ErrorBanner: View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(.yellow)
+                .accessibilityLabel("Warning")
             Text(text)
                 .font(.caption)
                 .foregroundStyle(.primary)
