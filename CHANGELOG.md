@@ -5,7 +5,7 @@ All notable changes to SlayNode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.0] - 2026-01-20
+## [1.0] - 2026-04-11
 
 ### ✨ Added
 
@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved runtime naming, workspace inference, and process-role presentation in the UI
 - Normalized branding to `SlayNode` across bundle metadata, build scripts, release tooling, and docs
 - Rebuilt the icon pipeline around `generate-icons.swift` as the source of truth
+- Aligned the public release line on `v1.0` and automated GitHub releases from `main`
 
 ### 🛠️ Fixed
 

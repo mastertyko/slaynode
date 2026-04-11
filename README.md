@@ -75,8 +75,10 @@ You open the app, inspect what is running, confirm what each process is, and sto
 
 4. **Create a release build (optional)**
    ```bash
-   ./release.sh 1.3.0
+   ./release.sh 1.0
    ```
+
+   Pushing to `main` automatically publishes the version defined in `XcodeSupport/Info.plist` as GitHub release `v<version>`.
 
 ## Using The App
 

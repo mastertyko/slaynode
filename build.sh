@@ -10,6 +10,11 @@ APP_DIR="${ROOT_DIR}/${APP_NAME}.app"
 EXECUTABLE_NAME="SlayNodeMenuBar"
 CONFIGURATION="${1:-debug}"
 ARCH_DIR="arm64-apple-macosx"
+INFO_PLIST_TEMPLATE="${ROOT_DIR}/XcodeSupport/Info.plist"
+PLIST_BUDDY="/usr/libexec/PlistBuddy"
+
+APP_VERSION="$("${PLIST_BUDDY}" -c 'Print :CFBundleShortVersionString' "${INFO_PLIST_TEMPLATE}")"
+APP_BUILD="$("${PLIST_BUDDY}" -c 'Print :CFBundleVersion' "${INFO_PLIST_TEMPLATE}")"
 
 echo "🔨 Building SlayNodeMenuBar (${CONFIGURATION})..."
 echo "🎨 Regenerating brand assets..."
@@ -31,7 +36,7 @@ mkdir -p "${APP_DIR}/Contents/MacOS"
 mkdir -p "${APP_DIR}/Contents/Resources"
 
 # Create Info.plist
-cat > "${APP_DIR}/Contents/Info.plist" <<'EOF'
+cat > "${APP_DIR}/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -51,9 +56,9 @@ cat > "${APP_DIR}/Contents/Info.plist" <<'EOF'
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.3.0</string>
+    <string>${APP_VERSION}</string>
     <key>CFBundleVersion</key>
-    <string>13</string>
+    <string>${APP_BUILD}</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSPrincipalClass</key>

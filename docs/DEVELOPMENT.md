@@ -57,13 +57,15 @@ swift test
 
 #### Create DMG for Distribution
 ```bash
-./release.sh 1.3.0
+./release.sh 1.0
 ```
 
 #### Notarization Flow
 ```bash
-./notarize.sh 1.3.0
+./notarize.sh 1.0
 ```
+
+Pushes to `main` automatically create or update the GitHub release that matches the version in `XcodeSupport/Info.plist`.
 
 #### Running Tests
 ```bash

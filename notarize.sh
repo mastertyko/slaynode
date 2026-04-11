@@ -18,7 +18,10 @@ set -euo pipefail
 #   APPLE_TEAM_ID     - Your Apple Developer Team ID
 #   SIGNING_IDENTITY  - "Developer ID Application: Your Name (TEAM_ID)"
 
-VERSION="${1:-1.3.0}"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INFO_PLIST="${ROOT_DIR}/XcodeSupport/Info.plist"
+VERSION_DEFAULT="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${INFO_PLIST}")"
+VERSION="${1:-${VERSION_DEFAULT}}"
 APP_NAME="SlayNode"
 APP_PATH="${APP_NAME}.app"
 DMG_PATH="${APP_NAME}-v${VERSION}.dmg"
