@@ -18,8 +18,8 @@ set -euo pipefail
 #   APPLE_TEAM_ID     - Your Apple Developer Team ID
 #   SIGNING_IDENTITY  - "Developer ID Application: Your Name (TEAM_ID)"
 
-VERSION="${1:-1.2.0}"
-APP_NAME="Slaynode"
+VERSION="${1:-1.3.0}"
+APP_NAME="SlayNode"
 APP_PATH="${APP_NAME}.app"
 DMG_PATH="${APP_NAME}-v${VERSION}.dmg"
 ZIP_PATH="${APP_NAME}-notarize.zip"
@@ -68,7 +68,7 @@ code_sign() {
     echo "🔐 Code signing with hardened runtime..."
     
     codesign --force --deep --sign "$SIGNING_IDENTITY" \
-        --entitlements Slaynode.entitlements \
+        --entitlements SlayNode.entitlements \
         --options runtime \
         --timestamp \
         "$APP_PATH"

@@ -61,14 +61,14 @@ jobs:
         run: |
           if [ -n "$SIGNING_IDENTITY" ]; then
             codesign --force --deep --sign "$SIGNING_IDENTITY" \
-              --entitlements Slaynode.entitlements \
+              --entitlements SlayNode.entitlements \
               --options runtime \
-              Slaynode.app
+              SlayNode.app
           else
             echo "No signing identity configured, using ad-hoc signing"
             codesign --force --deep --sign - \
-              --entitlements Slaynode.entitlements \
-              Slaynode.app
+              --entitlements SlayNode.entitlements \
+              SlayNode.app
           fi
 
       - name: Notarize App
@@ -78,27 +78,27 @@ jobs:
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          ditto -c -k --keepParent Slaynode.app Slaynode-notarize.zip
+          ditto -c -k --keepParent SlayNode.app SlayNode-notarize.zip
           
-          xcrun notarytool submit Slaynode-notarize.zip \
+          xcrun notarytool submit SlayNode-notarize.zip \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_APP_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
             --wait
           
-          xcrun stapler staple Slaynode.app
-          rm Slaynode-notarize.zip
+          xcrun stapler staple SlayNode.app
+          rm SlayNode-notarize.zip
 
       - name: Create DMG
         run: |
-          DMG_NAME="Slaynode-v${{ steps.version.outputs.VERSION }}.dmg"
+          DMG_NAME="SlayNode-v${{ steps.version.outputs.VERSION }}.dmg"
           DMG_TEMP="dmg-contents"
           
           mkdir -p "$DMG_TEMP"
-          cp -R Slaynode.app "$DMG_TEMP/"
+          cp -R SlayNode.app "$DMG_TEMP/"
           ln -s /Applications "$DMG_TEMP/Applications"
           
-          hdiutil create -volname "Slaynode" \
+          hdiutil create -volname "SlayNode" \
             -srcfolder "$DMG_TEMP" \
             -ov -format UDZO \
             "$DMG_NAME"
@@ -108,8 +108,8 @@ jobs:
 
       - name: Create ZIP
         run: |
-          ZIP_NAME="Slaynode-v${{ steps.version.outputs.VERSION }}.zip"
-          ditto -c -k --keepParent Slaynode.app "$ZIP_NAME"
+          ZIP_NAME="SlayNode-v${{ steps.version.outputs.VERSION }}.zip"
+          ditto -c -k --keepParent SlayNode.app "$ZIP_NAME"
           echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
 
       - name: Generate Release Notes
@@ -124,7 +124,7 @@ jobs:
           
           ### Installation
           1. Download the DMG or ZIP file
-          2. Move Slaynode.app to your Applications folder
+          2. Move SlayNode.app to your Applications folder
           3. Launch from Applications or Spotlight
           
           ### Requirements

@@ -6,9 +6,9 @@ final class StatusItemController: NSObject {
     private let statusItem: NSStatusItem
     private let popover = NSPopover()
     private let preferences: PreferencesStore
-    private let monitor: ProcessMonitor
+    private let monitor: any ProcessMonitoring
     
-    init(preferences: PreferencesStore, monitor: ProcessMonitor) {
+    init(preferences: PreferencesStore, monitor: any ProcessMonitoring) {
         self.preferences = preferences
         self.monitor = monitor
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -34,40 +34,21 @@ final class StatusItemController: NSObject {
         button.target = self
         button.action = #selector(togglePopover(_:))
         button.imagePosition = .imageOnly
-        button.toolTip = "Slaynode"
+        button.toolTip = "SlayNode"
+        button.setAccessibilityLabel("SlayNode")
         button.appearsDisabled = false
         button.isBordered = false
         button.focusRingType = .none
-        // Try sword-like or kill-related SF symbols
-        if let symbol = NSImage(systemSymbolName: "staroflife.fill", accessibilityDescription: "Slaynode") {
-            symbol.size = NSSize(width: 20, height: 20)
-            symbol.isTemplate = true
-            button.image = symbol
-        } else if let symbol = NSImage(systemSymbolName: "cross.fill", accessibilityDescription: "Slaynode") {
-            symbol.size = NSSize(width: 20, height: 20)
-            symbol.isTemplate = true
-            button.image = symbol
-        } else if let symbol = NSImage(systemSymbolName: "xmark.shield.fill", accessibilityDescription: "Slaynode") {
-            symbol.size = NSSize(width: 20, height: 20)
-            symbol.isTemplate = true
-            button.image = symbol
-        } else if let symbol = NSImage(systemSymbolName: "poweroff", accessibilityDescription: "Slaynode") {
-            symbol.size = NSSize(width: 20, height: 20)
-            symbol.isTemplate = true
-            button.image = symbol
-        } else if let symbol = NSImage(systemSymbolName: "stop.circle.fill", accessibilityDescription: "Slaynode") {
-            symbol.size = NSSize(width: 20, height: 20)
-            symbol.isTemplate = true
-            button.image = symbol
+        if let menuBarIcon = menuBarTemplateImage() {
+            menuBarIcon.size = NSSize(width: 18, height: 18)
+            menuBarIcon.isTemplate = true
+            button.image = menuBarIcon
+        } else if let fallbackSymbol = NSImage(systemSymbolName: "circle.hexagongrid.fill", accessibilityDescription: "SlayNode") {
+            fallbackSymbol.size = NSSize(width: 18, height: 18)
+            fallbackSymbol.isTemplate = true
+            button.image = fallbackSymbol
         } else {
-            // Fallback: Use the working X symbol
-            if let symbol = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: "Slaynode") {
-                symbol.size = NSSize(width: 20, height: 20)
-                symbol.isTemplate = true
-                button.image = symbol
-            } else {
-                button.title = "S"
-            }
+            button.title = "S"
         }
     }
     
@@ -84,5 +65,22 @@ final class StatusItemController: NSObject {
             let contentView = MenuContentView(preferences: preferences, monitor: monitor)
             popover.contentViewController = NSHostingController(rootView: contentView)
         }
+    }
+
+    private func menuBarTemplateImage() -> NSImage? {
+        if let directURL = Bundle.module.url(forResource: "MenuBarIcon", withExtension: "png"),
+           let image = NSImage(contentsOf: directURL) {
+            return image
+        }
+
+        if let imagesetURL = Bundle.module.url(
+            forResource: "MenuBarIcon",
+            withExtension: "png",
+            subdirectory: "Assets.xcassets/MenuBarIcon.imageset"
+        ), let image = NSImage(contentsOf: imagesetURL) {
+            return image
+        }
+
+        return nil
     }
 }

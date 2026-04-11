@@ -1,6 +1,6 @@
 # SlayNode Documentation
 
-This folder contains detailed documentation for developers and advanced users.
+This folder contains implementation-focused documentation for contributors and advanced users.
 
 ## 📚 Available Documentation
 
@@ -9,28 +9,28 @@ For developers who want to:
 - Understand the technical implementation
 - Contribute to the codebase
 - Build and test the application
-- Learn about the architecture
+- Learn about the current window-first architecture
 
 ### [ICON_SYSTEM.md](ICON_SYSTEM.md)
 For designers and developers who want to:
-- Understand how icons are managed
-- Modify or regenerate app icons
-- Learn about the SF Symbol implementation
-- Update visual assets
+- Understand how brand assets are generated
+- Modify or regenerate app and menu bar icons
+- Learn how `generate-icons.swift` drives the pipeline
+- Update visual assets without drifting from the current identity
 
 ## 🛠️ For End Users
 
 If you're just looking to use SlayNode, check the main [README.md](../README.md) file in the project root. It contains:
-- Simple installation instructions
+- Product overview and quick start
 - Basic usage guide
-- Troubleshooting common issues
+- Release-focused troubleshooting
 
 ## 🤝 Contributing to Documentation
 
 When updating documentation:
 - Keep end-user content in the main README.md
-- Put technical details in this docs/ folder
-- Update both files when making significant changes
+- Keep source-build and architecture details in this docs/ folder
+- Update related files together when product shape changes
 - Test all links and code examples
 
 ## 📖 Additional Resources

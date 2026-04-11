@@ -4,10 +4,10 @@ set -euo pipefail
 # Release script for SlayNode
 # Builds and creates GitHub releases
 
-VERSION="${1:-1.2.0}"
+VERSION="${1:-1.3.0}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_NAME="Slaynode"
-ZIP_NAME="${APP_NAME}-v${VERSION}.app.zip"
+APP_NAME="SlayNode"
+ZIP_NAME="${APP_NAME}-v${VERSION}.zip"
 
 echo "🚀 Creating SlayNode release v${VERSION}..."
 

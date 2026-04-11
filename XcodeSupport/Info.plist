@@ -12,6 +12,8 @@
     <string>6.0</string>
     <key>CFBundleName</key>
     <string>$(PRODUCT_NAME)</string>
+    <key>CFBundleDisplayName</key>
+    <string>SlayNode</string>
     <key>CFBundlePackageType</key>
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
@@ -20,8 +22,6 @@
     <string>1</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
-    <key>LSUIElement</key>
-    <true/>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
 </dict>

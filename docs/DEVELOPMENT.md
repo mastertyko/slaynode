@@ -2,51 +2,67 @@
 
 This documentation is for developers who want to contribute to or understand the technical implementation of SlayNode.
 
-## 🛠️ Development
+## Current Product Shape
 
-### Project Structure
+SlayNode is currently a window-first macOS app built with SwiftUI and SwiftPM.
+The primary user experience is the main dashboard window, while the menu bar controller
+and popover infrastructure remain in the codebase as supporting or future-facing paths.
+
+## Project Structure
 
 ```
-Slaynode/
+SlayNode/
 ├── Sources/
 │   └── SlayNodeMenuBar/
-│       ├── Resources/
-│       │   ├── AppIcon.iconset/                    # App icon sources
-│       │   ├── Assets.xcassets/                    # Template menu bar glyph + misc assets
-│       │   └── icon-iOS-Default-1024x1024@1x.png
-│       ├── SlayNodeMenuBarApp.swift               # Main app entry point + AppKit bridge
-│       ├── StatusItemController.swift             # Menu bar integration (380×700px popover)
-│       ├── ProcessMonitor.swift                   # Process monitoring logic
-│       ├── MenuViewModel.swift                    # Dynamic process detection & UI state
-│       ├── MenuContentView.swift                  # Enhanced UI with 600px scroll height
-│       ├── ProcessKiller.swift                    # Process termination management
-│       ├── ProcessClassifier.swift                # Process categorization logic
-│       ├── CommandParsing.swift                   # Command parsing and port extraction
-│       └── NodeProcess.swift                      # Node.js process data models
-├── generate-icons.swift                          # Utility to regenerate app/menu bar icons
-├── Tests/                                        # Unit tests
-├── build.sh                                     # Build script with LSUIElement=true
-├── Package.swift                                # Swift Package Manager
-└── README.md                                    # This file
+│       ├── SlayNodeMenuBarApp.swift              # App entry point, commands, app activation
+│       ├── MainWindowView.swift                  # Main app window shell
+│       ├── MenuContentView.swift                 # Shared app content host
+│       ├── WindowDashboardView.swift             # Window-first runtime dashboard
+│       ├── SettingsView.swift                    # Integrated settings surface
+│       ├── AboutWindowView.swift                 # Integrated about surface
+│       ├── ProcessMonitoring.swift               # Monitor protocol abstraction
+│       ├── ProcessMonitor.swift                  # Process collection and normalization
+│       ├── MenuViewModel.swift                   # Runtime UI state and actions
+│       ├── ProcessClassifier.swift               # Detection heuristics and role labeling
+│       ├── ProcessKiller.swift                   # Stop/kill behavior
+│       ├── StatusItemController.swift            # Menu bar integration path
+│       └── Resources/                            # App icon, menu bar glyph, bundled resources
+├── Tests/SlayNodeMenuBarTests/                   # Unit and integration tests
+├── script/build_and_run.sh                       # Official local build/run entry point
+├── generate-icons.swift                          # Source-of-truth renderer for brand assets
+├── build.sh                                      # Bundle assembly, icon generation, signing
+├── release.sh / notarize.sh                      # Packaging and distribution helpers
+└── .codex/environments/environment.toml          # Codex Run action wiring
 ```
 
 ### Building from Source
 
 The project uses **Swift Package Manager** for dependency management.
 
-#### Development Build
+#### Recommended Local Loop
 ```bash
-swift build
+./script/build_and_run.sh
+swift test
 ```
 
-#### Release Build with .app Bundle
+#### Build Debug Bundle
+```bash
+./build.sh debug
+```
+
+#### Build Release Bundle
 ```bash
 ./build.sh release
 ```
 
 #### Create DMG for Distribution
 ```bash
-./release.sh 1.2.0
+./release.sh 1.3.0
+```
+
+#### Notarization Flow
+```bash
+./notarize.sh 1.3.0
 ```
 
 #### Running Tests
@@ -54,64 +70,48 @@ swift build
 swift test
 ```
 
-## 🔧 Technical Implementation
+## Architecture Overview
 
-### Dynamic Process Detection
+### App Shell
 
-The app uses a robust process detection system that identifies Node.js development servers in real-time using modern Swift concurrency:
+- `SlayNodeMenuBarApp.swift`
+  Owns commands, app activation policy, and startup wiring.
+- `MainWindowView.swift`
+  Hosts the main dashboard window and in-app auxiliary routing.
+- `MenuContentView.swift`
+  Bridges shared runtime content between the main window and any legacy popover path.
 
-```swift
-// Core detection algorithm in MenuViewModel.swift
-func refresh() {
-    Task { @MainActor [weak self] in
-        let processes = await self.performProcessDetection()
-        // Update UI on main thread
-        self.processes = processes
-    }
-}
+### Runtime Dashboard
 
-private func performProcessDetection() async -> [NodeProcessItemViewModel] {
-    // Uses unified process parsing with comprehensive error handling
-    let processInfo = parseProcessInfo(from: command)
-    // Extracts title, ports, category, and project name in one pass
-}
-```
+- `WindowDashboardView.swift`
+  Provides the window-first UX with search, list/detail split, summary cards, and action surfaces.
+- `SettingsView.swift` and `AboutWindowView.swift`
+  Render as part of the same app experience instead of detached utility windows.
 
-### Key Features
+### Detection Pipeline
 
-- **Process Classification**: Automatically categorizes processes as web frameworks, build tools, package managers, and MCP tools
-- **Unified Process Parsing**: Single `parseProcessInfo()` function extracts all process information in one pass
-- **Port Detection**: Uses multiple regex patterns to extract port numbers from command arguments with framework-specific defaults
-- **Project Inference**: Intelligently extracts project names from command paths and arguments
-- **Comprehensive Error Handling**: Standardized error types with localized descriptions and proper error propagation
-- **Modern Threading**: Uses Swift concurrency (Task, async/await) with MainActor isolation for thread-safe UI updates
-- **Race Condition Prevention**: Proper synchronization for process termination and port verification
-- **Memory Management**: Automatic cleanup of timers and resources to prevent memory leaks
+- `ProcessMonitor.swift`
+  Collects processes, ports, working directories, and parent/child relationships.
+- `ProcessClassifier.swift`
+  Interprets commands into human-readable runtime roles.
+- `MenuViewModel.swift`
+  Converts raw process information into dashboard-ready view models and actions.
+- `ProcessKiller.swift`
+  Handles process termination and user-facing failure cases.
 
-### UI Architecture
+### Supporting Paths
 
-- **StatusItemController**: Manages NSStatusBar integration and popover display
-- **Enhanced Dimensions**: 380×700px popover with 600px scrollable content area
-- **Real-time Updates**: Configurable refresh intervals with visual loading states
-- **Process Management**: One-click process termination with immediate UI feedback
+- `StatusItemController.swift`
+  Keeps the menu bar entry point alive in the codebase and now uses the generated SlayNode glyph.
+- `generate-icons.swift`
+  Regenerates both the app icon family and the menu bar template glyph from one geometry source.
 
-### Performance Optimizations
+## Development Notes
 
-- **Efficient Process Listing**: Uses `ps` command with output limiting to prevent system overload
-- **Modern Concurrency**: Task-based background processing replacing DispatchQueue patterns
-- **UI Threading**: MainActor isolation for thread-safe UI updates
-- **Memory Management**: Weak references, automatic timer cleanup, and proper resource management
-- **Code Optimization**: Eliminated ~500+ lines of duplicate code through unified process parsing
-- **Error Resilience**: Graceful degradation and comprehensive error recovery mechanisms
-
-### Recent Improvements (v1.2.0)
-
-- **Threading Standardization**: Migrated from DispatchQueue to modern Swift concurrency
-- **Error Handling Enhancement**: Implemented comprehensive error type system with localized descriptions
-- **Code Consolidation**: Unified duplicate process parsing functions into single, maintainable solution
-- **Race Condition Fixes**: Solved synchronization issues in process termination and port verification
-- **Memory Leak Prevention**: Fixed timer cleanup issues and improved resource management
-- **Architecture Improvements**: Better separation of concerns and more maintainable code structure
+- Local builds regenerate brand assets automatically through [build.sh](../build.sh).
+- Sparkle update checks are only active when `SUFeedURL` and `SUPublicEDKey` are valid.
+- Crash reporting is optional and depends on build-time configuration.
+- The Xcode project remains in the repo, but SwiftPM plus `script/build_and_run.sh` is the primary local workflow.
 
 ## 🤝 Contributing
 
@@ -136,8 +136,9 @@ We welcome contributions! Here's how you can help:
 
 - Follow Swift coding conventions
 - Write unit tests for new features
-- Update documentation as needed
-- Ensure icons work in both light and dark mode
+- Update documentation whenever product shape or workflow changes
+- Keep generated brand assets and their documentation in sync
+- Prefer the scripted SwiftPM workflow unless you are specifically validating Xcode behavior
 
 ## 📄 License
 

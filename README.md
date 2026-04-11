@@ -2,64 +2,35 @@
 
 <div align="center">
 
-![Slaynode Icon](icon-iOS-Default-1024x1024@1x.png)
+![SlayNode Icon](icon-iOS-Default-1024x1024@1x.png)
 
-**A sleek macOS menu bar application for Node.js process management**
+**A focused macOS desktop app for local Node.js runtime control**
 
-[![Swift](https://img.shields.io/badge/Swift-5.9+-FA7343?style=for-the-badge&logo=swift)](https://swift.org)
+[![SwiftPM](https://img.shields.io/badge/SwiftPM-6.2+-FA7343?style=for-the-badge&logo=swift)](https://swift.org)
 [![macOS](https://img.shields.io/badge/macOS-13%2B-000000?style=for-the-badge&logo=apple)](https://apple.com/macos)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/mastertyko/slaynode/ci.yml?style=for-the-badge&label=CI)](https://github.com/mastertyko/slaynode/actions)
 
 </div>
 
-## ✨ What It Does
+## What It Does
 
-- 🎯 **Auto-Detects Node.js Servers** - Finds npm, yarn, pnpm, and npx processes automatically
-- ⚡ **One-Click Stop** - Instantly stop development servers with visual feedback
-- 🎨 **Clean Interface** - Large, scroll-free view showing all your servers
-- 🔍 **Smart Details** - Shows port numbers, project names, and commands
-- 📊 **Live Updates** - Configurable refresh intervals (2-30 seconds)
-- 🌙 **Menu Bar App** - Always accessible from your macOS menu bar
-- 🔒 **Private & Secure** - Everything happens locally, no network requests
-- 🛡️ **Robust Error Handling** - Comprehensive error reporting and graceful recovery
-- 🚀 **Modern Architecture** - Built with Swift concurrency and memory-safe patterns
-- 🔄 **Auto Updates** - Built-in Sparkle integration keeps the app current
-- 📡 **Crash Reporting** - Optional Sentry integration for stability insights
+- Detects local JavaScript and Node.js development processes automatically
+- Gives you a windowed dashboard with process list, detail view, ports, workspace, and command context
+- Lets you stop runtimes safely with `Slay`, or jump into the workspace with `Open Folder`
+- Keeps refresh timing configurable from inside the app
+- Keeps Settings and About inside the same app experience instead of separate utility popups
+- Runs locally on your Mac without sending process data anywhere
 
-## 📸 How It Looks
+## Why It Exists
 
-### Menu Bar
-The app appears as a clean icon in your macOS menu bar:
-
-![Menu Bar Icon](icon-iOS-Default-1024x1024@1x.png)
-
-### Process Management
-Click the menu bar icon to see your running servers:
-
-```
-┌─────────────────────────────────────────────────────┐
-│  Development Servers                    Updated now  │
-│  8 active servers                                   │
-│                                                     │
-│  🔵 my-app-server                    :3000  [Stop]  │
-│      PID: 12345 • Running • http://localhost:3000   │
-│      npm run dev • /Users/username/projects/my-app   │
-│                                                     │
-│  🔵 api-backend                      :8080  [Stop]  │
-│      PID: 12347 • Running • http://localhost:8080   │
-│      yarn start • /Users/username/projects/api      │
-│                                                     │
-│  [Refresh]                                      [Quit] │
-└─────────────────────────────────────────────────────┘
-```
+SlayNode is meant to replace the “which terminal tab owns this server?” routine with a single control surface.
+You open the app, inspect what is running, confirm what each process is, and stop the right thing without guessing.
 
 ## 🚀 Quick Start
 
-### Requirements
+### Release Build Requirements
 - macOS 13.0 or later
-- Xcode Command Line Tools
-- Swift 5.9+
 
 ### Installation
 
@@ -67,20 +38,24 @@ Click the menu bar icon to see your running servers:
 
 1. **Download the DMG**
    - Go to the [Latest Release](https://github.com/mastertyko/slaynode/releases)
-   - Download `Slaynode-v1.2.0.dmg`
+   - Download the latest `SlayNode` DMG release
 
 2. **Install the App**
    ```bash
    # Double-click the DMG file to mount it
-   # Drag Slaynode.app to your Applications folder
+   # Drag SlayNode.app to your Applications folder
    ```
 
 3. **Launch SlayNode**
    ```bash
-   open /Applications/Slaynode.app
+   open /Applications/SlayNode.app
    ```
 
 #### 🔧 Build from Source
+
+**Requirements**
+- macOS 13.0 or later
+- Xcode Command Line Tools
 
 1. **Clone the repository**
    ```bash
@@ -88,72 +63,65 @@ Click the menu bar icon to see your running servers:
    cd slaynode
    ```
 
-2. **Build the app**
+2. **Build and run**
    ```bash
-   ./build.sh
+   ./script/build_and_run.sh
    ```
 
-3. **Create DMG (optional)**
+3. **Run tests**
    ```bash
-   ./release.sh 1.2.0
+   swift test
    ```
 
-That's it! 🎉 The app appears in your menu bar and starts monitoring Node.js processes automatically.
+4. **Create a release build (optional)**
+   ```bash
+   ./release.sh 1.3.0
+   ```
 
-## 🔧 How It Works
+## Using The App
 
-**Automatic Detection:** SlayNode continuously scans for Node.js development servers running on your system.
+1. Launch SlayNode and let the dashboard refresh.
+2. Select a process from the left column.
+3. Review ports, command, role, and workspace in the detail pane.
+4. Use `Slay`, `Open Folder`, or `Copy Command` depending on what you need.
+5. Use `Cmd+,` for Settings and the app menu for About.
 
-**Smart Recognition:** It identifies different types of processes:
-- Next.js, Vite, React development servers
-- npm, yarn, pnpm, npx processes
-- Custom Node.js applications
+## Detection Model
 
-**One-Click Management:** Click the "Stop" button next to any server to instantly terminate it.
+- Frameworks like Vite, Next.js, and TSX-based runtimes are recognized directly.
+- Package-manager wrappers like `npm run dev` and `pnpm dev` are collapsed into more useful runtime rows.
+- Working directory, command parsing, ports, and child-process promotion are combined to avoid noisy false positives.
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 **App won't start?**
 ```bash
 # Fix permissions and code sign
-chmod +x Slaynode.app/Contents/MacOS/SlayNodeMenuBar
-codesign --force --sign - Slaynode.app
+chmod +x SlayNode.app/Contents/MacOS/SlayNodeMenuBar
+codesign --force --sign - SlayNode.app
 ```
 
-**Menu bar icon missing?**
-- Check Activity Monitor for "SlayNodeMenuBar" process
-- Restart the app: `killall SlayNodeMenuBar && open Slaynode.app`
+**The window opens but no runtimes show up?**
+- Make sure a Node.js or JavaScript dev process is actually running.
+- Use the in-app `Refresh` action once after launch.
+- Check Console.app or `./script/build_and_run.sh --logs` if you want runtime logs.
 
-**No servers showing?**
-- Make sure Node.js processes are actually running
-- Check System Settings > Privacy & Security for app permissions
+**Update checks are unavailable in local builds?**
+- That is expected unless `SUFeedURL` and `SUPublicEDKey` are configured for the bundle.
+- Release builds can use Sparkle when the feed and signing key are valid.
 
-## 📞 Need Help?
+**Crash reporting missing?**
+- Sentry is optional and only active when configured for the build you are running.
 
-- 🐛 **Report Issues**: [GitHub Issues](https://github.com/mastertyko/slaynode/issues)
-- 📖 **Documentation**: Check the `docs/` folder for detailed guides
-- 🌐 **Website**: [SlayNode Landing Page](https://mastertyko.github.io/slaynode/)
+## Documentation
 
-## 🔧 Development
+- [INSTALL.md](INSTALL.md) for installation, source-build, and troubleshooting details
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for architecture and contributor context
+- [docs/ICON_SYSTEM.md](docs/ICON_SYSTEM.md) for the current brand asset pipeline
 
-### Building from Source
+## Release And CI Notes
 
-```bash
-# Clone and build
-git clone https://github.com/mastertyko/slaynode.git
-cd slaynode
-./build.sh
-
-# Run tests
-swift test
-
-# Create release DMG
-./release.sh 1.3.0
-```
-
-### CI/CD Configuration
-
-The project uses GitHub Actions for CI/CD. To enable full release automation with notarization, configure these repository secrets:
+The project uses GitHub Actions for CI/CD. To enable signing, notarization, and release packaging, configure these repository secrets:
 
 | Secret | Description |
 |--------|-------------|
@@ -165,18 +133,16 @@ The project uses GitHub Actions for CI/CD. To enable full release automation wit
 | `APPLE_TEAM_ID` | Your 10-character Apple Team ID |
 | `SENTRY_DSN` | (Optional) Sentry DSN for crash reporting |
 
-### Sparkle Auto-Update Setup
+## Sparkle Setup
 
 1. Generate EdDSA keys:
    ```bash
    .build/artifacts/sparkle/Sparkle/bin/generate_keys
    ```
 
-2. Add the public key to `build.sh` (SUPublicEDKey in Info.plist)
-
-3. Store the private key securely for signing releases
-
-4. Update `appcast.xml` with each release
+2. Add the public key to the app bundle metadata generated by [build.sh](build.sh).
+3. Store the private key securely for signing releases.
+4. Publish matching release assets and keep [appcast.xml](appcast.xml) in sync.
 
 ## 📄 License
 

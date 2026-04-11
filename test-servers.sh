@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Test script to simulate different types of development servers
-# This helps verify that Slaynode can detect various server types
+# This helps verify that SlayNode can detect various server types
 
 echo "🚀 Starting test development servers..."
-echo "You can run these in separate terminal windows to test Slaynode detection"
+echo "You can run these in separate terminal windows to test SlayNode detection"
 echo ""
 
 echo "1. Next.js dev server (simulated):"
@@ -42,5 +42,5 @@ EXPR_PID=$!
 echo "Express test process PID: $EXPR_PID"
 
 echo ""
-echo "Test processes started. Open Slaynode to see if they're detected."
+echo "Test processes started. Open SlayNode to see if they're detected."
 echo "To stop all test processes: kill $NEXT_PID $VITE_PID $EXPR_PID"

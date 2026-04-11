@@ -75,7 +75,7 @@ final class MenuViewModel: ObservableObject {
 
     let preferences: PreferencesStore
 
-    private let monitor: ProcessMonitor
+    private let monitor: any ProcessMonitoring
     private let groupKiller = ProcessGroupKiller()
     private var cancellables: Set<AnyCancellable> = []
     private var stoppingPids: Set<Int32> = []
@@ -85,21 +85,23 @@ final class MenuViewModel: ObservableObject {
         Log.general.info("\(message)")
     }
 
-    init(preferences: PreferencesStore, monitor: ProcessMonitor) {
+    init(preferences: PreferencesStore, monitor: any ProcessMonitoring) {
         self.preferences = preferences
         self.monitor = monitor
 
         isLoading = true
         processes = []
         lastError = nil
-        lastUpdated = Date()
+        lastUpdated = nil
 
         bindMonitor()
+        bindPreferences()
     }
 
     func refresh() {
         Log.ui.debug("Refreshing process list via ProcessMonitor")
         isLoading = true
+        lastError = nil
         Task { await monitor.refresh() }
     }
 
@@ -346,6 +348,7 @@ final class MenuViewModel: ObservableObject {
                 self.latestProcesses = processes
                 self.lastUpdated = Date()
                 self.isLoading = false
+                self.lastError = nil
                 self.publishLatest()
             }
             .store(in: &cancellables)
@@ -354,6 +357,15 @@ final class MenuViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] error in
                 self?.lastError = error.localizedDescription
+            }
+            .store(in: &cancellables)
+    }
+
+    private func bindPreferences() {
+        preferences.$refreshInterval
+            .removeDuplicates(by: { abs($0 - $1) < 0.01 })
+            .sink { [weak self] interval in
+                self?.monitor.updateInterval(interval)
             }
             .store(in: &cancellables)
     }
@@ -385,15 +397,15 @@ final class MenuViewModel: ObservableObject {
         }
 
         return sorted.map { process in
-            let title = makeTitle(for: process)
             let commandSummary = makeCommandSummary(for: process)
+            let projectName = makeProjectName(for: process)
+            let title = makeTitle(for: process, projectName: projectName, commandSummary: commandSummary)
             let uptimeText = Self.durationFormatter.string(from: process.uptime) ?? "-"
             let startText = Self.relativeFormatter.localizedString(for: process.startTime, relativeTo: Date())
             let isStopping = stoppingPids.contains(process.pid)
             let portBadges = makePortBadges(for: process)
             let infoChips = makeInfoChips(for: process, commandSummary: commandSummary)
-            let projectName = makeProjectName(for: process)
-            let categoryBadge = process.descriptor == .unknown ? nil : process.descriptor.category.displayName
+            let categoryBadge = process.descriptor == .unknown ? nil : makeCategoryBadge(for: process)
 
             return NodeProcessItemViewModel(
                 id: process.pid,
@@ -414,8 +426,16 @@ final class MenuViewModel: ObservableObject {
         }
     }
 
-    private func makeTitle(for process: NodeProcess) -> String {
-        process.descriptor.displayName
+    private func makeTitle(for process: NodeProcess, projectName: String?, commandSummary: String) -> String {
+        if let projectName, shouldPreferProjectName(for: process, commandSummary: commandSummary) {
+            return projectName
+        }
+
+        if shouldPromoteCommandSummary(for: process) {
+            return commandSummary
+        }
+
+        return process.descriptor.displayName
     }
 
     private func makePortBadges(for process: NodeProcess) -> [NodeProcessItemViewModel.PortBadge] {
@@ -473,7 +493,7 @@ final class MenuViewModel: ObservableObject {
 
     private func makeProjectName(for process: NodeProcess) -> String? {
         guard let path = process.workingDirectory else { return nil }
-        let url = URL(fileURLWithPath: path)
+        let url = normalizedProjectURL(for: path)
         let lastComponent = url.lastPathComponent
         if !lastComponent.isEmpty {
             return lastComponent
@@ -502,6 +522,118 @@ final class MenuViewModel: ObservableObject {
 
         return trimmed
     }
+
+    private func normalizedProjectURL(for path: String) -> URL {
+        let url = URL(fileURLWithPath: path)
+        let components = url.pathComponents
+
+        if let nodeModulesIndex = components.lastIndex(of: "node_modules"), nodeModulesIndex > 1 {
+            let projectComponents = Array(components.prefix(nodeModulesIndex))
+            let normalizedPath = NSString.path(withComponents: projectComponents)
+            return URL(fileURLWithPath: normalizedPath)
+        }
+
+        return url
+    }
+
+    private func shouldPreferProjectName(for process: NodeProcess, commandSummary: String) -> Bool {
+        let displayName = process.descriptor.displayName.lowercased()
+
+        if genericDescriptorTitles.contains(displayName) {
+            return true
+        }
+
+        if looksLikeEntrypointFileName(displayName) || looksLikeEntrypointFileName(commandSummary) {
+            return true
+        }
+
+        if let script = process.descriptor.script?.lowercased(),
+           genericScriptTitles.contains(script) {
+            return true
+        }
+
+        return false
+    }
+
+    private func looksLikeEntrypointFileName(_ text: String) -> Bool {
+        let lowercased = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !lowercased.isEmpty else { return false }
+
+        return lowercased.hasSuffix(".js")
+            || lowercased.hasSuffix(".mjs")
+            || lowercased.hasSuffix(".cjs")
+            || lowercased.hasSuffix(".ts")
+            || lowercased.hasSuffix(".tsx")
+            || lowercased.hasSuffix(".mts")
+            || lowercased.hasSuffix(".cts")
+    }
+
+    private func shouldPromoteCommandSummary(for process: NodeProcess) -> Bool {
+        let displayName = process.descriptor.displayName.lowercased()
+
+        if process.descriptor.packageManager != nil && genericDescriptorTitles.contains(displayName) {
+            return true
+        }
+
+        return false
+    }
+
+    private func makeCategoryBadge(for process: NodeProcess) -> String {
+        switch process.descriptor.displayName {
+        case "TSX":
+            return "TypeScript Runner"
+        case "Nodemon":
+            return "Watcher"
+        case "Vite":
+            return "Bundler"
+        default:
+            if process.descriptor.packageManager != nil,
+               let script = process.descriptor.script?.lowercased(),
+               genericScriptTitles.contains(script),
+               process.descriptor.category == .utility {
+                return "Dev Script"
+            }
+
+            switch process.descriptor.category {
+            case .webFramework:
+                return "Web Framework"
+            case .bundler:
+                return "Bundler"
+            case .componentWorkbench:
+                return "Component Workbench"
+            case .mobile:
+                return "Mobile"
+            case .backend:
+                return "API/Backend"
+            case .monorepo:
+                return "Monorepo Tool"
+            case .utility:
+                return "Utility"
+            case .runtime:
+                return "Runtime"
+            }
+        }
+    }
+
+    private let genericDescriptorTitles = Set([
+        "dev",
+        "serve",
+        "start",
+        "preview",
+        "node",
+        "node.js",
+        "tsx",
+        "nodemon",
+        "bun",
+        "deno"
+    ])
+
+    private let genericScriptTitles = Set([
+        "dev",
+        "serve",
+        "start",
+        "preview"
+    ])
 
     @MainActor private static let durationFormatter: DateComponentsFormatter = {
         let formatter = DateComponentsFormatter()

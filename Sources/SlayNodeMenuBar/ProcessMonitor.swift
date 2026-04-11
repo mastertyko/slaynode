@@ -17,7 +17,7 @@ enum ProcessMonitorError: Error, LocalizedError {
 }
 
 @MainActor
-final class ProcessMonitor {
+final class ProcessMonitor: ProcessMonitoring {
     private var interval: TimeInterval
     private var isCollecting = false
     private var hasPendingRefresh = false
@@ -37,7 +37,7 @@ final class ProcessMonitor {
         errorsSubject.eraseToAnyPublisher()
     }
 
-    init(interval: TimeInterval = 5, shell: ShellExecuting = SystemShellExecutor()) {
+    init(interval: TimeInterval = Constants.Preferences.defaultRefreshInterval, shell: ShellExecuting = SystemShellExecutor()) {
         self.interval = interval
         self.shell = shell
     }
@@ -316,40 +316,73 @@ final class ProcessMonitor {
     }
 
     private func enrichProcesses(_ processes: [NodeProcess]) async throws -> [NodeProcess] {
-        let developmentServers = processes.filter(isLikelyDevelopmentProcess(_:))
+        let candidateProcesses = processes.filter(isPotentialDevelopmentProcess(_:))
         
-        guard !developmentServers.isEmpty else {
+        guard !candidateProcesses.isEmpty else {
             return []
         }
         
-        let portsByPid = await portResolver.resolvePorts(for: developmentServers.map { $0.pid })
-        let processByPid = Dictionary(uniqueKeysWithValues: developmentServers.map { ($0.pid, $0) })
+        let portsByPid = await portResolver.resolvePorts(for: candidateProcesses.map { $0.pid })
+        let workingDirectoriesByPid = await resolveWorkingDirectories(for: candidateProcesses.map { $0.pid })
+        let processByPid = Dictionary(uniqueKeysWithValues: candidateProcesses.map { ($0.pid, $0) })
+        let childrenByParentPid = Dictionary(grouping: candidateProcesses.filter { processByPid[$0.ppid] != nil }) { $0.ppid }
         
         var childPortsByParentPid: [Int32: [Int]] = [:]
         var hiddenChildPids: Set<Int32> = []
         
-        for process in developmentServers {
+        for process in candidateProcesses {
             let childPorts = portsByPid[process.pid] ?? []
             if !childPorts.isEmpty, process.ppid > 1, processByPid[process.ppid] != nil {
                 childPortsByParentPid[process.ppid, default: []].append(contentsOf: childPorts)
                 hiddenChildPids.insert(process.pid)
             }
         }
+
+        var promotedChildByParentPid: [Int32: NodeProcess] = [:]
+
+        for process in candidateProcesses {
+            guard let children = childrenByParentPid[process.pid],
+                  let promotedChild = preferredPromotedChild(
+                    for: process,
+                    children: children,
+                    portsByPid: portsByPid,
+                    childPortsByParentPid: childPortsByParentPid
+                  ) else {
+                continue
+            }
+
+            promotedChildByParentPid[process.pid] = promotedChild
+            hiddenChildPids.insert(promotedChild.pid)
+        }
         
         var result: [NodeProcess] = []
         
-        for process in developmentServers {
+        for process in candidateProcesses {
             if hiddenChildPids.contains(process.pid) {
                 continue
             }
             
             var allPorts = Set(process.ports + (portsByPid[process.pid] ?? []))
+            var descriptor = process.descriptor
+            var workingDirectory = process.workingDirectory ?? workingDirectoriesByPid[process.pid]
             
             if let childPorts = childPortsByParentPid[process.pid] {
                 allPorts.formUnion(childPorts)
             }
+
+            if let promotedChild = promotedChildByParentPid[process.pid] {
+                allPorts.formUnion(promotedChild.ports)
+                if let promotedPorts = childPortsByParentPid[promotedChild.pid] {
+                    allPorts.formUnion(promotedPorts)
+                }
+                if let resolvedChildPorts = portsByPid[promotedChild.pid] {
+                    allPorts.formUnion(resolvedChildPorts)
+                }
+                descriptor = promotedDescriptor(parent: process.descriptor, child: promotedChild.descriptor)
+                workingDirectory = promotedChild.workingDirectory ?? workingDirectoriesByPid[promotedChild.pid] ?? workingDirectory
+            }
             
-            result.append(NodeProcess(
+            let enrichedProcess = NodeProcess(
                 pid: process.pid,
                 ppid: process.ppid,
                 executable: process.executable,
@@ -358,16 +391,116 @@ final class ProcessMonitor {
                 ports: Array(allPorts).sorted(),
                 uptime: process.uptime,
                 startTime: process.startTime,
-                workingDirectory: process.workingDirectory,
-                descriptor: process.descriptor,
+                workingDirectory: workingDirectory,
+                descriptor: descriptor,
                 commandHash: process.commandHash
-            ))
+            )
+
+            guard shouldDisplayProcess(enrichedProcess) else {
+                continue
+            }
+
+            result.append(enrichedProcess)
         }
         
         return result
     }
+
+    private func preferredPromotedChild(
+        for parent: NodeProcess,
+        children: [NodeProcess],
+        portsByPid: [Int32: [Int]],
+        childPortsByParentPid: [Int32: [Int]]
+    ) -> NodeProcess? {
+        guard parent.descriptor.packageManager != nil else {
+            return nil
+        }
+
+        return children
+            .map { child in
+                (
+                    child,
+                    promotionScore(
+                        for: child,
+                        portsByPid: portsByPid,
+                        childPortsByParentPid: childPortsByParentPid
+                    )
+                )
+            }
+            .filter { $0.1 > 0 }
+            .max { lhs, rhs in
+                if lhs.1 != rhs.1 {
+                    return lhs.1 < rhs.1
+                }
+                return lhs.0.pid < rhs.0.pid
+            }?
+            .0
+    }
+
+    private func promotionScore(
+        for process: NodeProcess,
+        portsByPid: [Int32: [Int]],
+        childPortsByParentPid: [Int32: [Int]]
+    ) -> Int {
+        let directPorts = portsByPid[process.pid] ?? []
+        let descendantPorts = childPortsByParentPid[process.pid] ?? []
+        let totalPorts = Set(process.ports + directPorts + descendantPorts)
+
+        var score = 0
+
+        if !totalPorts.isEmpty {
+            score += 100
+        }
+
+        switch process.descriptor.category {
+        case .webFramework:
+            score += 60
+        case .bundler:
+            score += 55
+        case .backend:
+            score += 50
+        case .componentWorkbench:
+            score += 45
+        case .mobile:
+            score += 40
+        case .monorepo:
+            score += 30
+        case .utility:
+            score += 25
+        case .runtime:
+            score += 10
+        }
+
+        if process.descriptor.packageManager == nil {
+            score += 20
+        }
+
+        if process.command.lowercased().contains("node_modules/.bin/") {
+            score += 15
+        }
+
+        let normalizedName = process.descriptor.displayName.lowercased()
+        if normalizedName == "node.js" || normalizedName == "node" {
+            score -= 20
+        }
+
+        return score
+    }
+
+    private func promotedDescriptor(parent: ServerDescriptor, child: ServerDescriptor) -> ServerDescriptor {
+        ServerDescriptor(
+            name: child.name,
+            displayName: child.displayName,
+            category: child.category,
+            runtime: child.runtime ?? parent.runtime,
+            packageManager: parent.packageManager ?? child.packageManager,
+            script: child.script ?? parent.script,
+            details: child.details ?? parent.details,
+            portHints: child.portHints.isEmpty ? parent.portHints : child.portHints
+        )
+    }
     
-    private func isLikelyDevelopmentProcess(_ process: NodeProcess) -> Bool {
+    private func isPotentialDevelopmentProcess(_ process: NodeProcess) -> Bool {
         let executableLower = process.executable.lowercased()
         let commandLower = process.command.lowercased()
         
@@ -376,35 +509,51 @@ final class ProcessMonitor {
             return false
         }
         
+        if process.descriptor.runtime != nil {
+            return true
+        }
+        
+        if process.descriptor.packageManager != nil {
+            return true
+        }
+        
         if executableLower.contains("node") || executableLower.contains("nodejs") {
             return true
         }
         
-        if executableLower.contains("npm") || executableLower.contains("yarn") || executableLower.contains("pnpm") {
+        return false
+    }
+
+    private func shouldDisplayProcess(_ process: NodeProcess) -> Bool {
+        if !process.ports.isEmpty {
             return true
         }
-        
-        if executableLower.contains("npx") || executableLower.contains("yarnx") || executableLower.contains("pnpx") {
+
+        if hasExcludedLifecycleSignal(process.command.lowercased()) {
+            return false
+        }
+
+        if hasPositiveServerMode(process.descriptor.details) {
             return true
         }
-        
-        if executableLower.contains("next") || executableLower.contains("vite") ||
-            executableLower.contains("nuxt") || executableLower.contains("svelte") ||
-            executableLower.contains("remix") || executableLower.contains("astro") ||
-            executableLower.contains("webpack") || executableLower.contains("serve") {
+
+        if let script = process.descriptor.script?.lowercased(),
+           serverLifecycleScripts.contains(script) || directServerScripts.contains(script) {
             return true
         }
-        
-        if commandLower.contains(" dev ") || commandLower.contains(" start ") ||
-            commandLower.contains(" serve ") || commandLower.contains(" run dev") ||
-            commandLower.contains("run start") || commandLower.contains("run serve") {
+
+        if let packageManager = process.descriptor.packageManager,
+           !packageManager.isEmpty,
+           hasServerLifecycleSignal(process.command.lowercased()) {
             return true
         }
-        
-        if commandLower.contains("node_modules/.bin/") {
+
+        let descriptorName = process.descriptor.name.lowercased()
+        if directServerExecutables.contains(process.executable.lowercased()) ||
+            directServerScripts.contains(descriptorName) {
             return true
         }
-        
+
         return false
     }
     
@@ -450,6 +599,115 @@ final class ProcessMonitor {
         
         return false
     }
+
+    private func hasPositiveServerMode(_ details: String?) -> Bool {
+        guard let details else { return false }
+        let normalized = details.lowercased()
+        return normalized.contains("mode: dev") ||
+            normalized.contains("mode: start") ||
+            normalized.contains("mode: serve") ||
+            normalized.contains("mode: preview") ||
+            normalized.contains("mode: web")
+    }
+
+    private func hasServerLifecycleSignal(_ command: String) -> Bool {
+        serverLifecycleKeywords.contains { keyword in
+            command.contains(keyword)
+        }
+    }
+
+    private func hasExcludedLifecycleSignal(_ command: String) -> Bool {
+        excludedLifecycleKeywords.contains { keyword in
+            command.contains(keyword)
+        }
+    }
+
+    private func resolveWorkingDirectories(for pids: [Int32]) async -> [Int32: String] {
+        guard !pids.isEmpty else { return [:] }
+
+        let pidList = pids.map(String.init).joined(separator: ",")
+        guard let (status, output) = try? await runCommand(
+            Constants.Path.lsof,
+            arguments: ["-a", "-d", "cwd", "-Fn", "-p", pidList],
+            allowFailure: true
+        ), status == 0 else {
+            return [:]
+        }
+
+        var currentPid: Int32?
+        var result: [Int32: String] = [:]
+
+        for rawLine in output.split(whereSeparator: \.isNewline) {
+            let line = String(rawLine)
+            guard let prefix = line.first else { continue }
+
+            switch prefix {
+            case "p":
+                currentPid = Int32(line.dropFirst())
+            case "n":
+                guard let currentPid, !result.keys.contains(currentPid) else { continue }
+                let path = String(line.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !path.isEmpty {
+                    result[currentPid] = path
+                }
+            default:
+                continue
+            }
+        }
+
+        return result
+    }
+
+    private let serverLifecycleKeywords = [
+        " dev",
+        " run dev",
+        " serve",
+        " run serve",
+        " preview",
+        " run preview",
+        " start-storybook",
+        " storybook",
+        " start:web",
+        " react-scripts start"
+    ]
+
+    private let excludedLifecycleKeywords = [
+        " build",
+        " run build",
+        " lint",
+        " run lint",
+        " test",
+        " run test",
+        " typecheck",
+        " run typecheck",
+        " format",
+        " run format",
+        " install",
+        " run install"
+    ]
+
+    private let serverLifecycleScripts = Set([
+        "dev",
+        "serve",
+        "preview",
+        "storybook",
+        "start-storybook",
+        "start:web"
+    ])
+
+    private let directServerExecutables = Set([
+        "vite",
+        "webpack-dev-server",
+        "storybook",
+        "start-storybook"
+    ])
+
+    private let directServerScripts = Set([
+        "vite",
+        "webpack dev server",
+        "webpack-dev-server",
+        "storybook"
+    ])
     
     private func fetchCommandLine(for pid: Int32) async -> String? {
         guard let (status, output) = try? await runCommand(

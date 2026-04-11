@@ -1,59 +1,61 @@
 # Icon System Documentation
 
-This documentation covers the icon generation and management system used in SlayNode.
+This documentation covers the brand asset pipeline used in SlayNode.
 
-## 🎨 Icon System
+## Icon System
 
-Slaynode uses a custom sword icon with green-blue gradient design for the app icon and SF Symbols for the menu bar icon.
+SlayNode now uses one shared source of truth for its icon family: `generate-icons.swift`.
+The script renders the dock/app icon and the menu bar glyph from the same control-node
+geometry, then writes the generated PNG assets back into `Sources/SlayNodeMenuBar/Resources`.
 
-### App Icon
-- **Source**: `Sources/SlayNodeMenuBar/Resources/SlayNodeIcon.png` (1024² master artwork)
-- **Pipeline**: `swift generate-icons.swift` downscales the master image into the full `.iconset` (16×16 → 512×512 + Retina).
-- **Sizes**: 16×16 → 512×512 with @2× Retina variants, plus 1024×1024 marketing size.
+## Source Of Truth
 
-### Menu Bar Icon
-- **Implementation**: SF Symbol "staroflife.fill" for reliable template rendering
-- **Fallback System**: Multiple icon options for maximum compatibility
-- **Format**: System-native SF Symbols with automatic theme adaptation
+- `generate-icons.swift`
+  This is the canonical renderer for the brand mark.
+- `Sources/SlayNodeMenuBar/Resources/SlayNodeIcon.png`
+  Generated 1024x1024 app icon master used for previews and marketing.
+- `Sources/SlayNodeMenuBar/Resources/AppIcon.iconset/*`
+  Generated dock/app icon variants used to build `AppIcon.icns`.
+- `Sources/SlayNodeMenuBar/Resources/MenuBarIcon.png`
+  Generated high-resolution template glyph used by `StatusItemController`.
+- `Sources/SlayNodeMenuBar/Resources/Assets.xcassets/MenuBarIcon.imageset/*`
+  Generated 1x/2x template assets kept in sync for Xcode-facing workflows.
+- `icon-iOS-Default-1024x1024@1x.png`
+  Generated marketing/docs export kept in sync with the current app icon.
 
-### Icon Refresh Workflow
-1. **Update Master Icon**: Replace `Sources/SlayNodeMenuBar/Resources/SlayNodeIcon.png`
-2. **Generate Variants**: Run `swift generate-icons.swift` to rebuild all PNG variants
-3. **Build Project**: Run `./build.sh` to bundle the refreshed assets
-4. **Test**: Launch app and verify icons in both light and dark mode
+## Visual Model
 
-### Technical Notes
+- App icon
+  Midnight graphite container with cobalt, teal, and amber runtime nodes.
+- Menu bar glyph
+  Simplified monochrome version of the same network, without the background tile.
 
-**Why SF Symbols for Menu Bar:**
-- Template rendering issues with custom PNG icons
-- System-native reliability and automatic theme adaptation
-- Proper scaling across different display densities
-- No white/blank icon issues
+The menu bar glyph is intentionally not a flattened version of the full app icon.
+Template rendering in the macOS menu bar discards color, so the glyph has to be
+optically simpler and heavier than the dock icon to stay legible at 16-22 px.
 
-**Icon Generation Script:**
-The `generate-icons.swift` utility handles:
-- Resizing master icon to all required sizes
-- Creating proper PNG variants with transparency
-- Generating both 1x and 2x variants for menu bar
-- Ensuring consistent quality across all sizes
+## Workflow
 
-### Adding New Icons
+1. Edit the geometry or palette in `generate-icons.swift`.
+2. Run `swift generate-icons.swift` to refresh the generated assets.
+3. Run `./build.sh` to rebuild the app bundle and `AppIcon.icns`.
+4. Verify the icon in Dock, About, and menu bar contexts.
 
-1. **App Icon**: Update `SlayNodeIcon.png` with new design
-2. **Menu Bar Icon**: Modify SF Symbol selection in `StatusItemController.swift`
-3. **Generate**: Run `swift generate-icons.swift` for app icon variants
-4. **Test**: Verify icons work in both light and dark modes
+`./build.sh` now regenerates brand assets automatically before building, so
+normal local builds stay in sync with the renderer.
 
-## 🎯 Design Guidelines
+## Technical Notes
 
-**App Icon:**
-- Use 1024×1024 PNG with transparency
-- Include clear visual elements that scale well
-- Maintain high contrast for visibility
-- Consider both light and dark background compatibility
+- `StatusItemController.swift` loads the generated `MenuBarIcon.png` and marks it
+  as a template image for proper macOS tinting/highlight behavior.
+- The menu bar glyph avoids gradients, glows, and background plates because those
+  details collapse in template rendering.
+- Repo URLs and bundle identifiers remain lowercase (`slaynode`) even though the
+  user-facing product name is `SlayNode`.
 
-**Menu Bar Icon:**
-- Prefer SF Symbols for reliability
-- Ensure template rendering compatibility
-- Test across macOS versions
-- Verify visibility in both themes
+## Design Constraints
+
+- Prefer 2-3 bold anchor shapes.
+- Preserve generous negative space in the menu bar glyph.
+- Keep small-scale strokes optically thicker than the dock icon equivalent.
+- Treat generated PNGs as build artifacts, not the primary design source.

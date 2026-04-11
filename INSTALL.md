@@ -1,170 +1,100 @@
 # Installation Guide
 
-## Quick Install
+## Release Install
 
-### Prerequisites
+### Requirements
+- macOS 13.0 or later
+
+### Install Steps
+1. Download the latest DMG from [GitHub Releases](https://github.com/mastertyko/slaynode/releases).
+2. Drag `SlayNode.app` into `/Applications`.
+3. Launch it from Finder, Spotlight, or:
+   ```bash
+   open /Applications/SlayNode.app
+   ```
+
+### Verify It Works
+1. Launch a local dev server such as:
+   ```bash
+   npm run dev
+   ```
+2. Open SlayNode.
+3. Confirm the runtime appears in the left-hand list.
+4. Select it and verify that ports, command, and workspace details show up in the main panel.
+
+## Build From Source
+
+### Requirements
 - macOS 13.0 or later
 - Xcode Command Line Tools (`xcode-select --install`)
-- Swift 5.9+
 
-### Step 1: Clone the Repository
+### Recommended Workflow
 ```bash
 git clone https://github.com/mastertyko/slaynode.git
 cd slaynode
+./script/build_and_run.sh
 ```
 
-### Step 2: Build the Application
+### Useful Commands
 ```bash
-# Build and create .app bundle
-./build.sh
+# Run the full test suite
+swift test
+
+# Build a release bundle
+./build.sh release
+
+# Build, launch, and verify the app process
+./script/build_and_run.sh --verify
+
+# Stream app logs
+./script/build_and_run.sh --logs
 ```
-
-### Step 3: Launch the App
-```bash
-# Method 1: Double-click in Finder
-open Slaynode.app
-
-# Method 2: Launch from command line
-open Slaynode.app
-```
-
-The app will appear in your menu bar as a small icon and start monitoring Node.js processes automatically.
-
-## Manual Build Instructions
-
-If you prefer to build manually or need to debug:
-
-### Development Build
-```bash
-# Build without creating .app bundle
-swift build
-```
-
-### Debug Build
-```bash
-# Build with debug symbols
-swift build -c debug
-```
-
-### Release Build
-```bash
-# Build optimized release
-swift build -c release
-```
-
-## Verification
-
-### Check Installation
-1. Look for the SlayNode icon in your menu bar
-2. Click the icon to see the process list
-3. Verify it shows running Node.js processes
-
-### Test Functionality
-1. Start a Node.js server:
-   ```bash
-   npm run dev
-   # or
-   yarn start
-   # or
-   node server.js
-   ```
-
-2. Click the SlayNode menu bar icon
-3. Verify your server appears in the list
-4. Test the Stop button functionality
 
 ## Troubleshooting
 
-### Common Issues
-
-**"App is damaged" error**
+### The App Will Not Open
 ```bash
-# Fix permissions and code sign
-chmod +x Slaynode.app/Contents/MacOS/SlayNodeMenuBar
-codesign --force --sign - Slaynode.app
+chmod +x SlayNode.app/Contents/MacOS/SlayNodeMenuBar
+codesign --force --sign - SlayNode.app
 ```
 
-**"Menu bar icon doesn't appear"**
-- Check Activity Monitor for "SlayNodeMenuBar" process
-- Restart the app:
-  ```bash
-  killall SlayNodeMenuBar && open Slaynode.app
-  ```
+### The App Opens But No Runtimes Are Listed
+- Make sure a Node.js or JavaScript dev process is running.
+- Use the in-app `Refresh` action.
+- Check Console.app for `SlayNodeMenuBar` log entries.
 
-**"No processes detected"**
-- Ensure Node.js processes are actually running
-- Check app permissions in System Settings > Privacy & Security
-- Try manual refresh by clicking the Refresh button
-
-**Build fails with Xcode errors**
+### Source Builds Fail
 ```bash
-# Install Xcode Command Line Tools
 xcode-select --install
-
-# If that doesn't work, try:
 sudo xcode-select --reset
 ```
 
-### Logs and Debugging
+### Update Checks Are Missing
+- Local builds intentionally disable Sparkle when the feed URL or EdDSA key is not configured.
+- This is expected until release metadata is wired correctly.
 
-View debug logs in Console.app:
-1. Open Console.app
-2. Filter for "SlayNodeMenuBar" in the search bar
-3. Look for process detection logs and error messages
+## Logs
 
-### Clean Reinstall
-
-If you experience persistent issues:
+Use one of these approaches:
 
 ```bash
-# Remove the app
-rm -rf Slaynode.app
-
-# Clean build artifacts
-swift package clean
-
-# Rebuild
-./build.sh
+./script/build_and_run.sh --logs
+./script/build_and_run.sh --telemetry
 ```
 
-## Permissions
-
-The app requires minimal permissions:
-- **Process Monitoring**: Reads process list (built into macOS)
-- **Process Termination**: Stops processes you own
-- **No Network Access**: All processing happens locally
-- **No File System Access**: Only reads process information
-
-## Auto-Start (Optional)
-
-To make SlayNode launch automatically on login:
-
-1. Open **System Settings** > **General** > **Login Items**
-2. Click the `+` button
-3. Navigate to and select `Slaynode.app`
-4. Ensure it's enabled in the login items list
+Or open Console.app and filter on `SlayNodeMenuBar`.
 
 ## Uninstall
 
-To completely remove SlayNode:
-
-1. Quit the app: Right-click menu bar icon > Quit
-2. Remove from Login Items (if added)
-3. Delete the app: `rm -rf Slaynode.app`
-4. Remove preferences (optional):
+1. Quit SlayNode from the app menu or by closing the app normally.
+2. Remove `SlayNode.app` from `/Applications`.
+3. Optionally clear the stored refresh interval:
    ```bash
-   rm -rf ~/Library/Containers/com.slaynode.menubar
+   defaults delete com.slaynode.preferences.refreshInterval
    ```
 
 ## Getting Help
 
-- 📧 **Issues**: [GitHub Issues](https://github.com/mastertyko/slaynode/issues)
-- 📖 **Documentation**: [README.md](README.md)
-- 🔧 **Debug Logs**: Check Console.app for "SlayNodeMenuBar"
-
----
-
-**Need help?** Open an issue on GitHub and include:
-- macOS version
-- What you were trying to do
-- Any error messages from Console.app
+- [README.md](README.md) for the product overview
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for implementation details
+- [GitHub Issues](https://github.com/mastertyko/slaynode/issues) for bug reports

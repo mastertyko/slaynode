@@ -3,10 +3,21 @@
 /Packages
 xcuserdata/
 DerivedData/
+.claude/
 .swiftpm/configuration/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
 *.app
+*.dmg
+*.zip
+*.backup
+dmg-*/
+.notarize-credentials
+
+.codex/*
+!.codex/environments/
+.codex/environments/*
+!.codex/environments/environment.toml
 
 # Debug files
 debug-*.swift

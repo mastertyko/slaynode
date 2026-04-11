@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
     <channel>
-        <title>Slaynode Updates</title>
+        <title>SlayNode Updates</title>
         <link>https://github.com/mastertyko/slaynode</link>
-        <description>Most recent updates to Slaynode</description>
+        <description>Most recent updates to SlayNode</description>
         <language>en</language>
         
         <!-- Latest Release -->
@@ -24,7 +24,7 @@
                 </ul>
             ]]></description>
             <enclosure 
-                url="https://github.com/mastertyko/slaynode/releases/download/v1.3.0/Slaynode-v1.3.0.zip"
+                url="https://github.com/mastertyko/slaynode/releases/download/v1.3.0/SlayNode-v1.3.0.zip"
                 sparkle:edSignature="SIGNATURE_HERE"
                 length="0"
                 type="application/octet-stream" />
@@ -47,7 +47,7 @@
                 </ul>
             ]]></description>
             <enclosure 
-                url="https://github.com/mastertyko/slaynode/releases/download/v1.2.0/Slaynode-v1.2.0.zip"
+                url="https://github.com/mastertyko/slaynode/releases/download/v1.2.0/SlayNode-v1.2.0.zip"
                 sparkle:edSignature=""
                 length="0"
                 type="application/octet-stream" />

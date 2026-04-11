@@ -5,13 +5,15 @@ set -euo pipefail
 # Creates a .app bundle in the project root
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_NAME="Slaynode"
+APP_NAME="SlayNode"
 APP_DIR="${ROOT_DIR}/${APP_NAME}.app"
 EXECUTABLE_NAME="SlayNodeMenuBar"
 CONFIGURATION="${1:-debug}"
 ARCH_DIR="arm64-apple-macosx"
 
 echo "🔨 Building SlayNodeMenuBar (${CONFIGURATION})..."
+echo "🎨 Regenerating brand assets..."
+swift generate-icons.swift
 swift build -c "${CONFIGURATION}"
 
 PRODUCT_DIR="${ROOT_DIR}/.build/${ARCH_DIR}/${CONFIGURATION}"
@@ -43,7 +45,9 @@ cat > "${APP_DIR}/Contents/Info.plist" <<'EOF'
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>Slaynode</string>
+    <string>SlayNode</string>
+    <key>CFBundleDisplayName</key>
+    <string>SlayNode</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -52,16 +56,14 @@ cat > "${APP_DIR}/Contents/Info.plist" <<'EOF'
     <string>13</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
-    <key>LSUIElement</key>
-    <true/>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Slaynode needs to monitor running development servers for process management.</string>
+    <string>SlayNode needs to monitor running development servers for process management.</string>
     <key>NSSystemAdministrationUsageDescription</key>
-    <string>Slaynode needs to inspect system processes to detect development servers.</string>
+    <string>SlayNode needs to inspect system processes to detect development servers.</string>
     <key>SUFeedURL</key>
     <string>https://raw.githubusercontent.com/mastertyko/slaynode/main/appcast.xml</string>
     <key>SUPublicEDKey</key>
@@ -113,7 +115,7 @@ for fw in "${APP_DIR}"/Contents/Frameworks/*.framework; do
   fi
 done
 
-ENTITLEMENTS_PATH="${ROOT_DIR}/Slaynode.entitlements"
+ENTITLEMENTS_PATH="${ROOT_DIR}/SlayNode.entitlements"
 if [[ -f "${ENTITLEMENTS_PATH}" ]]; then
     codesign --force --sign - --entitlements "${ENTITLEMENTS_PATH}" "${APP_DIR}"
 else

@@ -33,7 +33,7 @@ final class MenuViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.isLoading)
         XCTAssertTrue(viewModel.processes.isEmpty)
         XCTAssertNil(viewModel.lastError)
-        XCTAssertNotNil(viewModel.lastUpdated)
+        XCTAssertNil(viewModel.lastUpdated)
     }
     
     @MainActor
@@ -80,6 +80,168 @@ final class MenuViewModelTests: XCTestCase {
         let viewModel = MenuViewModel(preferences: preferences, monitor: monitor)
         
         XCTAssertEqual(viewModel.preferences.refreshInterval, 15.0, accuracy: 0.01)
+    }
+
+    @MainActor
+    func testPreferencesUpdateMonitorInterval() async {
+        let preferences = PreferencesStore(defaults: testDefaults)
+        preferences.setRefreshInterval(12.0)
+
+        let monitor = MockProcessMonitor()
+        let viewModel = MenuViewModel(preferences: preferences, monitor: monitor)
+
+        await Task.yield()
+        XCTAssertEqual(try XCTUnwrap(monitor.updatedIntervals.last), 12.0, accuracy: 0.01)
+
+        preferences.setRefreshInterval(18.0)
+        await Task.yield()
+
+        XCTAssertEqual(try XCTUnwrap(monitor.updatedIntervals.last), 18.0, accuracy: 0.01)
+        XCTAssertEqual(viewModel.preferences.refreshInterval, 18.0, accuracy: 0.01)
+    }
+
+    @MainActor
+    func testGenericScriptUsesProjectNameAsTitleWhenAvailable() async {
+        let preferences = PreferencesStore(defaults: testDefaults)
+        let monitor = MockProcessMonitor()
+        let viewModel = MenuViewModel(preferences: preferences, monitor: monitor)
+
+        let process = NodeProcess(
+            pid: 4319,
+            ppid: 1,
+            executable: "npm",
+            command: "npm run dev",
+            arguments: ["run", "dev"],
+            ports: [4319],
+            uptime: 12,
+            startTime: Date().addingTimeInterval(-12),
+            workingDirectory: "/tmp/slaynode-gui-fixture",
+            descriptor: ServerDescriptor(
+                name: "dev",
+                displayName: "dev",
+                category: .utility,
+                runtime: "Node.js",
+                packageManager: "npm",
+                script: "dev",
+                details: nil,
+                portHints: []
+            ),
+            commandHash: 1
+        )
+
+        monitor.processesSubject.send([process])
+        await Task.yield()
+
+        XCTAssertEqual(viewModel.processes.first?.title, "slaynode-gui-fixture")
+        XCTAssertEqual(viewModel.processes.first?.projectName, "slaynode-gui-fixture")
+        XCTAssertEqual(viewModel.processes.first?.subtitle, "npm dev")
+    }
+
+    @MainActor
+    func testNodeModulesBinWorkingDirectoryUsesEnclosingProjectName() async {
+        let preferences = PreferencesStore(defaults: testDefaults)
+        let monitor = MockProcessMonitor()
+        let viewModel = MenuViewModel(preferences: preferences, monitor: monitor)
+
+        let process = NodeProcess(
+            pid: 3000,
+            ppid: 1,
+            executable: "tsx",
+            command: "tsx watch server.ts",
+            arguments: ["watch", "server.ts"],
+            ports: [3000],
+            uptime: 24,
+            startTime: Date().addingTimeInterval(-24),
+            workingDirectory: "/Users/test/frontend/node_modules/.bin",
+            descriptor: ServerDescriptor(
+                name: "TSX",
+                displayName: "TSX",
+                category: .utility,
+                runtime: "Node.js",
+                packageManager: nil,
+                script: nil,
+                details: nil,
+                portHints: []
+            ),
+            commandHash: 2
+        )
+
+        monitor.processesSubject.send([process])
+        await Task.yield()
+
+        XCTAssertEqual(viewModel.processes.first?.title, "frontend")
+        XCTAssertEqual(viewModel.processes.first?.projectName, "frontend")
+    }
+
+    @MainActor
+    func testTsxProcessUsesSpecializedCategoryBadge() async {
+        let preferences = PreferencesStore(defaults: testDefaults)
+        let monitor = MockProcessMonitor()
+        let viewModel = MenuViewModel(preferences: preferences, monitor: monitor)
+
+        let process = NodeProcess(
+            pid: 3200,
+            ppid: 1,
+            executable: "npm",
+            command: "npm run dev",
+            arguments: ["run", "dev"],
+            ports: [3000],
+            uptime: 42,
+            startTime: Date().addingTimeInterval(-42),
+            workingDirectory: "/Users/test/backend",
+            descriptor: ServerDescriptor(
+                name: "TSX",
+                displayName: "TSX",
+                category: .utility,
+                runtime: "Node.js",
+                packageManager: "npm",
+                script: "dev",
+                details: nil,
+                portHints: []
+            ),
+            commandHash: 3
+        )
+
+        monitor.processesSubject.send([process])
+        await Task.yield()
+
+        XCTAssertEqual(viewModel.processes.first?.categoryBadge, "TypeScript Runner")
+    }
+
+    @MainActor
+    func testFileEntrypointUsesProjectNameForTitleWhenWorkingDirectoryExists() async {
+        let preferences = PreferencesStore(defaults: testDefaults)
+        let monitor = MockProcessMonitor()
+        let viewModel = MenuViewModel(preferences: preferences, monitor: monitor)
+
+        let process = NodeProcess(
+            pid: 4327,
+            ppid: 1,
+            executable: "node",
+            command: "node /tmp/slaynode-window-fixture/server.mjs",
+            arguments: ["/tmp/slaynode-window-fixture/server.mjs"],
+            ports: [4327],
+            uptime: 30,
+            startTime: Date().addingTimeInterval(-30),
+            workingDirectory: "/tmp/slaynode-window-fixture",
+            descriptor: ServerDescriptor(
+                name: "server.mjs",
+                displayName: "server.mjs",
+                category: .utility,
+                runtime: "Node.js",
+                packageManager: nil,
+                script: nil,
+                details: nil,
+                portHints: []
+            ),
+            commandHash: 4
+        )
+
+        monitor.processesSubject.send([process])
+        await Task.yield()
+
+        XCTAssertEqual(viewModel.processes.first?.title, "slaynode-window-fixture")
+        XCTAssertEqual(viewModel.processes.first?.projectName, "slaynode-window-fixture")
     }
 }
 
@@ -228,6 +390,35 @@ final class NodeProcessItemViewModelTests: XCTestCase {
         
         XCTAssertEqual(chip1, chip2)
         XCTAssertNotEqual(chip1, chip3)
+    }
+}
+
+@MainActor
+private final class MockProcessMonitor: ProcessMonitoring {
+    let processesSubject = CurrentValueSubject<[NodeProcess], Never>([])
+    let errorsSubject = PassthroughSubject<Error, Never>()
+
+    private(set) var updatedIntervals: [TimeInterval] = []
+
+    var processesPublisher: AnyPublisher<[NodeProcess], Never> {
+        processesSubject.eraseToAnyPublisher()
+    }
+
+    var errorsPublisher: AnyPublisher<Error, Never> {
+        errorsSubject.eraseToAnyPublisher()
+    }
+
+    func start() {}
+    func stop() {}
+
+    func updateInterval(_ newInterval: TimeInterval) {
+        updatedIntervals.append(newInterval)
+    }
+
+    func refresh() async {}
+
+    func verifyProcess(pid: Int32, expectedHash: Int) async -> Bool {
+        true
     }
 }
 #endif

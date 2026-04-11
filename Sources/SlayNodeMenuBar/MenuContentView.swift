@@ -2,25 +2,80 @@ import AppKit
 import SwiftUI
 
 struct MenuContentView: View {
+    @Environment(\.openWindow) private var openWindow
+
+    enum Presentation: Equatable {
+        case menuBarPopover
+        case mainWindow
+    }
+
     @StateObject private var viewModel: MenuViewModel
     @ObservedObject var preferences: PreferencesStore
+    private let presentation: Presentation
+    private let updateController: UpdateController?
+    private let activeAuxiliary: AuxiliarySheet?
+    private let showAboutActionOverride: (() -> Void)?
+    private let openSettingsActionOverride: (() -> Void)?
+    private let dismissAuxiliaryActionOverride: (() -> Void)?
 
     private let panelCornerRadius: CGFloat = 24
     private let headerCornerRadius: CGFloat = 18
 
-    init(preferences: PreferencesStore, monitor: ProcessMonitor) {
+    init(
+        preferences: PreferencesStore,
+        monitor: any ProcessMonitoring,
+        presentation: Presentation = .menuBarPopover,
+        updateController: UpdateController? = nil,
+        activeAuxiliary: AuxiliarySheet? = nil,
+        showAboutAction: (() -> Void)? = nil,
+        openSettingsAction: (() -> Void)? = nil,
+        dismissAuxiliaryAction: (() -> Void)? = nil
+    ) {
         self.preferences = preferences
+        self.presentation = presentation
+        self.updateController = updateController
+        self.activeAuxiliary = activeAuxiliary
+        self.showAboutActionOverride = showAboutAction
+        self.openSettingsActionOverride = openSettingsAction
+        self.dismissAuxiliaryActionOverride = dismissAuxiliaryAction
         self._viewModel = StateObject(wrappedValue: MenuViewModel(preferences: preferences, monitor: monitor))
     }
     
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1.0)) { context in
-            mainContent(currentTime: context.date)
+            surface(currentTime: context.date)
         }
     }
-    
+
+    private var isWindowPresentation: Bool {
+        presentation == .mainWindow
+    }
+
     @ViewBuilder
-    private func mainContent(currentTime: Date) -> some View {
+    private func surface(currentTime: Date) -> some View {
+        if isWindowPresentation {
+            WindowDashboardView(
+                viewModel: viewModel,
+                preferences: preferences,
+                updateController: updateController,
+                statusText: statusText(currentTime: currentTime),
+                statusIcon: statusIcon(currentTime: currentTime),
+                activeAuxiliary: activeAuxiliary,
+                showAboutAction: showAboutDialog,
+                openSettingsAction: openSettingsLegacy,
+                dismissAuxiliaryAction: dismissAuxiliary,
+                quitAction: { NSApplication.shared.terminate(nil) }
+            )
+        } else {
+            sharedContent(currentTime: currentTime)
+                .padding(22)
+                .frame(width: 380, alignment: .leading)
+                .glassPanel(cornerRadius: panelCornerRadius)
+        }
+    }
+
+    @ViewBuilder
+    private func sharedContent(currentTime: Date) -> some View {
         VStack(alignment: .leading, spacing: 20) {
             header(currentTime: currentTime)
 
@@ -38,45 +93,15 @@ struct MenuContentView: View {
 
             footer
         }
-        .padding(22)
-        .frame(width: 380, alignment: .leading)
-        .glassPanel(cornerRadius: panelCornerRadius)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .animation(.easeInOut(duration: 0.25), value: viewModel.isLoading)
     }
 
     private func showAboutDialog() {
-        let alert = NSAlert()
-        alert.messageText = "SlayNode"
-        alert.informativeText = """
-        Version 1.2.0
-
-        A sleek macOS menu bar application for Node.js process management.
-
-        © 2025 SlayNode
-
-        GitHub: github.com/mastertyko/slaynode
-        Report Issues: github.com/mastertyko/slaynode/issues
-        """
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "View on GitHub")
-        alert.addButton(withTitle: "Report Issues")
-        alert.addButton(withTitle: "OK")
-
-        let response = alert.runModal()
-
-        switch response {
-        case .alertFirstButtonReturn:
-            // View on GitHub
-            if let url = URL(string: "https://github.com/mastertyko/slaynode") {
-                NSWorkspace.shared.open(url)
-            }
-        case .alertSecondButtonReturn:
-            // Report Issues
-            if let url = URL(string: "https://github.com/mastertyko/slaynode/issues") {
-                NSWorkspace.shared.open(url)
-            }
-        default:
-            break
+        if let showAboutActionOverride {
+            showAboutActionOverride()
+        } else {
+            openWindow(id: AppWindowID.about)
         }
     }
 
@@ -84,9 +109,17 @@ struct MenuContentView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("SlayNode - The Easy Way!")
+                    Text(isWindowPresentation ? "Development Servers" : "SlayNode - The Easy Way!")
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(Color.white.opacity(0.92))
+
+                    if isWindowPresentation {
+                        Text("Monitor and stop active local Node.js servers without jumping between terminals.")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.white.opacity(0.78))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
                     HStack(spacing: 4) {
                         Image(systemName: statusIcon(currentTime: currentTime))
                             .font(.caption2)
@@ -122,10 +155,22 @@ struct MenuContentView: View {
                 }
             }
             
-            if !viewModel.processes.isEmpty {
-                Text("\(viewModel.processes.count) active \(viewModel.processes.count == 1 ? "server" : "servers")")
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(Color.white.opacity(0.78))
+            HStack(spacing: 8) {
+                if !viewModel.processes.isEmpty {
+                    Text("\(viewModel.processes.count) active \(viewModel.processes.count == 1 ? "server" : "servers")")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(Color.white.opacity(0.78))
+                }
+
+                if isWindowPresentation {
+                    Text("Updates every \(Int(preferences.refreshInterval))s")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(Color.white.opacity(0.72))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.white.opacity(0.10))
+                        .clipShape(Capsule())
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -161,7 +206,7 @@ struct MenuContentView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 14) {
                         ForEach(viewModel.processes) { process in
-                            ProcessRowView(process: process) {
+                            ProcessRowView(process: process, presentation: presentation) {
                                 viewModel.stopProcess(process.pid)
                             }
                             .transition(.scale.combined(with: .opacity))
@@ -171,34 +216,70 @@ struct MenuContentView: View {
                     .padding(.vertical, 4)
                 }
                 .scrollIndicators(.hidden)
-                .frame(maxHeight: 600)
+                .frame(maxHeight: isWindowPresentation ? .infinity : 600)
             }
         }
-        .frame(minHeight: 300) // Ensure minimum height even when empty
+        .frame(minHeight: isWindowPresentation ? 420 : 300)
     }
     
     private var footer: some View {
-        HStack(spacing: 12) {
-            Button {
-                viewModel.refresh()
-            } label: {
-                Label("Refresh", systemImage: "arrow.clockwise")
-                    .labelStyle(.titleAndIcon)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+        Group {
+            if isWindowPresentation {
+                HStack(spacing: 10) {
+                    Button {
+                        viewModel.refresh()
+                    } label: {
+                        Label("Refresh", systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
 
-            Button(role: .destructive) {
-                NSApplication.shared.terminate(nil)
-            } label: {
-                Label("Quit", systemImage: "power")
-                    .labelStyle(.iconOnly)
-                    .frame(width: 44, height: 44)
+                    settingsButton
+
+                    Button {
+                        showAboutDialog()
+                    } label: {
+                        Label("About", systemImage: "info.circle")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+
+                    Spacer()
+
+                    Button(role: .destructive) {
+                        NSApplication.shared.terminate(nil)
+                    } label: {
+                        Label("Quit", systemImage: "power")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                }
+            } else {
+                HStack(spacing: 12) {
+                    Button {
+                        viewModel.refresh()
+                    } label: {
+                        Label("Refresh", systemImage: "arrow.clockwise")
+                            .labelStyle(.titleAndIcon)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+
+                    compactSettingsButton
+
+                    Button(role: .destructive) {
+                        NSApplication.shared.terminate(nil)
+                    } label: {
+                        Label("Quit", systemImage: "power")
+                            .labelStyle(.iconOnly)
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .accessibilityLabel("Quit SlayNode")
+                }
             }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-            .accessibilityLabel("Quit SlayNode")
         }
     }
     
@@ -208,9 +289,10 @@ struct MenuContentView: View {
         }
 
         let timeInterval = currentTime.timeIntervalSince(updated)
+        let refreshInterval = max(preferences.refreshInterval, 1)
 
-        if timeInterval < 5 {
-            let secondsUntilNext = 5 - Int(timeInterval)
+        if timeInterval < refreshInterval {
+            let secondsUntilNext = max(1, Int(ceil(refreshInterval - timeInterval)))
             return "Next update in \(secondsUntilNext)s"
         }
 
@@ -226,8 +308,9 @@ struct MenuContentView: View {
         }
 
         let timeInterval = currentTime.timeIntervalSince(updated)
+        let refreshInterval = max(preferences.refreshInterval, 1)
 
-        if timeInterval < 5 {
+        if timeInterval < refreshInterval {
             return "timer"
         }
 
@@ -236,6 +319,42 @@ struct MenuContentView: View {
         }
 
         return "clock"
+    }
+
+    private var settingsButton: some View {
+        Button {
+            openSettingsLegacy()
+        } label: {
+            Label("Settings", systemImage: "gearshape")
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+    }
+
+    private var compactSettingsButton: some View {
+        Button {
+            openSettingsLegacy()
+        } label: {
+            Label("Settings", systemImage: "gearshape")
+                .labelStyle(.iconOnly)
+                .frame(width: 44, height: 44)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .accessibilityLabel("Open Settings")
+    }
+
+    private func openSettingsLegacy() {
+        if let openSettingsActionOverride {
+            openSettingsActionOverride()
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+            openWindow(id: AppWindowID.settings)
+        }
+    }
+
+    private func dismissAuxiliary() {
+        dismissAuxiliaryActionOverride?()
     }
     
     private var headerGradient: LinearGradient {
@@ -252,10 +371,33 @@ struct MenuContentView: View {
     private var headerShadow: Color {
         Color.accentColor.opacity(0.35)
     }
+
+    private var windowBackground: some View {
+        LinearGradient(
+            colors: [
+                Color(nsColor: .windowBackgroundColor),
+                Color.accentColor.opacity(0.10),
+                Color(nsColor: .underPageBackgroundColor)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var windowPanelBackground: some View {
+        RoundedRectangle(cornerRadius: 28, style: .continuous)
+            .fill(.regularMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(Color.white.opacity(0.08))
+            )
+            .shadow(color: Color.black.opacity(0.16), radius: 26, y: 12)
+    }
 }
 
 private struct ProcessRowView: View {
     let process: NodeProcessItemViewModel
+    let presentation: MenuContentView.Presentation
     let stopAction: () -> Void
 
     var body: some View {
@@ -319,7 +461,7 @@ private struct ProcessRowView: View {
             if !process.subtitle.isEmpty {
                 Text(process.subtitle)
                     .font(.caption.monospaced())
-                    .lineLimit(1)
+                    .lineLimit(presentation == .mainWindow ? 2 : 1)
                     .foregroundStyle(.secondary)
                     .padding(.top, 2)
             }
@@ -435,77 +577,123 @@ private struct CapsuleLabel: View {
     }
 
     private var categoryBackground: Color {
-        switch text {
-        case "Web Framework":
+        switch normalizedText {
+        case "web framework":
             return Color.blue.opacity(0.15)
-        case "Bundler":
+        case "bundler":
             return Color.orange.opacity(0.15)
-        case "Framework":
+        case "framework":
             return Color.cyan.opacity(0.15)
-        case "Server":
+        case "server":
             return Color.green.opacity(0.15)
-        case "Utility":
+        case "utility":
             return Color.purple.opacity(0.15)
-        case "Tool":
-            return Color.mint.opacity(0.15)
-        case "MCP Tool":
-            return Color.pink.opacity(0.15)
-        case "Development":
+        case "dev script":
             return Color.indigo.opacity(0.15)
-        case "Node.js":
+        case "typescript runner":
+            return Color.teal.opacity(0.15)
+        case "watcher":
+            return Color.mint.opacity(0.15)
+        case "tool":
+            return Color.mint.opacity(0.15)
+        case "mcp tool":
+            return Color.pink.opacity(0.15)
+        case "development":
+            return Color.indigo.opacity(0.15)
+        case "node.js", "runtime":
             return Color.green.opacity(0.1)
+        case "api/backend":
+            return Color.green.opacity(0.15)
+        case "component workbench":
+            return Color.yellow.opacity(0.15)
+        case "monorepo tool":
+            return Color.brown.opacity(0.15)
+        case "mobile":
+            return Color.cyan.opacity(0.15)
         default:
             return Color.secondary.opacity(0.15)
         }
     }
 
     private var categoryForeground: Color {
-        switch text {
-        case "Web Framework":
+        switch normalizedText {
+        case "web framework":
             return Color.blue
-        case "Bundler":
+        case "bundler":
             return Color.orange
-        case "Framework":
+        case "framework":
             return Color.cyan
-        case "Server":
+        case "server":
             return Color.green
-        case "Utility":
+        case "utility":
             return Color.purple
-        case "Tool":
-            return Color.mint
-        case "MCP Tool":
-            return Color.pink
-        case "Development":
+        case "dev script":
             return Color.indigo
-        case "Node.js":
+        case "typescript runner":
+            return Color.teal
+        case "watcher":
+            return Color.mint
+        case "tool":
+            return Color.mint
+        case "mcp tool":
+            return Color.pink
+        case "development":
+            return Color.indigo
+        case "node.js", "runtime":
             return Color.green
+        case "api/backend":
+            return Color.green
+        case "component workbench":
+            return Color.yellow
+        case "monorepo tool":
+            return Color.brown
+        case "mobile":
+            return Color.cyan
         default:
             return Color.secondary
         }
+    }
+
+    private var normalizedText: String {
+        text.lowercased()
     }
 }
 
 // Helper function to get appropriate icon for each category
 private func iconForCategory(_ category: String) -> String {
-    switch category {
-    case "Web Framework":
+    switch category.lowercased() {
+    case "web framework":
         return "globe"
-    case "Bundler":
+    case "bundler":
         return "cube.box"
-    case "Framework":
+    case "framework":
         return "square.stack.3d.up"
-    case "Server":
+    case "server":
         return "server.rack"
-    case "Utility":
+    case "utility":
         return "wrench.and.screwdriver"
-    case "Tool":
+    case "dev script":
+        return "terminal"
+    case "typescript runner":
+        return "curlybraces"
+    case "watcher":
+        return "eye"
+    case "tool":
         return "hammer"
-    case "MCP Tool":
+    case "mcp tool":
         return "brain.head.profile"
-    case "Development":
+    case "development":
         return "hammer.circle"
-    case "Node.js":
+    case "node.js", "runtime":
         return "hexagon"
+    case "api/backend":
+        return "server.rack"
+    case "component workbench":
+        return "square.on.square"
+    case "monorepo tool":
+        return "square.stack.3d.down.right"
+    case "mobile":
+        return "iphone"
     default:
         return "tag"
     }
@@ -565,7 +753,7 @@ private struct InfoChipView: View {
     }
 }
 
-private struct EmptyStateView: View {
+struct EmptyStateView: View {
     let refreshAction: () -> Void
 
     var body: some View {
@@ -600,7 +788,7 @@ private struct EmptyStateView: View {
 }
 
 
-private struct ErrorBanner: View {
+struct ErrorBanner: View {
     let text: String
     
     var body: some View {

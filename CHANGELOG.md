@@ -5,6 +5,28 @@ All notable changes to SlayNode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-01-20
+
+### ✨ Added
+
+- Window-first runtime dashboard with richer list/detail layout
+- Integrated Settings and About surfaces inside the main app experience
+- Dedicated SlayNode menu bar glyph generated from the same brand system as the app icon
+- Official `script/build_and_run.sh` workflow for local build, run, logs, and verification
+
+### 🔁 Changed
+
+- Repositioned the app from a menu bar-first utility to a desktop control surface for local runtimes
+- Improved runtime naming, workspace inference, and process-role presentation in the UI
+- Normalized branding to `SlayNode` across bundle metadata, build scripts, release tooling, and docs
+- Rebuilt the icon pipeline around `generate-icons.swift` as the source of truth
+
+### 🛠️ Fixed
+
+- Settings and About now feel like part of the same product instead of detached popups
+- Local builds no longer present Sparkle update flows when release metadata is incomplete
+- Wrapper processes such as `npm run dev` inherit more useful identities from their child runtimes
+
 ## [1.2.0] - 2025-10-12
 
 ### ✨ New Features & Improvements

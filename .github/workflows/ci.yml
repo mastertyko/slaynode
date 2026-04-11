@@ -44,6 +44,6 @@ jobs:
       - name: Upload App Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Slaynode-${{ github.sha }}
-          path: Slaynode.app
+          name: SlayNode-${{ github.sha }}
+          path: SlayNode.app
           retention-days: 7

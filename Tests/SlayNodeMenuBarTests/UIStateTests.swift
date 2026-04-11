@@ -263,5 +263,15 @@ final class UpdateControllerStateTests: XCTestCase {
         
         XCTAssertNotNil(controller.lastUpdateCheckDate == nil || controller.lastUpdateCheckDate != nil)
     }
+
+    @MainActor
+    func testUpdateControllerDisablesInvalidConfiguration() {
+        let controller = UpdateController(
+            configuration: .init(feedURL: "https://example.com/appcast.xml", publicEDKey: "   ")
+        )
+
+        XCTAssertFalse(controller.canCheckForUpdates)
+        XCTAssertNil(controller.lastUpdateCheckDate)
+    }
 }
 #endif

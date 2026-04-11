@@ -43,6 +43,7 @@ enum ProcessClassifier {
     private static func classifyPackageManagerWrapper(context: CommandParser.CommandContext) -> ServerDescriptor? {
         let loweredTokens = context.lowercasedTokens
         guard let executor = loweredTokens.first else { return nil }
+        let normalizedExecutor = (executor as NSString).lastPathComponent
 
         let wrappers: [String: String] = [
             "npm": "npm",
@@ -55,7 +56,7 @@ enum ProcessClassifier {
             "bunx": "bun"
         ]
 
-        guard let packageManager = wrappers[executor] else {
+        guard let packageManager = wrappers[normalizedExecutor] else {
             return nil
         }
 
@@ -112,7 +113,7 @@ enum ProcessClassifier {
 
     private static func extractScriptName(from tokens: [String]) -> String? {
         guard tokens.count > 1 else { return nil }
-        let first = tokens[0].lowercased()
+        let first = (tokens[0] as NSString).lastPathComponent.lowercased()
         let second = tokens[1].lowercased()
 
         if second == "run" || second == "run-script" {
