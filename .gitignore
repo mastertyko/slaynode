@@ -14,10 +14,7 @@ DerivedData/
 dmg-*/
 .notarize-credentials
 
-.codex/*
-!.codex/environments/
-.codex/environments/*
-!.codex/environments/environment.toml
+.codex/
 
 # Debug files
 debug-*.swift
