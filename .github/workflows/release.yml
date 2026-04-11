@@ -161,7 +161,6 @@ jobs:
           body_path: release-notes.md
           draft: false
           prerelease: false
-          overwrite_files: true
           files: |
             ${{ env.DMG_NAME }}
             ${{ env.ZIP_NAME }}
