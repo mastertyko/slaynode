@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![SlayNode Icon](icon-iOS-Default-1024x1024@1x.png)
+<img src="icon-iOS-Default-1024x1024@1x.png" alt="SlayNode icon" width="160">
 
 **A focused macOS desktop app for local Node.js runtime control**
 
