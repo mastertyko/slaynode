@@ -13,149 +13,64 @@
 
 </div>
 
-## What It Does
+SlayNode gives you one place to see what local JavaScript runtimes are running, which ports they use, what workspace they belong to, and how to stop the right thing without guessing.
 
-- Detects local JavaScript and Node.js development processes automatically
-- Gives you a windowed dashboard with process list, detail view, ports, workspace, and command context
-- Lets you stop runtimes safely with `Slay`, or jump into the workspace with `Open Folder`
-- Keeps refresh timing configurable from inside the app
-- Keeps Settings and About inside the same app experience instead of separate utility popups
-- Runs locally on your Mac without sending process data anywhere
+## What You Can Do
 
-## Why It Exists
+- Detect local JavaScript and Node.js development processes automatically
+- Inspect ports, command context, runtime role, and workspace details
+- Stop runtimes safely with `Slay`
+- Jump straight into the owning project with `Open Folder`
+- Keep everything local on your Mac without sending process data anywhere
 
-SlayNode is meant to replace the “which terminal tab owns this server?” routine with a single control surface.
-You open the app, inspect what is running, confirm what each process is, and stop the right thing without guessing.
+## Install
 
-## 🚀 Quick Start
+1. Download the latest release from [GitHub Releases](https://github.com/mastertyko/slaynode/releases).
+2. Drag `SlayNode.app` into `/Applications`.
+3. Launch it:
 
-### Release Build Requirements
-- macOS 13.0 or later
-
-### Installation
-
-#### 🚀 Easy Installation (Recommended)
-
-1. **Download the DMG**
-   - Go to the [Latest Release](https://github.com/mastertyko/slaynode/releases)
-   - Download the latest `SlayNode` DMG release
-
-2. **Install the App**
-   ```bash
-   # Double-click the DMG file to mount it
-   # Drag SlayNode.app to your Applications folder
-   ```
-
-3. **Launch SlayNode**
    ```bash
    open /Applications/SlayNode.app
    ```
 
-#### 🔧 Build from Source
+## Build From Source
 
 **Requirements**
 - macOS 13.0 or later
 - Xcode Command Line Tools
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/mastertyko/slaynode.git
-   cd slaynode
-   ```
+```bash
+git clone https://github.com/mastertyko/slaynode.git
+cd slaynode
+./script/build_and_run.sh
+```
 
-2. **Build and run**
-   ```bash
-   ./script/build_and_run.sh
-   ```
+Run the test suite with:
 
-3. **Run tests**
-   ```bash
-   swift test
-   ```
+```bash
+swift test
+```
 
-4. **Create a release build (optional)**
-   ```bash
-   ./release.sh 1.0
-   ```
+## Using SlayNode
 
-   Pushing to `main` automatically publishes the version defined in `XcodeSupport/Info.plist` as GitHub release `v<version>`.
-
-## Using The App
-
-1. Launch SlayNode and let the dashboard refresh.
-2. Select a process from the left column.
-3. Review ports, command, role, and workspace in the detail pane.
+1. Launch the app and let the dashboard refresh.
+2. Select a runtime from the left column.
+3. Review its ports, command, role, and workspace in the detail pane.
 4. Use `Slay`, `Open Folder`, or `Copy Command` depending on what you need.
 5. Use `Cmd+,` for Settings and the app menu for About.
 
-## Detection Model
+## Recognition Model
 
 - Frameworks like Vite, Next.js, and TSX-based runtimes are recognized directly.
-- Package-manager wrappers like `npm run dev` and `pnpm dev` are collapsed into more useful runtime rows.
-- Working directory, command parsing, ports, and child-process promotion are combined to avoid noisy false positives.
-
-## Troubleshooting
-
-**App won't start?**
-```bash
-# Fix permissions and code sign
-chmod +x SlayNode.app/Contents/MacOS/SlayNodeMenuBar
-codesign --force --sign - SlayNode.app
-```
-
-**The window opens but no runtimes show up?**
-- Make sure a Node.js or JavaScript dev process is actually running.
-- Use the in-app `Refresh` action once after launch.
-- Check Console.app or `./script/build_and_run.sh --logs` if you want runtime logs.
-
-**Update checks are unavailable in local builds?**
-- That is expected unless `SUFeedURL` and `SUPublicEDKey` are configured for the bundle.
-- Release builds can use Sparkle when the feed and signing key are valid.
-
-**Crash reporting missing?**
-- Sentry is optional and only active when configured for the build you are running.
+- Package-manager wrappers like `npm run dev` and `pnpm dev` are collapsed into clearer runtime rows.
+- Working directory, command parsing, ports, and child-process promotion are combined to reduce false positives.
 
 ## Documentation
 
-- [INSTALL.md](INSTALL.md) for installation, source-build, and troubleshooting details
-- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for architecture and contributor context
-- [docs/ICON_SYSTEM.md](docs/ICON_SYSTEM.md) for the current brand asset pipeline
+- [INSTALL.md](INSTALL.md) for installation, source-build, and troubleshooting
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for architecture, release automation, and contributor context
+- [docs/ICON_SYSTEM.md](docs/ICON_SYSTEM.md) for the brand asset pipeline
 
-## Release And CI Notes
+## License
 
-The project uses GitHub Actions for CI/CD. To enable signing, notarization, and release packaging, configure these repository secrets:
-
-| Secret | Description |
-|--------|-------------|
-| `CERTIFICATE_BASE64` | Base64-encoded Developer ID Application certificate (.p12) |
-| `CERTIFICATE_PASSWORD` | Password for the .p12 certificate |
-| `SIGNING_IDENTITY` | Full signing identity, e.g., `Developer ID Application: Name (TEAM_ID)` |
-| `APPLE_ID` | Your Apple ID email for notarization |
-| `APPLE_APP_PASSWORD` | App-specific password from appleid.apple.com |
-| `APPLE_TEAM_ID` | Your 10-character Apple Team ID |
-| `SENTRY_DSN` | (Optional) Sentry DSN for crash reporting |
-
-## Sparkle Setup
-
-1. Generate EdDSA keys:
-   ```bash
-   .build/artifacts/sparkle/Sparkle/bin/generate_keys
-   ```
-
-2. Add the public key to the app bundle metadata generated by [build.sh](build.sh).
-3. Store the private key securely for signing releases.
-4. Publish matching release assets and keep [appcast.xml](appcast.xml) in sync.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-
-**Made with ❤️ for the Node.js community**
-
-[⭐ Star this repo](https://github.com/mastertyko/slaynode) • [🐛 Report Issues](https://github.com/mastertyko/slaynode/issues)
-
-</div>
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
