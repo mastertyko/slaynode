@@ -98,7 +98,45 @@ struct SettingsContentView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     Toggle("Show recent history in the app and inspector", isOn: $settings.showRecentHistory)
                     Divider()
-                    Toggle("Show richer menu bar summary surface", isOn: $settings.showMenuBarSection)
+                    Toggle("Show expanded summary in the menu bar panel", isOn: $settings.showMenuBarSection)
+                }
+            }
+
+            AuxiliarySectionCard(
+                title: "Notifications",
+                systemImage: "bell.badge",
+                accent: .pink
+            ) {
+                VStack(alignment: .leading, spacing: 14) {
+                    Toggle("Notify when a service action fails", isOn: $settings.showFailureNotifications)
+                    Divider()
+                    Toggle("Notify when a service becomes critical", isOn: $settings.showHealthNotifications)
+
+                    if settings.showFailureNotifications || settings.showHealthNotifications {
+                        Divider()
+
+                        HStack {
+                            Text("Repeat cooldown")
+                                .font(.subheadline.weight(.semibold))
+                            Spacer()
+                            Text("\(Int(settings.notificationCooldownMinutes)) min")
+                                .font(.subheadline.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Slider(value: $settings.notificationCooldownMinutes, in: 1...30, step: 1)
+                            .tint(.pink)
+                            .accessibilityLabel("Notification cooldown")
+                            .accessibilityValue("\(Int(settings.notificationCooldownMinutes)) minutes")
+
+                        Text("Repeated failures or flapping health states stay quiet until the cooldown window passes. Notifications remain local to this Mac.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("All local notifications are currently turned off.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
 

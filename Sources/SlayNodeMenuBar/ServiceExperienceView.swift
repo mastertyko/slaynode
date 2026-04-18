@@ -547,6 +547,10 @@ struct ServiceMenuBarView: View {
     @Bindable var center: ServiceCenterModel
     @Environment(\.openWindow) private var openWindow
 
+    private var menuBarPresentation: MenuBarStatusPresentation {
+        center.menuBarPresentation
+    }
+
     private var visibleServices: [ManagedService] {
         center.services
             .sorted(by: menuBarPriority)
@@ -565,7 +569,7 @@ struct ServiceMenuBarView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             ServiceMenuBarHeaderCard(
-                activeCount: center.activeServiceCount,
+                presentation: menuBarPresentation,
                 unhealthyCount: center.unhealthyServiceCount,
                 updatedLabel: updatedLabel
             ) {
@@ -589,7 +593,7 @@ struct ServiceMenuBarView: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Text("Active Services")
+                    Text("Top Services")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
 
@@ -601,14 +605,11 @@ struct ServiceMenuBarView: View {
                 }
 
                 if visibleServices.isEmpty {
-                    ContentUnavailableView(
-                        "No Active Services",
-                        systemImage: "checkmark.circle",
-                        description: Text("Local infra will appear here when discovery finds something running.")
-                    )
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 18)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    ServiceMenuBarEmptyState {
+                        Task { await center.refresh() }
+                    } openDashboard: {
+                        openWindow(id: AppWindowID.dashboard)
+                    }
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 10) {
@@ -621,9 +622,11 @@ struct ServiceMenuBarView: View {
                                             within: center.workspaces + center.recentWorkspaces
                                         )
                                     },
-                                    isExpanded: center.settings.showMenuBarSection
-                                ) {
-                                    Task { await center.perform(.stop, on: service) }
+                                    isExpanded: center.settings.showMenuBarSection,
+                                    primaryAction: service.supports(.stop) ? .stop : nil,
+                                    quickActions: menuBarQuickActions(for: service)
+                                ) { action in
+                                    Task { await center.perform(action, on: service) }
                                 }
                             }
                         }
@@ -653,7 +656,18 @@ struct ServiceMenuBarView: View {
             }
         }
         .padding(18)
-        .frame(width: center.settings.showMenuBarSection ? 432 : 372)
+        .frame(width: center.settings.showMenuBarSection ? 448 : 380)
+    }
+
+    private func menuBarQuickActions(for service: ManagedService) -> [ServiceAction] {
+        let priority: [ServiceAction] = [
+            .restart,
+            .openWorkspace,
+            .openLogs,
+            .revealConfig
+        ]
+
+        return priority.filter(service.supports).prefix(2).map { $0 }
     }
 }
 
@@ -926,7 +940,9 @@ private struct ServiceMenuBarRow: View {
     let service: ManagedService
     let workspaceTitle: String?
     let isExpanded: Bool
-    let stop: () -> Void
+    let primaryAction: ServiceAction?
+    let quickActions: [ServiceAction]
+    let perform: (ServiceAction) -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -988,11 +1004,33 @@ private struct ServiceMenuBarRow: View {
 
             Spacer(minLength: 8)
 
-            if service.supports(.stop) {
-                Button("Stop", action: stop)
+            VStack(alignment: .trailing, spacing: 8) {
+                if isExpanded && !quickActions.isEmpty {
+                    HStack(spacing: 6) {
+                        ForEach(quickActions, id: \.self) { action in
+                            Button {
+                                perform(action)
+                            } label: {
+                                Image(systemName: action.systemImage)
+                            }
+                            .buttonStyle(.bordered)
+                            .buttonBorderShape(.capsule)
+                            .controlSize(.small)
+                            .help(action.title)
+                            .accessibilityLabel(action.title)
+                        }
+                    }
+                }
+
+                if let primaryAction {
+                    Button(primaryAction.title) {
+                        perform(primaryAction)
+                    }
                     .buttonStyle(.borderedProminent)
                     .buttonBorderShape(.capsule)
                     .controlSize(.small)
+                    .tint(primaryAction == .stop ? .orange : nil)
+                }
             }
         }
         .padding(isExpanded ? 12 : 8)
@@ -1002,7 +1040,7 @@ private struct ServiceMenuBarRow: View {
 }
 
 private struct ServiceMenuBarHeaderCard: View {
-    let activeCount: Int
+    let presentation: MenuBarStatusPresentation
     let unhealthyCount: Int
     let updatedLabel: String
     let refresh: () -> Void
@@ -1013,29 +1051,33 @@ private struct ServiceMenuBarHeaderCard: View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(Color.accentColor.opacity(0.14))
 
-                Image(systemName: "shippingbox.circle.fill")
+                Image(systemName: presentation.symbolName)
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(Color.accentColor)
             }
             .frame(width: 42, height: 42)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("SlayNode")
-                    .font(.headline.weight(.semibold))
+                HStack(spacing: 8) {
+                    Text("SlayNode")
+                        .font(.headline.weight(.semibold))
+
+                    if let countText = presentation.countText {
+                        Text(countText)
+                            .font(.caption2.weight(.bold))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 4)
+                            .background(Color.accentColor.opacity(0.12), in: Capsule())
+                    }
+                }
 
                 Text(updatedLabel)
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                if unhealthyCount > 0 {
-                    Text("\(unhealthyCount) service\(unhealthyCount == 1 ? "" : "s") need attention")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.orange)
-                } else {
-                    Text("\(activeCount) active services")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
+                Text(presentation.statusText)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(presentation.needsAttention ? .orange : .secondary)
             }
 
             Spacer(minLength: 10)
@@ -1049,6 +1091,34 @@ private struct ServiceMenuBarHeaderCard: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+}
+
+private struct ServiceMenuBarEmptyState: View {
+    let refresh: () -> Void
+    let openDashboard: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ContentUnavailableView(
+                "No Services Right Now",
+                systemImage: "checkmark.circle",
+                description: Text("When discovery finds local infrastructure, the most relevant services will show up here.")
+            )
+
+            HStack(spacing: 10) {
+                Button("Refresh", action: refresh)
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.capsule)
+
+                Button("Open Dashboard", action: openDashboard)
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 18)
         .glassEffect(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }

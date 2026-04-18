@@ -129,7 +129,7 @@ struct SlayNodeMenuBarApp: App {
         MenuBarExtra {
             ServiceMenuBarView(center: center)
         } label: {
-            Label("SlayNode", systemImage: "shippingbox.circle.fill")
+            ServiceMenuBarLabel(presentation: center.menuBarPresentation)
         }
         .menuBarExtraStyle(.window)
     }
@@ -146,5 +146,22 @@ final class ServiceAppDelegate: NSObject, NSApplicationDelegate {
         }
 
         NSApp.setActivationPolicy(.regular)
+    }
+}
+
+private struct ServiceMenuBarLabel: View {
+    let presentation: MenuBarStatusPresentation
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: presentation.symbolName)
+            if let countText = presentation.countText {
+                Text(countText)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+            }
+        }
+        .help(presentation.statusText)
+        .accessibilityLabel(presentation.accessibilityLabel)
     }
 }

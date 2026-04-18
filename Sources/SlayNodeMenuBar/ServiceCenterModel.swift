@@ -12,6 +12,9 @@ final class AppSettings {
         static let refreshInterval = "com.slaynode.settings.refreshInterval"
         static let showRecentHistory = "com.slaynode.settings.showRecentHistory"
         static let showMenuBarSection = "com.slaynode.settings.showMenuBarSection"
+        static let showFailureNotifications = "com.slaynode.settings.showFailureNotifications"
+        static let showHealthNotifications = "com.slaynode.settings.showHealthNotifications"
+        static let notificationCooldownMinutes = "com.slaynode.settings.notificationCooldownMinutes"
     }
 
     private let defaults: UserDefaults
@@ -35,6 +38,25 @@ final class AppSettings {
         }
     }
 
+    var showFailureNotifications: Bool {
+        didSet {
+            defaults.set(showFailureNotifications, forKey: Keys.showFailureNotifications)
+        }
+    }
+
+    var showHealthNotifications: Bool {
+        didSet {
+            defaults.set(showHealthNotifications, forKey: Keys.showHealthNotifications)
+        }
+    }
+
+    var notificationCooldownMinutes: Double {
+        didSet {
+            notificationCooldownMinutes = max(1, min(notificationCooldownMinutes, 30))
+            defaults.set(notificationCooldownMinutes, forKey: Keys.notificationCooldownMinutes)
+        }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
 
@@ -52,6 +74,92 @@ final class AppSettings {
         } else {
             self.showMenuBarSection = defaults.bool(forKey: Keys.showMenuBarSection)
         }
+
+        if defaults.object(forKey: Keys.showFailureNotifications) == nil {
+            self.showFailureNotifications = true
+        } else {
+            self.showFailureNotifications = defaults.bool(forKey: Keys.showFailureNotifications)
+        }
+
+        if defaults.object(forKey: Keys.showHealthNotifications) == nil {
+            self.showHealthNotifications = true
+        } else {
+            self.showHealthNotifications = defaults.bool(forKey: Keys.showHealthNotifications)
+        }
+
+        let storedCooldown = defaults.object(forKey: Keys.notificationCooldownMinutes) as? Double
+        self.notificationCooldownMinutes = max(1, min(storedCooldown ?? 3, 30))
+    }
+}
+
+struct MenuBarStatusPresentation: Equatable, Sendable {
+    let symbolName: String
+    let countText: String?
+    let statusText: String
+    let accessibilityLabel: String
+    let needsAttention: Bool
+
+    static func make(
+        activeCount: Int,
+        unhealthyCount: Int,
+        isRefreshing: Bool,
+        hasError: Bool
+    ) -> MenuBarStatusPresentation {
+        if unhealthyCount > 0 {
+            let countText = compactCountText(unhealthyCount)
+            let summary = "\(unhealthyCount) service\(unhealthyCount == 1 ? "" : "s") need attention"
+            return MenuBarStatusPresentation(
+                symbolName: "exclamationmark.triangle.fill",
+                countText: countText,
+                statusText: summary,
+                accessibilityLabel: "SlayNode, \(summary)",
+                needsAttention: true
+            )
+        }
+
+        if hasError {
+            return MenuBarStatusPresentation(
+                symbolName: "exclamationmark.circle.fill",
+                countText: nil,
+                statusText: "Last action needs attention",
+                accessibilityLabel: "SlayNode, last action needs attention",
+                needsAttention: true
+            )
+        }
+
+        if isRefreshing {
+            return MenuBarStatusPresentation(
+                symbolName: "arrow.trianglehead.2.clockwise.rotate.90.circle.fill",
+                countText: nil,
+                statusText: "Refreshing local services",
+                accessibilityLabel: "SlayNode, refreshing local services",
+                needsAttention: false
+            )
+        }
+
+        if activeCount > 0 {
+            let countText = compactCountText(activeCount)
+            let summary = "\(activeCount) active service\(activeCount == 1 ? "" : "s")"
+            return MenuBarStatusPresentation(
+                symbolName: "shippingbox.circle.fill",
+                countText: countText,
+                statusText: summary,
+                accessibilityLabel: "SlayNode, \(summary)",
+                needsAttention: false
+            )
+        }
+
+        return MenuBarStatusPresentation(
+            symbolName: "shippingbox.circle",
+            countText: nil,
+            statusText: "No active services",
+            accessibilityLabel: "SlayNode, no active services",
+            needsAttention: false
+        )
+    }
+
+    private static func compactCountText(_ value: Int) -> String {
+        value > 9 ? "9+" : "\(value)"
     }
 }
 
@@ -89,6 +197,7 @@ final class ServiceCommandBridge {
 @MainActor
 final class NotificationCoordinator {
     private var requestedAuthorization = false
+    private var lastNotificationDates: [String: Date] = [:]
 
     func requestAuthorizationIfNeeded() {
         guard !requestedAuthorization else { return }
@@ -103,7 +212,13 @@ final class NotificationCoordinator {
         }
     }
 
-    func postFailure(for service: ManagedService, message: String) {
+    func postFailure(for service: ManagedService, message: String, settings: AppSettings) {
+        guard settings.showFailureNotifications else { return }
+        guard shouldPostNotification(
+            key: "failure:\(service.id)",
+            cooldownMinutes: settings.notificationCooldownMinutes
+        ) else { return }
+
         requestAuthorizationIfNeeded()
 
         let content = UNMutableNotificationContent()
@@ -120,7 +235,13 @@ final class NotificationCoordinator {
         UNUserNotificationCenter.current().add(request)
     }
 
-    func postHealthWarning(for service: ManagedService) {
+    func postHealthWarning(for service: ManagedService, settings: AppSettings) {
+        guard settings.showHealthNotifications else { return }
+        guard shouldPostNotification(
+            key: "health:\(service.id)",
+            cooldownMinutes: settings.notificationCooldownMinutes
+        ) else { return }
+
         requestAuthorizationIfNeeded()
 
         let content = UNMutableNotificationContent()
@@ -135,6 +256,19 @@ final class NotificationCoordinator {
         )
 
         UNUserNotificationCenter.current().add(request)
+    }
+
+    private func shouldPostNotification(key: String, cooldownMinutes: Double) -> Bool {
+        let now = Date()
+        let cooldown = cooldownMinutes * 60
+
+        if let lastNotificationDate = lastNotificationDates[key],
+           now.timeIntervalSince(lastNotificationDate) < cooldown {
+            return false
+        }
+
+        lastNotificationDates[key] = now
+        return true
     }
 }
 
@@ -209,6 +343,15 @@ final class ServiceCenterModel {
 
     var unhealthyServiceCount: Int {
         services.filter { $0.health == .critical || $0.status == .degraded }.count
+    }
+
+    var menuBarPresentation: MenuBarStatusPresentation {
+        MenuBarStatusPresentation.make(
+            activeCount: activeServiceCount,
+            unhealthyCount: unhealthyServiceCount,
+            isRefreshing: isRefreshing,
+            hasError: lastError != nil
+        )
     }
 
     var workspaces: [WorkspaceIdentity] {
@@ -297,7 +440,7 @@ final class ServiceCenterModel {
         } catch {
             let message = error.localizedDescription
             lastError = message
-            notifications.postFailure(for: service, message: message)
+            notifications.postFailure(for: service, message: message, settings: settings)
             historyStore.record(action: action, on: service, outcome: "Failed: \(message)")
             recentActions = historyStore.recentActions()
             return nil
@@ -349,7 +492,7 @@ final class ServiceCenterModel {
 
         for service in services where service.health == .critical {
             if knownHealth[service.id] != .critical {
-                notifications.postHealthWarning(for: service)
+                notifications.postHealthWarning(for: service, settings: settings)
             }
         }
 
