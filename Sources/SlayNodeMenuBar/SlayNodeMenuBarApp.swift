@@ -1,7 +1,9 @@
-import SwiftUI
 import AppKit
+import SwiftData
+import SwiftUI
 
 enum AppWindowID {
+    static let dashboard = "dashboard"
     static let settings = "settings"
     static let about = "about"
 }
@@ -15,79 +17,126 @@ enum AuxiliarySheet: String, Identifiable {
 
 @main
 struct SlayNodeMenuBarApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var activeSheet: AuxiliarySheet?
-    
+    @NSApplicationDelegateAdaptor(ServiceAppDelegate.self) private var appDelegate
+    @Environment(\.openWindow) private var openWindow
+
+    @State private var center: ServiceCenterModel
+    @StateObject private var updateController = UpdateController()
+
+    init() {
+        let container = try! ModelContainer(
+            for: WorkspaceHistoryRecord.self,
+            ServiceHistoryRecord.self,
+            ServiceActionRecord.self,
+            WindowStateRecord.self
+        )
+
+        let settings = AppSettings()
+        let historyStore = ServiceHistoryStore(container: container)
+        let processProvider = ProcessServiceProvider()
+        let dockerProvider = DockerServiceProvider()
+        let brewProvider = BrewServiceProvider()
+        let orchestrator = DiscoveryOrchestrator(
+            discoveryProviders: [processProvider, dockerProvider, brewProvider],
+            controlProviders: [processProvider, dockerProvider, brewProvider]
+        )
+
+        _center = State(
+            initialValue: ServiceCenterModel(
+                orchestrator: orchestrator,
+                historyStore: historyStore,
+                settings: settings
+            )
+        )
+    }
+
     var body: some Scene {
-        WindowGroup("SlayNode") {
-            MainWindowView(
-                preferences: appDelegate.preferences,
-                monitor: appDelegate.processMonitor,
-                updateController: appDelegate.updateController,
-                activeSheet: $activeSheet
+        WindowGroup(id: AppWindowID.dashboard) {
+            ServiceDashboardWindowView(
+                center: center,
+                updateController: updateController,
+                lockedWorkspaceID: nil,
+                sceneStateID: "main-dashboard"
             )
         }
+        .defaultWindowPlacement { _, _ in
+            WindowPlacement(.center, width: 1380, height: 860)
+        }
+        .windowResizability(.contentSize)
+        .restorationBehavior(.automatic)
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button("About SlayNode") {
-                    presentAuxiliarySheet(.about)
+                    openWindow(id: AppWindowID.about)
                 }
             }
 
             CommandGroup(replacing: .appSettings) {
-                Button("Settings…") {
-                    presentAuxiliarySheet(.settings)
+                SettingsLink {
+                    Text("Settings…")
                 }
                 .keyboardShortcut(",", modifiers: .command)
             }
+
+            CommandMenu("Services") {
+                Button("Refresh Discovery") {
+                    Task { await center.refresh() }
+                }
+                .keyboardShortcut("r", modifiers: [.command, .shift])
+            }
         }
 
-        Window("SlayNode Settings", id: AppWindowID.settings) {
-            SettingsView(preferences: appDelegate.preferences, updateController: appDelegate.updateController)
+        WindowGroup("Workspace", for: String.self) { workspaceID in
+            let resolvedWorkspaceID = workspaceID.wrappedValue
+            ServiceDashboardWindowView(
+                center: center,
+                updateController: updateController,
+                lockedWorkspaceID: resolvedWorkspaceID,
+                sceneStateID: "workspace-\(resolvedWorkspaceID ?? "unknown")"
+            )
+        }
+        .defaultWindowPlacement { _, _ in
+            WindowPlacement(.center, width: 1280, height: 800)
+        }
+        .restorationBehavior(.automatic)
+
+        Settings {
+            SlayNodeSettingsView(center: center, updateController: updateController)
+        }
+
+        Window("Settings", id: AppWindowID.settings) {
+            SlayNodeSettingsView(center: center, updateController: updateController)
+        }
+        .defaultWindowPlacement { _, _ in
+            WindowPlacement(.center, width: 640, height: 460)
         }
 
         Window("About SlayNode", id: AppWindowID.about) {
-            AboutWindowView()
+            SlayNodeAboutView()
         }
-    }
+        .defaultWindowPlacement { _, _ in
+            WindowPlacement(.center, width: 760, height: 560)
+        }
 
-    private func presentAuxiliarySheet(_ sheet: AuxiliarySheet) {
-        NSApp.activate(ignoringOtherApps: true)
-        activeSheet = sheet
+        MenuBarExtra {
+            ServiceMenuBarView(center: center)
+        } label: {
+            Label("SlayNode", systemImage: "shippingbox.circle.fill")
+        }
+        .menuBarExtraStyle(.window)
     }
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    let preferences = PreferencesStore()
-    let processMonitor = ProcessMonitor()
-    let updateController = UpdateController()
-    
+final class ServiceAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         CrashReporter.start()
-        
+
         if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
            let appIcon = NSImage(contentsOf: iconURL) {
             NSApp.applicationIconImage = appIcon
         }
+
         NSApp.setActivationPolicy(.regular)
-        processMonitor.start()
-        Task { await processMonitor.refresh() }
-        NSApp.activate(ignoringOtherApps: true)
-        closeLegacyAuxiliaryWindows()
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 400_000_000)
-            closeLegacyAuxiliaryWindows()
-        }
-        
-        updateController.checkForUpdatesInBackground()
-    }
-
-    private func closeLegacyAuxiliaryWindows() {
-        let auxiliaryTitles: Set<String> = ["SlayNode Settings", "About SlayNode"]
-
-        for window in NSApp.windows where auxiliaryTitles.contains(window.title) {
-            window.close()
-        }
     }
 }

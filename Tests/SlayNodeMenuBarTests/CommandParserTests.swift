@@ -33,6 +33,18 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 9229])
     }
 
+    func testInferPortsFromSeparateFlagArguments() {
+        let tokens = ["vite", "--port", "4173", "--inspect", "127.0.0.1:9230"]
+        let ports = CommandParser.inferPorts(from: tokens)
+        XCTAssertEqual(ports, [4173, 9230])
+    }
+
+    func testInferPortsIgnoresBareNumericArguments() {
+        let tokens = ["sleep", "2", "--retries", "28"]
+        let ports = CommandParser.inferPorts(from: tokens)
+        XCTAssertTrue(ports.isEmpty)
+    }
+
     func testInferWorkingDirectoryFromFlag() {
         let path = CommandParser.inferWorkingDirectory(from: ["--cwd", "~/Projects/demo"])
         XCTAssertTrue(path?.hasSuffix("Projects/demo") ?? false)

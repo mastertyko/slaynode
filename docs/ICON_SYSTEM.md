@@ -4,7 +4,7 @@ This documentation covers the brand asset pipeline used in SlayNode.
 
 ## Icon System
 
-SlayNode now uses one shared source of truth for its icon family: `generate-icons.swift`.
+SlayNode uses one shared source of truth for its icon family: `generate-icons.swift`.
 The script renders the dock/app icon and the menu bar glyph from the same control-node
 geometry, then writes the generated PNG assets back into `Sources/SlayNodeMenuBar/Resources`.
 
@@ -30,6 +30,10 @@ geometry, then writes the generated PNG assets back into `Sources/SlayNodeMenuBa
 - Menu bar glyph
   Simplified monochrome version of the same network, without the background tile.
 
+The current icon set is tuned to sit comfortably inside the macOS 26 visual language:
+cleaner silhouettes, calmer contrast, and a glyph that still reads clearly against
+Liquid Glass toolbars and menu bar treatments.
+
 The menu bar glyph is intentionally not a flattened version of the full app icon.
 Template rendering in the macOS menu bar discards color, so the glyph has to be
 optically simpler and heavier than the dock icon to stay legible at 16-22 px.
@@ -47,7 +51,7 @@ normal local builds stay in sync with the renderer.
 ## Technical Notes
 
 - `StatusItemController.swift` loads the generated `MenuBarIcon.png` and marks it
-  as a template image for proper macOS tinting/highlight behavior.
+  as a template image for proper macOS tinting and highlight behavior.
 - The menu bar glyph avoids gradients, glows, and background plates because those
   details collapse in template rendering.
 - Repo URLs and bundle identifiers remain lowercase (`slaynode`) even though the

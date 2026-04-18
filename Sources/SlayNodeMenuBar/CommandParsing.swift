@@ -77,22 +77,29 @@ enum CommandParser {
 
     static func inferPorts(from tokens: [String]) -> [Int] {
         var collected: Set<Int> = []
-        let regularExpression = try? NSRegularExpression(pattern: "--?(?:port|p)=?(\\d+)", options: .caseInsensitive)
 
-        for token in tokens {
-            if let regex = regularExpression,
-               let match = regex.firstMatch(in: token, range: NSRange(location: 0, length: token.utf16.count)),
-               match.numberOfRanges > 1,
-               let range = Range(match.range(at: 1), in: token),
-               let port = Int(token[range]) {
+        for (index, token) in tokens.enumerated() {
+            if let inlinePort = extractInlinePort(from: token) {
+                collected.insert(inlinePort)
+                continue
+            }
+
+            if isPortFlag(token),
+               index + 1 < tokens.count,
+               let port = extractPortCandidate(from: tokens[index + 1]) {
                 collected.insert(port)
                 continue
             }
 
-            let components = token.split(separator: ":")
-            if let last = components.last,
-               let port = Int(last),
-               port > 0 {
+            if token.contains("://"),
+               let components = URLComponents(string: token),
+               let port = components.port {
+                collected.insert(port)
+                continue
+            }
+
+            if looksLikeHostPort(token),
+               let port = extractTrailingPort(from: token) {
                 collected.insert(port)
             }
         }
@@ -154,5 +161,74 @@ enum CommandParser {
 
     private static func sanitizePath(_ path: String) -> String {
         (path as NSString).expandingTildeInPath
+    }
+
+    private static func isPortFlag(_ token: String) -> Bool {
+        let normalized = token.lowercased()
+        return [
+            "--port",
+            "-p",
+            "--inspect",
+            "--inspect-brk",
+            "--http-port",
+            "--https-port"
+        ].contains(normalized)
+    }
+
+    private static func extractInlinePort(from token: String) -> Int? {
+        let patterns = [
+            #"^--?(?:port|p)=(.+)$"#,
+            #"^--?(?:inspect|inspect-brk)=(.+)$"#,
+            #"^-p(\d+)$"#
+        ]
+
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+                  let match = regex.firstMatch(in: token, range: NSRange(location: 0, length: token.utf16.count)),
+                  match.numberOfRanges > 1,
+                  let range = Range(match.range(at: 1), in: token) else {
+                continue
+            }
+
+            let candidate = String(token[range])
+            if let port = extractPortCandidate(from: candidate) {
+                return port
+            }
+        }
+
+        return nil
+    }
+
+    private static func extractPortCandidate(from value: String) -> Int? {
+        if let directPort = Int(value), isValidPort(directPort) {
+            return directPort
+        }
+
+        return extractTrailingPort(from: value)
+    }
+
+    private static func extractTrailingPort(from value: String) -> Int? {
+        guard let candidate = value.split(separator: ":").last,
+              let port = Int(candidate),
+              isValidPort(port) else {
+            return nil
+        }
+
+        return port
+    }
+
+    private static func looksLikeHostPort(_ token: String) -> Bool {
+        guard token.contains(":") else { return false }
+
+        let lowered = token.lowercased()
+        return lowered.contains("localhost:") ||
+            lowered.contains("127.") ||
+            lowered.contains("0.0.0.0:") ||
+            lowered.contains("[::") ||
+            token.contains("://")
+    }
+
+    private static func isValidPort(_ value: Int) -> Bool {
+        (1...65_535).contains(value)
     }
 }

@@ -62,6 +62,7 @@ struct NodeProcessItemViewModel: Identifiable, Equatable {
     let command: String
     let workingDirectory: String?
     let descriptor: ServerDescriptor
+    let searchIndex: String
     let isStopping: Bool
 }
 
@@ -141,6 +142,7 @@ final class MenuViewModel: ObservableObject {
                 command: processes[index].command,
                 workingDirectory: processes[index].workingDirectory,
                 descriptor: processes[index].descriptor,
+                searchIndex: processes[index].searchIndex,
                 isStopping: true
             )
         }
@@ -242,6 +244,7 @@ final class MenuViewModel: ObservableObject {
                     command: self.processes[index].command,
                     workingDirectory: self.processes[index].workingDirectory,
                     descriptor: self.processes[index].descriptor,
+                    searchIndex: self.processes[index].searchIndex,
                     isStopping: false
                 )
             }
@@ -406,6 +409,15 @@ final class MenuViewModel: ObservableObject {
             let portBadges = makePortBadges(for: process)
             let infoChips = makeInfoChips(for: process, commandSummary: commandSummary)
             let categoryBadge = process.descriptor == .unknown ? nil : makeCategoryBadge(for: process)
+            let searchIndex = makeSearchIndex(
+                title: title,
+                commandSummary: commandSummary,
+                categoryBadge: categoryBadge,
+                projectName: projectName,
+                process: process,
+                portBadges: portBadges,
+                infoChips: infoChips
+            )
 
             return NodeProcessItemViewModel(
                 id: process.pid,
@@ -421,9 +433,36 @@ final class MenuViewModel: ObservableObject {
                 command: process.command,
                 workingDirectory: process.workingDirectory,
                 descriptor: process.descriptor,
+                searchIndex: searchIndex,
                 isStopping: isStopping
             )
         }
+    }
+
+    private func makeSearchIndex(
+        title: String,
+        commandSummary: String,
+        categoryBadge: String?,
+        projectName: String?,
+        process: NodeProcess,
+        portBadges: [NodeProcessItemViewModel.PortBadge],
+        infoChips: [NodeProcessItemViewModel.InfoChip]
+    ) -> String {
+        [
+            title,
+            commandSummary,
+            categoryBadge ?? "",
+            projectName ?? "",
+            process.command,
+            process.workingDirectory ?? "",
+            process.descriptor.displayName,
+            process.descriptor.runtime ?? "",
+            process.descriptor.details ?? "",
+            portBadges.map(\.text).joined(separator: " "),
+            infoChips.map(\.text).joined(separator: " ")
+        ]
+        .joined(separator: "\n")
+        .lowercased()
     }
 
     private func makeTitle(for process: NodeProcess, projectName: String?, commandSummary: String) -> String {

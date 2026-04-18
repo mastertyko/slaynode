@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 @MainActor
-final class StatusItemController: NSObject {
+final class StatusItemController: NSObject, NSPopoverDelegate {
     private let statusItem: NSStatusItem
     private let popover = NSPopover()
     private let preferences: PreferencesStore
@@ -56,8 +56,7 @@ final class StatusItemController: NSObject {
         popover.behavior = .transient
         popover.animates = true
         popover.contentSize = NSSize(width: 380, height: 700)
-        // Create content eagerly so ProcessMonitor starts immediately
-        ensurePopoverContent()
+        popover.delegate = self
     }
 
     private func ensurePopoverContent() {
@@ -65,6 +64,10 @@ final class StatusItemController: NSObject {
             let contentView = MenuContentView(preferences: preferences, monitor: monitor)
             popover.contentViewController = NSHostingController(rootView: contentView)
         }
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        popover.contentViewController = nil
     }
 
     private func menuBarTemplateImage() -> NSImage? {

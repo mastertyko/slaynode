@@ -20,19 +20,10 @@ struct WindowDashboardView: View {
     private var filteredProcesses: [NodeProcessItemViewModel] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return viewModel.processes }
+        let normalizedQuery = query.lowercased()
 
         return viewModel.processes.filter { process in
-            let haystack = [
-                process.title,
-                process.subtitle,
-                process.categoryBadge ?? "",
-                process.projectName ?? "",
-                process.command,
-                process.workingDirectory ?? ""
-            ]
-            .joined(separator: "\n")
-
-            return haystack.localizedCaseInsensitiveContains(query)
+            process.searchIndex.contains(normalizedQuery)
         }
     }
 
@@ -75,24 +66,36 @@ struct WindowDashboardView: View {
         return selectedProcess?.categoryBadge
     }
 
-    private var concretePortCount: Int {
-        viewModel.processes.reduce(into: 0) { count, process in
+    private var visibleConcretePortCount: Int {
+        filteredProcesses.reduce(into: 0) { count, process in
             count += process.actualPorts.count
         }
     }
 
-    private var likelyPortCount: Int {
-        viewModel.processes.reduce(into: 0) { count, process in
+    private var visibleLikelyPortCount: Int {
+        filteredProcesses.reduce(into: 0) { count, process in
             count += process.likelyPorts.count
         }
     }
 
-    private var projectCount: Int {
-        Set(viewModel.processes.compactMap(\.projectName)).count
+    private var workspaceSections: [RuntimeWorkspaceSection] {
+        makeWorkspaceSections(from: filteredProcesses)
     }
 
-    private var roleCount: Int {
-        Set(viewModel.processes.compactMap(\.categoryBadge)).count
+    private var visibleProjectCount: Int {
+        workspaceSections.count
+    }
+
+    private var visibleRoleCount: Int {
+        Set(filteredProcesses.compactMap(\.categoryBadge)).count
+    }
+
+    private var visibleProcessCount: Int {
+        filteredProcesses.count
+    }
+
+    private var isFiltering: Bool {
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
@@ -103,19 +106,23 @@ struct WindowDashboardView: View {
             VStack(alignment: .leading, spacing: 18) {
                 WindowHeroBanner(
                     activeCount: viewModel.processes.count,
-                    concretePortCount: concretePortCount,
-                    likelyPortCount: likelyPortCount,
-                    projectCount: projectCount,
-                    roleCount: roleCount,
+                    visibleCount: visibleProcessCount,
+                    concretePortCount: visibleConcretePortCount,
+                    likelyPortCount: visibleLikelyPortCount,
+                    projectCount: visibleProjectCount,
+                    roleCount: visibleRoleCount,
                     statusText: statusText,
                     statusIcon: statusIcon,
                     refreshInterval: Int(preferences.refreshInterval.rounded()),
                     accent: accent,
                     isLoading: viewModel.isLoading,
                     selectionLabel: dashboardSelectionLabel,
+                    activeAuxiliary: activeAuxiliary,
+                    isFiltering: isFiltering,
                     refreshAction: viewModel.refresh,
                     showAboutAction: showAboutAction,
                     openSettingsAction: openSettingsAction,
+                    dismissAuxiliaryAction: dismissAuxiliaryAction,
                     quitAction: quitAction
                 )
 
@@ -141,13 +148,11 @@ struct WindowDashboardView: View {
                             activeAuxiliary: activeAuxiliary,
                             preferences: preferences,
                             updateController: updateController,
-                            openRuntimeAction: dismissAuxiliaryAction,
-                            openSettingsAction: openSettingsAction,
                             openAboutAction: showAboutAction
                         )
                     } else {
                         WindowSidebarPanel(
-                            processes: filteredProcesses,
+                            workspaceSections: workspaceSections,
                             isLoading: viewModel.isLoading,
                             totalCount: viewModel.processes.count,
                             searchText: $searchText,
@@ -174,10 +179,10 @@ struct WindowDashboardView: View {
             .padding(28)
         }
         .onAppear(perform: syncSelection)
-        .onChange(of: filteredProcessIDs) { _ in
+        .onChange(of: filteredProcessIDs) {
             syncSelection()
         }
-        .onChange(of: searchText) { _ in
+        .onChange(of: searchText) {
             syncSelection()
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.9), value: filteredProcessIDs)
@@ -210,10 +215,10 @@ private struct WindowWorkspaceSidebarPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Workspace")
+                Text("App surfaces")
                     .font(.title3.weight(.semibold))
 
-                Text("Move between live runtime control and app surfaces without leaving the main window.")
+                Text("Switch between runtime inspection and app utilities without leaving the same window.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -331,8 +336,6 @@ private struct WindowWorkspaceDetailPanel: View {
     let activeAuxiliary: AuxiliarySheet
     @ObservedObject var preferences: PreferencesStore
     @ObservedObject var updateController: UpdateController
-    let openRuntimeAction: () -> Void
-    let openSettingsAction: () -> Void
     let openAboutAction: () -> Void
 
     private var accent: Color {
@@ -347,31 +350,6 @@ private struct WindowWorkspaceDetailPanel: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                HStack(alignment: .center, spacing: 12) {
-                    Button(action: openRuntimeAction) {
-                        Label("Back to Runtime", systemImage: "chevron.left")
-                    }
-                    .buttonStyle(WindowToolbarPrimaryButtonStyle(tint: .secondary))
-
-                    Spacer()
-
-                    HStack(spacing: 8) {
-                        workspaceModeButton(
-                            title: "Settings",
-                            systemImage: "gearshape.2.fill",
-                            isActive: activeAuxiliary == .settings,
-                            action: openSettingsAction
-                        )
-
-                        workspaceModeButton(
-                            title: "About",
-                            systemImage: "app.badge",
-                            isActive: activeAuxiliary == .about,
-                            action: openAboutAction
-                        )
-                    }
-                }
-
                 switch activeAuxiliary {
                 case .settings:
                     SettingsContentView(
@@ -406,32 +384,11 @@ private struct WindowWorkspaceDetailPanel: View {
                 )
         )
     }
-
-    @ViewBuilder
-    private func workspaceModeButton(
-        title: String,
-        systemImage: String,
-        isActive: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        if isActive {
-            Button(action: action) {
-                Label(title, systemImage: systemImage)
-            }
-            .buttonStyle(WindowToolbarPrimaryButtonStyle(tint: accent))
-            .controlSize(.large)
-        } else {
-            Button(action: action) {
-                Label(title, systemImage: systemImage)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-        }
-    }
 }
 
 private struct WindowHeroBanner: View {
     let activeCount: Int
+    let visibleCount: Int
     let concretePortCount: Int
     let likelyPortCount: Int
     let projectCount: Int
@@ -442,68 +399,106 @@ private struct WindowHeroBanner: View {
     let accent: Color
     let isLoading: Bool
     let selectionLabel: String?
+    let activeAuxiliary: AuxiliarySheet?
+    let isFiltering: Bool
     let refreshAction: () -> Void
     let showAboutAction: () -> Void
     let openSettingsAction: () -> Void
+    let dismissAuxiliaryAction: () -> Void
     let quitAction: () -> Void
 
+    private var supportingText: String {
+        switch activeAuxiliary {
+        case .settings:
+            return "Tune the app and scan cadence without losing sight of the runtime context."
+        case .about:
+            return "Keep release info, support links and product details close to the runtime workspace."
+        case nil:
+            return "Inspect what is actually running, understand why it was classified that way, and take the right action quickly."
+        }
+    }
+
+    private var inventoryText: String {
+        let serviceLabel = visibleCount == 1 ? "service" : "services"
+        let projectLabel = projectCount == 1 ? "workspace" : "workspaces"
+
+        if isFiltering && visibleCount != activeCount {
+            return "Showing \(visibleCount) \(serviceLabel) across \(projectCount) \(projectLabel)"
+        }
+
+        return "\(visibleCount) \(serviceLabel) across \(projectCount) \(projectLabel)"
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top, spacing: 18) {
-                VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 24) {
+                VStack(alignment: .leading, spacing: 12) {
                     Text("Local Runtime Control")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
 
-                    Text("See what is actually running, why it was identified, and take action without hunting through terminals.")
+                    Text(supportingText)
                         .font(.headline)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    HStack(spacing: 8) {
-                        WindowStatusPill(
-                            text: statusText,
-                            systemImage: statusIcon,
-                            tint: accent
-                        )
-
-                        WindowStatusPill(
-                            text: "Auto-refresh \(max(refreshInterval, 1))s",
-                            systemImage: "timer",
-                            tint: .secondary
-                        )
-
-                        if let selectionLabel {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 8) {
                             WindowStatusPill(
-                                text: selectionLabel,
-                                systemImage: windowCategoryIcon(for: selectionLabel),
+                                text: statusText,
+                                systemImage: statusIcon,
                                 tint: accent
                             )
+
+                            WindowStatusPill(
+                                text: "Auto-refresh \(max(refreshInterval, 1))s",
+                                systemImage: "timer",
+                                tint: .secondary
+                            )
+
+                            if let selectionLabel {
+                                WindowStatusPill(
+                                    text: selectionLabel,
+                                    systemImage: windowCategoryIcon(for: selectionLabel),
+                                    tint: accent
+                                )
+                            }
                         }
+
+                        Text(inventoryText)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
                     }
                 }
 
                 Spacer(minLength: 20)
 
-                VStack(alignment: .trailing, spacing: 10) {
+                VStack(alignment: .trailing, spacing: 12) {
                     HStack(spacing: 10) {
-                        Button(action: refreshAction) {
-                            Label("Refresh", systemImage: "arrow.clockwise")
-                        }
-                        .buttonStyle(WindowToolbarPrimaryButtonStyle(tint: accent))
+                        if activeAuxiliary == nil {
+                            Button(action: refreshAction) {
+                                Label("Refresh", systemImage: "arrow.clockwise")
+                            }
+                            .buttonStyle(WindowToolbarPrimaryButtonStyle(tint: accent))
 
-                        windowSettingsButton
+                            windowSettingsButton
 
-                        Button(action: showAboutAction) {
-                            Label("About", systemImage: "info.circle")
+                            Button(action: showAboutAction) {
+                                Label("About", systemImage: "info.circle")
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
+                        } else {
+                            Button(action: dismissAuxiliaryAction) {
+                                Label("Runtime", systemImage: "chevron.left")
+                            }
+                            .buttonStyle(WindowToolbarPrimaryButtonStyle(tint: .secondary))
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.large)
 
                         Button(role: .destructive, action: quitAction) {
                             Label("Quit", systemImage: "power")
                         }
                         .buttonStyle(.bordered)
-                        .controlSize(.large)
+                        .controlSize(.regular)
                     }
 
                     if isLoading {
@@ -514,15 +509,21 @@ private struct WindowHeroBanner: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
+                    } else if isFiltering && activeCount != visibleCount {
+                        Text("\(activeCount - visibleCount) filtered out")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 12)], spacing: 12) {
                 WindowMetricCard(
                     title: "Active services",
-                    value: "\(activeCount)",
-                    detail: activeCount == 1 ? "1 running process" : "\(activeCount) running processes",
+                    value: "\(visibleCount)",
+                    detail: isFiltering && activeCount != visibleCount
+                        ? "\(activeCount) detected before filtering"
+                        : (visibleCount == 1 ? "1 running process" : "\(visibleCount) running processes"),
                     accent: accent,
                     systemImage: "server.rack"
                 )
@@ -584,12 +585,12 @@ private struct WindowHeroBanner: View {
             Label("Settings", systemImage: "gearshape")
         }
         .buttonStyle(.bordered)
-        .controlSize(.large)
+        .controlSize(.regular)
     }
 }
 
 private struct WindowSidebarPanel: View {
-    let processes: [NodeProcessItemViewModel]
+    let workspaceSections: [RuntimeWorkspaceSection]
     let isLoading: Bool
     let totalCount: Int
     @Binding var searchText: String
@@ -598,10 +599,10 @@ private struct WindowSidebarPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Runtime map")
+                Text("Runtime inventory")
                     .font(.title3.weight(.semibold))
 
-                Text("Choose a service to inspect what it is, how it was identified, and which actions are available.")
+                Text("Search by workspace, runtime name, role, port, command or folder, then inspect the right process in detail.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -611,14 +612,29 @@ private struct WindowSidebarPanel: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
 
-                TextField("Search processes, commands or folders", text: $searchText)
+                TextField("Search workspaces, roles, commands or folders", text: $searchText)
                     .textFieldStyle(.plain)
+
+                if !searchText.isEmpty {
+                    Button {
+                        searchText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Clear search")
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.primary.opacity(0.05))
+                    .fill(Color.primary.opacity(0.06))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.white.opacity(0.06))
+                    )
             )
 
             Text(summaryText)
@@ -634,7 +650,7 @@ private struct WindowSidebarPanel: View {
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if processes.isEmpty {
+                } else if workspaceSections.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
                         Image(systemName: "rectangle.stack.badge.magnifyingglass")
                             .font(.system(size: 28, weight: .regular, design: .rounded))
@@ -643,7 +659,7 @@ private struct WindowSidebarPanel: View {
                         Text("Nothing matches that filter")
                             .font(.headline)
 
-                        Text("Try a project name, a port, or part of the command.")
+                        Text("Try a project name, runtime name like Vite, a port, or part of the command.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -652,16 +668,11 @@ private struct WindowSidebarPanel: View {
                 } else {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 8) {
-                            ForEach(processes) { process in
-                                Button {
-                                    selectedProcessID = process.id
-                                } label: {
-                                    WindowSidebarRow(
-                                        process: process,
-                                        isSelected: selectedProcessID == process.id
-                                    )
-                                }
-                                .buttonStyle(.plain)
+                            ForEach(workspaceSections) { section in
+                                WindowWorkspaceSectionCard(
+                                    section: section,
+                                    selectedProcessID: $selectedProcessID
+                                )
                             }
                         }
                         .padding(.vertical, 2)
@@ -683,11 +694,107 @@ private struct WindowSidebarPanel: View {
     }
 
     private var summaryText: String {
-        if processes.count == totalCount {
-            return totalCount == 1 ? "1 active process" : "\(totalCount) active processes"
+        let visibleServiceCount = workspaceSections.reduce(0) { $0 + $1.serviceCount }
+        let visibleWorkspaceCount = workspaceSections.count
+
+        let workspaceLabel = visibleWorkspaceCount == 1 ? "1 workspace" : "\(visibleWorkspaceCount) workspaces"
+        let serviceLabel = visibleServiceCount == 1 ? "1 service" : "\(visibleServiceCount) services"
+
+        if visibleServiceCount == totalCount {
+            return "\(serviceLabel) across \(workspaceLabel)"
         }
 
-        return "Showing \(processes.count) of \(totalCount)"
+        return "Showing \(serviceLabel) across \(workspaceLabel)"
+    }
+}
+
+private struct WindowWorkspaceSectionCard: View {
+    let section: RuntimeWorkspaceSection
+    @Binding var selectedProcessID: Int32?
+
+    private var tint: Color {
+        colorForCategory(section.dominantCategory)
+    }
+
+    private var isSectionSelected: Bool {
+        guard let selectedProcessID else { return false }
+        return section.processes.contains(where: { $0.id == selectedProcessID })
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(tint.opacity(isSectionSelected ? 0.22 : 0.12))
+                    .frame(width: 38, height: 38)
+                    .overlay {
+                        Image(systemName: windowCategoryIcon(for: section.dominantCategory))
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(tint)
+                    }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(section.title)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+
+                    Text(sectionHeaderDetail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+
+                    if let path = section.path {
+                        Text(path)
+                            .font(.caption2.monospaced())
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                }
+
+                Spacer(minLength: 8)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(section.processes) { process in
+                    Button {
+                        selectedProcessID = process.id
+                    } label: {
+                        WindowSidebarRow(
+                            process: process,
+                            isSelected: selectedProcessID == process.id
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(isSectionSelected ? tint.opacity(0.08) : Color.primary.opacity(0.035))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(isSectionSelected ? tint.opacity(0.18) : Color.white.opacity(0.06))
+                )
+        )
+    }
+
+    private var sectionHeaderDetail: String {
+        var parts = ["\(section.serviceCount) \(section.serviceCount == 1 ? "service" : "services")"]
+
+        if section.actualPortCount > 0 {
+            parts.append("\(section.actualPortCount) live \(section.actualPortCount == 1 ? "port" : "ports")")
+        } else if section.likelyPortCount > 0 {
+            parts.append("\(section.likelyPortCount) likely \(section.likelyPortCount == 1 ? "port" : "ports")")
+        }
+
+        if !section.roleSummary.isEmpty {
+            parts.append(section.roleSummary)
+        }
+
+        return parts.joined(separator: " · ")
     }
 }
 
@@ -800,6 +907,40 @@ private struct WindowProcessDetailPanel: View {
 
                         LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
                             WindowInfoCard(
+                                title: "Workspace",
+                                systemImage: "folder",
+                                accent: .blue
+                            ) {
+                                if let projectName = process.projectName {
+                                    WindowMetadataLine(label: "Project", value: projectName)
+                                }
+
+                                if let workingDirectory = process.workingDirectory {
+                                    WindowPathBlock(path: workingDirectory)
+                                } else {
+                                    Text("No working directory could be resolved.")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            WindowInfoCard(
+                                title: "Command",
+                                systemImage: "terminal",
+                                accent: .indigo
+                            ) {
+                                Text(process.command)
+                                    .font(.system(.body, design: .monospaced))
+                                    .textSelection(.enabled)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(14)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .fill(Color.primary.opacity(0.05))
+                                    )
+                            }
+
+                            WindowInfoCard(
                                 title: "At a glance",
                                 systemImage: "waveform.path.ecg",
                                 accent: accent
@@ -811,7 +952,51 @@ private struct WindowProcessDetailPanel: View {
                             }
 
                             WindowInfoCard(
-                                title: "Why SlayNode flagged it",
+                                title: "Detection confidence",
+                                systemImage: "checkmark.shield",
+                                accent: detectionConfidence(for: process).tint
+                            ) {
+                                let confidence = detectionConfidence(for: process)
+                                let signals = detectionSignals(for: process)
+
+                                HStack(alignment: .top, spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text(confidence.title)
+                                            .font(.subheadline.weight(.semibold))
+
+                                        Text(confidence.detail)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+
+                                    Spacer()
+
+                                    WindowStatusPill(
+                                        text: confidence.label,
+                                        systemImage: confidence.systemImage,
+                                        tint: confidence.tint
+                                    )
+                                }
+
+                                Divider()
+
+                                VStack(alignment: .leading, spacing: 10) {
+                                    ForEach(Array(signals.enumerated()), id: \.offset) { _, signal in
+                                        WindowSignalRow(signal: signal)
+                                    }
+                                }
+
+                                Divider()
+
+                                Text(slayScopeNarrative(for: process))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+
+                            WindowInfoCard(
+                                title: "Runtime identity",
                                 systemImage: "sparkles",
                                 accent: .orange
                             ) {
@@ -852,40 +1037,6 @@ private struct WindowProcessDetailPanel: View {
                                     }
                                 }
                             }
-
-                            WindowInfoCard(
-                                title: "Workspace",
-                                systemImage: "folder",
-                                accent: .blue
-                            ) {
-                                if let projectName = process.projectName {
-                                    WindowMetadataLine(label: "Project", value: projectName)
-                                }
-
-                                if let workingDirectory = process.workingDirectory {
-                                    WindowPathBlock(path: workingDirectory)
-                                } else {
-                                    Text("No working directory could be resolved.")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-
-                        WindowInfoCard(
-                            title: "Command",
-                            systemImage: "terminal",
-                            accent: .indigo
-                        ) {
-                            Text(process.command)
-                                .font(.system(.body, design: .monospaced))
-                                .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(14)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .fill(Color.primary.opacity(0.05))
-                                )
                         }
 
                         if !process.infoChips.isEmpty {
@@ -974,9 +1125,22 @@ private struct WindowProcessHeroCard: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
+                    if let workingDirectory = process.workingDirectory {
+                        Text(workingDirectory)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+
                     HStack(spacing: 8) {
                         WindowStatusPill(text: "PID \(process.pid)", systemImage: "number", tint: .secondary)
                         WindowStatusPill(text: process.uptimeDescription, systemImage: "timer", tint: .secondary)
+                        WindowStatusPill(
+                            text: detectionConfidence(for: process).label,
+                            systemImage: detectionConfidence(for: process).systemImage,
+                            tint: detectionConfidence(for: process).tint
+                        )
 
                         if let projectName = process.projectName {
                             WindowStatusPill(text: projectName, systemImage: "folder", tint: .secondary)
@@ -1039,20 +1203,25 @@ private struct WindowProcessHeroCard: View {
                         Label("Slay", systemImage: "xmark")
                     }
                     .buttonStyle(.bordered)
-                    .controlSize(.large)
+                    .controlSize(.regular)
                     .tint(.red)
                 }
             }
+
+            Text(slayScopeNarrative(for: process))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(22)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(.thinMaterial)
+                .fill(.regularMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .fill(
                             LinearGradient(
-                                colors: [accent.opacity(0.18), Color.clear],
+                                colors: [accent.opacity(0.10), Color.clear],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -1060,7 +1229,7 @@ private struct WindowProcessHeroCard: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(accent.opacity(0.22))
+                        .stroke(Color.white.opacity(0.10))
                 )
         )
     }
@@ -1088,7 +1257,17 @@ private struct WindowInfoCard<Content: View>: View {
         .padding(18)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(.thinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [accent.opacity(0.06), Color.clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .stroke(Color.white.opacity(0.08))
@@ -1108,14 +1287,14 @@ private struct WindowToolbarPrimaryButtonStyle: ButtonStyle {
             .padding(.vertical, 9)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(.ultraThinMaterial)
+                    .fill(.regularMaterial)
                     .overlay(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .fill(
                                 LinearGradient(
                                     colors: [
-                                        tint.opacity(configuration.isPressed ? 0.16 : 0.24),
-                                        tint.opacity(configuration.isPressed ? 0.04 : 0.10)
+                                        tint.opacity(configuration.isPressed ? 0.10 : 0.16),
+                                        tint.opacity(configuration.isPressed ? 0.01 : 0.04)
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -1124,13 +1303,13 @@ private struct WindowToolbarPrimaryButtonStyle: ButtonStyle {
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(tint.opacity(configuration.isPressed ? 0.18 : 0.26))
+                            .stroke(tint.opacity(configuration.isPressed ? 0.14 : 0.18))
                     )
             )
             .shadow(
-                color: tint.opacity(configuration.isPressed ? 0.08 : 0.16),
-                radius: configuration.isPressed ? 6 : 14,
-                y: configuration.isPressed ? 2 : 5
+                color: Color.black.opacity(configuration.isPressed ? 0.04 : 0.08),
+                radius: configuration.isPressed ? 4 : 10,
+                y: configuration.isPressed ? 1 : 3
             )
             .scaleEffect(configuration.isPressed ? 0.985 : 1.0)
             .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
@@ -1163,7 +1342,17 @@ private struct WindowMetricCard: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(accent.opacity(0.10))
+                .fill(.thinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [accent.opacity(0.10), Color.clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .stroke(accent.opacity(0.12))
@@ -1191,7 +1380,11 @@ private struct WindowStatusPill: View {
         .padding(.vertical, 6)
         .background(
             Capsule(style: .continuous)
-                .fill(tint.opacity(0.12))
+                .fill(.thinMaterial)
+                .overlay(
+                    Capsule(style: .continuous)
+                        .fill(tint.opacity(0.10))
+                )
         )
         .foregroundStyle(tint)
     }
@@ -1263,6 +1456,29 @@ private struct WindowPathBlock: View {
     }
 }
 
+private struct WindowSignalRow: View {
+    let signal: DetectionSignal
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: signal.systemImage)
+                .foregroundStyle(.secondary)
+                .frame(width: 16, height: 16)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(signal.title)
+                    .font(.subheadline.weight(.semibold))
+
+                Text(signal.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
 private struct WindowNoSelectionView: View {
     let searchText: String
 
@@ -1297,32 +1513,25 @@ private struct WindowBackdrop: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color(nsColor: .windowBackgroundColor),
-                    Color(nsColor: .underPageBackgroundColor)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            Color(nsColor: .windowBackgroundColor)
 
             Circle()
-                .fill(accent.opacity(0.18))
-                .frame(width: 420, height: 420)
-                .blur(radius: 110)
-                .offset(x: -260, y: -180)
-
-            Circle()
-                .fill(Color.orange.opacity(0.14))
+                .fill(accent.opacity(0.12))
                 .frame(width: 360, height: 360)
                 .blur(radius: 120)
-                .offset(x: 320, y: 180)
+                .offset(x: -240, y: -220)
 
             Circle()
-                .fill(Color.teal.opacity(0.10))
+                .fill(Color.orange.opacity(0.08))
                 .frame(width: 300, height: 300)
-                .blur(radius: 100)
-                .offset(x: 120, y: -220)
+                .blur(radius: 140)
+                .offset(x: 320, y: 220)
+
+            Circle()
+                .fill(Color.teal.opacity(0.06))
+                .frame(width: 260, height: 260)
+                .blur(radius: 120)
+                .offset(x: 100, y: -220)
         }
     }
 }
@@ -1424,27 +1633,4 @@ private func openDirectory(_ path: String) {
 private func openLocalhost(port: Int) {
     guard let url = URL(string: "http://127.0.0.1:\(port)") else { return }
     NSWorkspace.shared.open(url)
-}
-
-private extension NodeProcessItemViewModel {
-    var actualPorts: [Int] {
-        portBadges
-            .filter { !$0.isLikely }
-            .compactMap { parsePort(from: $0.text) }
-    }
-
-    var likelyPorts: [Int] {
-        portBadges
-            .filter(\.isLikely)
-            .compactMap { parsePort(from: $0.text) }
-    }
-
-    private func parsePort(from text: String) -> Int? {
-        let cleaned = text
-            .replacingOccurrences(of: "≈ ", with: "")
-            .replacingOccurrences(of: ":", with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        return Int(cleaned)
-    }
 }

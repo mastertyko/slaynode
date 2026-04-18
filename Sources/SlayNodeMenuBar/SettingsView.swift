@@ -23,7 +23,7 @@ struct SettingsView: View {
                 openAboutAction: openAboutAction
             )
         }
-        .frame(minWidth: 560, idealWidth: 620, maxWidth: 680, minHeight: 420, idealHeight: 460, maxHeight: 520)
+        .frame(minWidth: 520, idealWidth: 580, maxWidth: 640, minHeight: 380, idealHeight: 430, maxHeight: 500)
     }
 }
 
@@ -111,12 +111,19 @@ struct SettingsContentView: View {
 
                     Spacer()
 
-                    Button("Check Now") {
-                        updateController.checkForUpdates()
+                    if updateController.canCheckForUpdates {
+                        Button("Check Now") {
+                            updateController.checkForUpdates()
+                        }
+                        .buttonStyle(AuxiliaryPrimaryButtonStyle(tint: accent))
+                        .accessibilityLabel("Check for updates")
+                    } else {
+                        AuxiliaryPill(
+                            text: "Unavailable in local build",
+                            systemImage: "wrench.and.screwdriver",
+                            tint: .secondary
+                        )
                     }
-                    .buttonStyle(AuxiliaryPrimaryButtonStyle(tint: accent))
-                    .disabled(!updateController.canCheckForUpdates)
-                    .accessibilityLabel("Check for updates")
                 }
             }
 

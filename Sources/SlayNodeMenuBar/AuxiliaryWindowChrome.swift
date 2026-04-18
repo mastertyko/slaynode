@@ -6,25 +6,18 @@ struct AuxiliaryWindowBackdrop: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color(nsColor: .windowBackgroundColor),
-                    Color(nsColor: .underPageBackgroundColor)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            Color(nsColor: .windowBackgroundColor)
 
             Circle()
-                .fill(accent.opacity(0.18))
-                .frame(width: 260, height: 260)
-                .blur(radius: 80)
+                .fill(accent.opacity(0.12))
+                .frame(width: 240, height: 240)
+                .blur(radius: 90)
                 .offset(x: -150, y: -120)
 
             Circle()
-                .fill(Color.orange.opacity(0.10))
+                .fill(Color.orange.opacity(0.07))
                 .frame(width: 220, height: 220)
-                .blur(radius: 90)
+                .blur(radius: 110)
                 .offset(x: 180, y: 120)
         }
     }
@@ -85,7 +78,7 @@ struct AuxiliaryHeroCard<Trailing: View>: View {
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .fill(
                             LinearGradient(
-                                colors: [accent.opacity(0.14), Color.clear],
+                                colors: [accent.opacity(0.08), Color.clear],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -121,7 +114,17 @@ struct AuxiliarySectionCard<Content: View>: View {
         .padding(18)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(.thinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [accent.opacity(0.05), Color.clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .stroke(Color.white.opacity(0.08))
@@ -165,14 +168,14 @@ struct AuxiliaryPrimaryButtonStyle: ButtonStyle {
             .padding(.vertical, 9)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(.ultraThinMaterial)
+                    .fill(.regularMaterial)
                     .overlay(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .fill(
                                 LinearGradient(
                                     colors: [
-                                        tint.opacity(configuration.isPressed ? 0.16 : 0.24),
-                                        tint.opacity(configuration.isPressed ? 0.04 : 0.10)
+                                        tint.opacity(configuration.isPressed ? 0.10 : 0.16),
+                                        tint.opacity(configuration.isPressed ? 0.01 : 0.04)
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -181,13 +184,13 @@ struct AuxiliaryPrimaryButtonStyle: ButtonStyle {
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(tint.opacity(configuration.isPressed ? 0.18 : 0.26))
+                            .stroke(tint.opacity(configuration.isPressed ? 0.14 : 0.18))
                     )
             )
             .shadow(
-                color: tint.opacity(configuration.isPressed ? 0.08 : 0.16),
-                radius: configuration.isPressed ? 6 : 14,
-                y: configuration.isPressed ? 2 : 5
+                color: Color.black.opacity(configuration.isPressed ? 0.04 : 0.08),
+                radius: configuration.isPressed ? 4 : 10,
+                y: configuration.isPressed ? 1 : 3
             )
             .scaleEffect(configuration.isPressed ? 0.985 : 1.0)
             .animation(.easeOut(duration: 0.16), value: configuration.isPressed)

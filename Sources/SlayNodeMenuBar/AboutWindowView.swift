@@ -6,7 +6,7 @@ struct AboutWindowView: View {
         AuxiliaryWindowShell(accent: Color.accentColor) {
             AboutContentView()
         }
-        .frame(minWidth: 560, idealWidth: 620, maxWidth: 680, minHeight: 380, idealHeight: 410, maxHeight: 460)
+        .frame(minWidth: 520, idealWidth: 580, maxWidth: 640, minHeight: 360, idealHeight: 400, maxHeight: 460)
     }
 }
 
@@ -64,20 +64,10 @@ struct AboutContentView: View {
                 }
             }
 
-            HStack(spacing: 10) {
-                Spacer()
-
-                Button("Report Issues") {
-                    openExternalURL("https://github.com/mastertyko/slaynode/issues")
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-
-                Button("View on GitHub") {
-                    openExternalURL("https://github.com/mastertyko/slaynode")
-                }
-                .buttonStyle(AuxiliaryPrimaryButtonStyle(tint: accent))
-            }
+            Text("All process detection stays on your Mac. Use the GitHub links above for source, releases and issue reporting.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

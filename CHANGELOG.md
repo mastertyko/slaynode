@@ -5,16 +5,43 @@ All notable changes to SlayNode will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-04-18
+
+### Added
+
+- Tahoe-native main window built around `NavigationSplitView`, toolbar search, inspector, and workspace-scoped secondary windows
+- Unified local service domain for processes, Docker containers, and Homebrew Services
+- Actor-based discovery orchestration and source-specific control providers
+- SwiftData-backed history for recent workspaces, action history, and scene restoration
+- App Intents, Spotlight indexing hooks, local notification plumbing, and richer menu bar integration
+- New tests for provider logic, command redaction, port parsing, and the extracted dashboard support layer
+
+### Changed
+
+- Raised the minimum OS requirement to `macOS 26.0`
+- Repositioned SlayNode from Node-focused runtime utility to a first-class local service control room
+- Rebuilt the main UX around native macOS 26 patterns instead of custom window chrome
+- Replaced primary destructive copy like `Slay` with clearer actions such as `Stop`, `Force Stop`, and `Restart`
+- Tightened process heuristics so tooling daemons and non-service noise are filtered out more aggressively
+- Redacted known secret-bearing command arguments before they are shown in the UI
+
+### Fixed
+
+- Search and filtering now operate on a normalized service index instead of ad hoc runtime strings
+- Hidden or low-value utility processes no longer dominate the main dashboard
+- Commands and summaries shown in the UI avoid leaking common API keys and token flags
+- Recent workspace history no longer reintroduces detached `/` roots into the primary sidebar
+
 ## [1.0] - 2026-04-11
 
-### ✨ Added
+### Added
 
 - Window-first runtime dashboard with richer list/detail layout
 - Integrated Settings and About surfaces inside the main app experience
 - Dedicated SlayNode menu bar glyph generated from the same brand system as the app icon
 - Official `script/build_and_run.sh` workflow for local build, run, logs, and verification
 
-### 🔁 Changed
+### Changed
 
 - Repositioned the app from a menu bar-first utility to a desktop control surface for local runtimes
 - Improved runtime naming, workspace inference, and process-role presentation in the UI
@@ -22,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rebuilt the icon pipeline around `generate-icons.swift` as the source of truth
 - Aligned the public release line on `v1.0` and automated GitHub releases from `main`
 
-### 🛠️ Fixed
+### Fixed
 
 - Settings and About now feel like part of the same product instead of detached popups
 - Local builds no longer present Sparkle update flows when release metadata is incomplete
@@ -30,69 +57,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.0] - 2025-10-12
 
-### ✨ New Features & Improvements
+### Added
 
-#### Architecture & Code Quality
-- **Threading Modernization**: Migrated from DispatchQueue to modern Swift concurrency (Task, async/await)
-- **Code Consolidation**: Eliminated ~500+ lines of duplicate code through unified process parsing
-- **Error Handling Overhaul**: Implemented comprehensive error type system with localized descriptions
-- **Memory Management**: Fixed timer memory leaks and improved resource cleanup
+- Threading modernization using Swift concurrency and async/await
+- Unified process parsing and standardized error handling
+- Improved port detection, logging, and process-role classification
 
-#### Bug Fixes
-- **MainActor Warnings**: Fixed all threading warnings by properly isolating UI updates
-- **Race Conditions**: Resolved synchronization issues in process termination and port verification
-- **Memory Leaks**: Fixed timer cleanup in MenuContentView to prevent memory leaks
-- **Process Detection**: Improved robustness of process parsing with better error handling
+### Fixed
 
-#### New Features
-- **Enhanced Process Categories**: Added support for MCP (Model Context Protocol) tools
-- **Better Error Messages**: User-friendly error descriptions with technical details
-- **Improved Port Detection**: Multiple regex patterns with framework-specific default ports
-- **Comprehensive Logging**: Better debugging information throughout the application
-
-#### Technical Improvements
-- **Unified Process Parsing**: Single `parseProcessInfo()` function extracts all process information
-- **Standardized Error Types**: `MenuViewModelError` enum with proper error propagation
-- **Modern Timer Management**: Task-based timers replacing DispatchSourceTimer
-- **Input Validation**: Proper validation for process IDs and port numbers
-- **Resource Cleanup**: Automatic cleanup of timers and background tasks
-
-#### Performance
-- **Reduced Memory Footprint**: Eliminated duplicate code and improved memory management
-- **Faster Process Detection**: Optimized parsing algorithms with single-pass extraction
-- **Better Concurrency**: Improved task scheduling and thread utilization
-- **Graceful Degradation**: Better error recovery and fallback mechanisms
-
-### 🛠️ Development Improvements
-
-- **Documentation**: Updated technical documentation with modern patterns
-- **Code Organization**: Better separation of concerns and more maintainable structure
-- **Testing Foundation**: Improved error handling makes testing more reliable
-- **Future-Proofing**: Modern Swift patterns ensure long-term maintainability
+- MainActor warnings, timer memory leaks, race conditions, and parser robustness issues
 
 ## [1.1.x] - Previous Versions
 
 ### Core Features
+
 - Menu bar integration with popover interface
 - Real-time Node.js process detection
 - One-click process termination
 - Port number detection and display
 - Project name inference
-- Configurable refresh intervals
-
----
-
-## Migration Guide
-
-### For Users
-No action required - all changes are backward compatible and improve reliability.
-
-### For Developers
-- The app now uses modern Swift concurrency patterns
-- Error handling has been standardized with new error types
-- Process parsing functions have been unified
-- Threading model has been simplified with MainActor isolation
-
-### Compatibility
-- Internal API changes only - no user-facing breaking changes
-- All existing functionality preserved with enhanced reliability

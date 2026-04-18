@@ -308,6 +308,7 @@ final class NodeProcessItemViewModelTests: XCTestCase {
             command: "node test.js",
             workingDirectory: nil,
             descriptor: .unknown,
+            searchIndex: "test node test.js",
             isStopping: false
         )
         
@@ -325,6 +326,7 @@ final class NodeProcessItemViewModelTests: XCTestCase {
             command: "node test.js",
             workingDirectory: nil,
             descriptor: .unknown,
+            searchIndex: "test node test.js",
             isStopping: false
         )
         
@@ -346,6 +348,7 @@ final class NodeProcessItemViewModelTests: XCTestCase {
             command: "node test.js",
             workingDirectory: nil,
             descriptor: .unknown,
+            searchIndex: "test node test.js",
             isStopping: false
         )
         
@@ -363,6 +366,7 @@ final class NodeProcessItemViewModelTests: XCTestCase {
             command: "node test.js",
             workingDirectory: nil,
             descriptor: .unknown,
+            searchIndex: "test node test.js",
             isStopping: true
         )
         

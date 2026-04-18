@@ -4,24 +4,25 @@
 
 <img src="icon-iOS-Default-1024x1024@1x.png" alt="SlayNode icon" width="160">
 
-**A focused macOS desktop app for local Node.js runtime control**
+**A Tahoe-native macOS control room for local services**
 
 [![SwiftPM](https://img.shields.io/badge/SwiftPM-6.2+-FA7343?style=for-the-badge&logo=swift)](https://swift.org)
-[![macOS](https://img.shields.io/badge/macOS-13%2B-000000?style=for-the-badge&logo=apple)](https://apple.com/macos)
+[![macOS](https://img.shields.io/badge/macOS-26%2B-000000?style=for-the-badge&logo=apple)](https://apple.com/macos)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/mastertyko/slaynode/ci.yml?style=for-the-badge&label=CI)](https://github.com/mastertyko/slaynode/actions)
 
 </div>
 
-SlayNode gives you one place to see what local JavaScript runtimes are running, which ports they use, what workspace they belong to, and how to stop the right thing without guessing.
+SlayNode gives you one place to discover, inspect, and control local services on modern macOS. It unifies live development runtimes, Docker containers, and Homebrew Services into one native dashboard with a fast menu bar entry point, workspace-aware search, and deliberate control actions.
 
 ## What You Can Do
 
-- Detect local JavaScript and Node.js development processes automatically
-- Inspect ports, command context, runtime role, and workspace details
-- Stop runtimes safely with `Slay`
-- Jump straight into the owning project with `Open Folder`
-- Keep everything local on your Mac without sending process data anywhere
+- Discover local processes, Docker containers, and Homebrew Services automatically
+- Inspect ports, runtime/source, workspace ownership, command context, and health
+- Use `Stop`, `Force Stop`, `Restart`, `Open Logs`, and `Open Workspace` when supported
+- Search across services, ports, runtimes, and workspaces from the native toolbar
+- Restore recent workspaces and window context through local on-device persistence
+- Keep everything local on your Mac without sending service metadata anywhere
 
 ## Install
 
@@ -36,8 +37,8 @@ SlayNode gives you one place to see what local JavaScript runtimes are running, 
 ## Build From Source
 
 **Requirements**
-- macOS 13.0 or later
-- Xcode Command Line Tools
+- macOS 26.0 or later
+- Xcode 26 or current Command Line Tools with Swift 6.2 support
 
 ```bash
 git clone https://github.com/mastertyko/slaynode.git
@@ -54,16 +55,24 @@ swift test
 ## Using SlayNode
 
 1. Launch the app and let the dashboard refresh.
-2. Select a runtime from the left column.
-3. Review its ports, command, role, and workspace in the detail pane.
-4. Use `Slay`, `Open Folder`, or `Copy Command` depending on what you need.
-5. Use `Cmd+,` for Settings and the app menu for About.
+2. Choose `All Services` or focus a workspace from the sidebar.
+3. Select a service from the center column to inspect it in the detail view and inspector.
+4. Use `Stop`, `Force Stop`, `Restart`, `Logs`, or `Open Workspace` depending on what the source supports.
+5. Use `Cmd+,` for Settings, the toolbar search field to narrow the list, and the app menu for About.
 
 ## Recognition Model
 
-- Frameworks like Vite, Next.js, and TSX-based runtimes are recognized directly.
-- Package-manager wrappers like `npm run dev` and `pnpm dev` are collapsed into clearer runtime rows.
-- Working directory, command parsing, ports, and child-process promotion are combined to reduce false positives.
+- Frameworks like Vite, Next.js, Bun, Deno, Python, Ruby, and Go services are normalized into one service model.
+- Docker containers and Homebrew Services are first-class sources with source-specific actions.
+- Working directory, command parsing, ports, health, and dependency heuristics are combined to reduce false positives.
+- Sensitive arguments such as API keys and tokens are redacted before commands are shown in the UI.
+
+## Product Shape
+
+- Main window: Tahoe-native `NavigationSplitView` with sidebar, list, detail, and inspector
+- Menu bar: fast triage surface backed by the same service graph as the main app
+- Persistence: recent workspaces, actions, and window state stored locally with SwiftData
+- System integration: App Intents, Spotlight indexing, local notifications, and native window restoration
 
 ## Documentation
 

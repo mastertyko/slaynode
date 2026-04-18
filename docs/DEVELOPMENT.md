@@ -4,28 +4,26 @@ This documentation is for developers who want to contribute to or understand the
 
 ## Current Product Shape
 
-SlayNode is currently a window-first macOS app built with SwiftUI and SwiftPM.
-The primary user experience is the main dashboard window, while the menu bar controller
-and popover infrastructure remain in the codebase as supporting or future-facing paths.
+SlayNode is now a macOS 26-first desktop app built with SwiftUI, Observation, SwiftData, and SwiftPM. The primary experience is a Tahoe-native main window backed by a normalized local service graph, while the menu bar extra, app intents, and system integrations all share the same state and action layer.
 
 ## Project Structure
 
-```
+```text
 SlayNode/
 ├── Sources/
 │   └── SlayNodeMenuBar/
-│       ├── SlayNodeMenuBarApp.swift              # App entry point, commands, app activation
-│       ├── MainWindowView.swift                  # Main app window shell
-│       ├── MenuContentView.swift                 # Shared app content host
-│       ├── WindowDashboardView.swift             # Window-first runtime dashboard
-│       ├── SettingsView.swift                    # Integrated settings surface
-│       ├── AboutWindowView.swift                 # Integrated about surface
-│       ├── ProcessMonitoring.swift               # Monitor protocol abstraction
-│       ├── ProcessMonitor.swift                  # Process collection and normalization
-│       ├── MenuViewModel.swift                   # Runtime UI state and actions
-│       ├── ProcessClassifier.swift               # Detection heuristics and role labeling
-│       ├── ProcessKiller.swift                   # Stop/kill behavior
-│       ├── StatusItemController.swift            # Menu bar integration path
+│       ├── SlayNodeMenuBarApp.swift              # App scenes, commands, settings/about windows, menu bar extra
+│       ├── ServiceExperienceView.swift           # Main NavigationSplitView UI, menu bar UI, settings, about
+│       ├── ServiceCenterModel.swift              # Shared app state, refresh loop, notifications, Spotlight bridge
+│       ├── ServiceProviders.swift                # Discovery providers, control providers, orchestrator, heuristics
+│       ├── ManagedServices.swift                 # Normalized service domain model and SwiftData records
+│       ├── ServiceHistoryStore.swift             # Recent workspaces, action history, restoration persistence
+│       ├── ServiceIntents.swift                  # App Intents / entity definitions
+│       ├── UpdateController.swift                # Sparkle/release update integration
+│       ├── ProcessMonitor.swift                  # Legacy process monitoring path still used by existing tests/flows
+│       ├── MenuViewModel.swift                   # Legacy compatibility UI model for older menu/window paths
+│       ├── WindowDashboardView.swift             # Legacy dashboard compatibility layer
+│       ├── StatusItemController.swift            # Legacy/AppKit menu bar bridge and glyph loading
 │       └── Resources/                            # App icon, menu bar glyph, bundled resources
 ├── Tests/SlayNodeMenuBarTests/                   # Unit and integration tests
 ├── script/build_and_run.sh                       # Official local build/run entry point
@@ -35,39 +33,39 @@ SlayNode/
 └── .codex/environments/environment.toml          # Codex Run action wiring
 ```
 
-### Building from Source
+## Building From Source
 
-The project uses **Swift Package Manager** for dependency management.
+The project uses Swift Package Manager for dependency management.
 
-#### Recommended Local Loop
+### Recommended Local Loop
 ```bash
 ./script/build_and_run.sh
 swift test
 ```
 
-#### Build Debug Bundle
+### Build Debug Bundle
 ```bash
 ./build.sh debug
 ```
 
-#### Build Release Bundle
+### Build Release Bundle
 ```bash
 ./build.sh release
 ```
 
-#### Create DMG for Distribution
+### Create DMG for Distribution
 ```bash
 ./release.sh 1.0
 ```
 
-#### Notarization Flow
+### Notarization Flow
 ```bash
 ./notarize.sh 1.0
 ```
 
 Pushes to `main` automatically create or update the GitHub release that matches the version in `XcodeSupport/Info.plist`.
 
-#### Running Tests
+### Running Tests
 ```bash
 swift test
 ```
@@ -77,71 +75,83 @@ swift test
 ### App Shell
 
 - `SlayNodeMenuBarApp.swift`
-  Owns commands, app activation policy, and startup wiring.
-- `MainWindowView.swift`
-  Hosts the main dashboard window and in-app auxiliary routing.
-- `MenuContentView.swift`
-  Bridges shared runtime content between the main window and any legacy popover path.
+  Owns app scenes, window restoration behavior, commands, activation policy, and the shared model container.
+- `ServiceExperienceView.swift`
+  Renders the Tahoe-native `NavigationSplitView`, the menu bar surface, settings, and about windows.
 
-### Runtime Dashboard
+### Shared Service Layer
 
-- `WindowDashboardView.swift`
-  Provides the window-first UX with search, list/detail split, summary cards, and action surfaces.
-- `SettingsView.swift` and `AboutWindowView.swift`
-  Render as part of the same app experience instead of detached utility windows.
+- `ManagedServices.swift`
+  Defines `ManagedService`, `ServiceSource`, `ServiceAction`, `WorkspaceIdentity`, and the SwiftData persistence models.
+- `ServiceCenterModel.swift`
+  Hosts the shared observable app state and bridges discovery, persistence, notifications, and Spotlight.
+- `ServiceHistoryStore.swift`
+  Persists recent workspaces, actions, and scene/window state.
 
-### Detection Pipeline
+### Discovery And Control
 
-- `ProcessMonitor.swift`
-  Collects processes, ports, working directories, and parent/child relationships.
-- `ProcessClassifier.swift`
-  Interprets commands into human-readable runtime roles.
-- `MenuViewModel.swift`
-  Converts raw process information into dashboard-ready view models and actions.
-- `ProcessKiller.swift`
-  Handles process termination and user-facing failure cases.
+- `ServiceProviders.swift`
+  Defines discovery/control protocols and the actor-based `DiscoveryOrchestrator`.
+- `ProcessServiceProvider`
+  Discovers local processes and supports `Stop`, `Force Stop`, and workspace/config actions.
+- `DockerServiceProvider`
+  Discovers containers and supports `Stop`, `Force Stop`, `Restart`, and `Open Logs`.
+- `BrewServiceProvider`
+  Discovers Homebrew Services and supports `Stop` and `Restart`.
 
-### Supporting Paths
+### System Integration
 
+- `ServiceIntents.swift`
+  Exposes the normalized service graph to App Intents and Shortcuts.
+- `ServiceCenterModel.NotificationCoordinator`
+  Emits local notifications for failed actions or worsening health transitions.
+- `ServiceCenterModel.SpotlightIndexer`
+  Keeps recent workspaces and services searchable through Core Spotlight.
+
+### Legacy Compatibility Paths
+
+- `ProcessMonitor.swift`, `MenuViewModel.swift`, `MenuContentView.swift`, `MainWindowView.swift`, and `WindowDashboardView.swift`
+  Remain in the repo to preserve older flows, tests, and comparison surfaces while the new architecture becomes the default.
 - `StatusItemController.swift`
-  Keeps the menu bar entry point alive in the codebase and now uses the generated SlayNode glyph.
+  Continues to bridge the generated menu bar asset into AppKit-specific status item paths where needed.
 - `generate-icons.swift`
   Regenerates both the app icon family and the menu bar template glyph from one geometry source.
 
 ## Development Notes
 
 - Local builds regenerate brand assets automatically through [build.sh](../build.sh).
+- The minimum deployment target is now `macOS 26.0`.
+- The preferred state model is `@Observable` plus structured concurrency, not `ObservableObject` plus Combine, unless working in legacy compatibility code.
+- All user-facing command strings should be sanitized through the shared service model before they reach the UI.
 - Sparkle update checks are only active when `SUFeedURL` and `SUPublicEDKey` are valid.
 - Crash reporting is optional and depends on build-time configuration.
 - The Xcode project remains in the repo, but SwiftPM plus `script/build_and_run.sh` is the primary local workflow.
 
-## 🤝 Contributing
+## Contributing
 
-We welcome contributions! Here's how you can help:
-
-1. **Fork the repository**
-2. **Create a feature branch**
+1. Fork the repository.
+2. Create a feature branch.
    ```bash
    git checkout -b feature/amazing-feature
    ```
-3. **Commit your changes**
+3. Commit your changes.
    ```bash
    git commit -m "feat: Add amazing feature"
    ```
-4. **Push to the branch**
+4. Push to the branch.
    ```bash
    git push origin feature/amazing-feature
    ```
-5. **Open a Pull Request**
+5. Open a pull request.
 
 ### Development Guidelines
 
-- Follow Swift coding conventions
-- Write unit tests for new features
-- Update documentation whenever product shape or workflow changes
-- Keep generated brand assets and their documentation in sync
-- Prefer the scripted SwiftPM workflow unless you are specifically validating Xcode behavior
+- Follow Swift coding conventions.
+- Write unit tests for new features.
+- Update documentation whenever product shape or workflow changes.
+- Keep generated brand assets and their documentation in sync.
+- Prefer the scripted SwiftPM workflow unless you are specifically validating Xcode behavior.
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](../LICENSE) file for details.

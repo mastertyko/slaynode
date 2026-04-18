@@ -30,6 +30,6 @@ struct MainWindowView: View {
             openSettingsAction: { activeSheet = .settings },
             dismissAuxiliaryAction: { activeSheet = nil }
         )
-            .frame(minWidth: 1020, idealWidth: 1240, maxWidth: 1480, minHeight: 720, idealHeight: 860, alignment: .top)
+            .frame(minWidth: 940, idealWidth: 1180, maxWidth: 1440, minHeight: 680, idealHeight: 820, alignment: .top)
     }
 }

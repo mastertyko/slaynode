@@ -42,9 +42,7 @@ struct MenuContentView: View {
     }
     
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 1.0)) { context in
-            surface(currentTime: context.date)
-        }
+        surface(currentTime: Date())
     }
 
     private var isWindowPresentation: Bool {
@@ -292,13 +290,10 @@ struct MenuContentView: View {
         let refreshInterval = max(preferences.refreshInterval, 1)
 
         if timeInterval < refreshInterval {
-            let secondsUntilNext = max(1, Int(ceil(refreshInterval - timeInterval)))
-            return "Next update in \(secondsUntilNext)s"
+            return "Updated just now"
         }
 
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        let relative = formatter.localizedString(for: updated, relativeTo: currentTime)
+        let relative = Self.relativeFormatter.localizedString(for: updated, relativeTo: currentTime)
         return "Updated \(relative)"
     }
 
@@ -311,7 +306,7 @@ struct MenuContentView: View {
         let refreshInterval = max(preferences.refreshInterval, 1)
 
         if timeInterval < refreshInterval {
-            return "timer"
+            return "checkmark.circle.fill"
         }
 
         if timeInterval < 30 {
@@ -371,6 +366,12 @@ struct MenuContentView: View {
     private var headerShadow: Color {
         Color.accentColor.opacity(0.35)
     }
+
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter
+    }()
 
     private var windowBackground: some View {
         LinearGradient(

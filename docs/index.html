@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SlayNode - Node.js Process Manager for macOS</title>
-    <meta name="description" content="A focused macOS desktop app for local runtime control. Detect, inspect, and stop Node.js development servers from one dashboard.">
+    <title>SlayNode - Local Service Control Room for macOS</title>
+    <meta name="description" content="A Tahoe-native macOS app for local service control. Detect, inspect, and manage development runtimes, Docker containers, and Homebrew Services from one dashboard.">
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/mastertyko/slaynode/main/icon-iOS-Default-1024x1024%401x.png">
     <style>
         :root {
@@ -326,8 +326,8 @@
     <main>
         <section class="hero">
             <div class="container">
-                <h1>Node.js Process Manager for macOS</h1>
-                <p>A focused desktop app that detects local Node.js runtimes, explains what they are, and lets you stop the right process from one control surface.</p>
+                <h1>Local Service Control Room for macOS</h1>
+                <p>A Tahoe-native desktop app that discovers local runtimes, Docker containers, and Homebrew Services, explains what they are, and lets you control the right thing from one surface.</p>
                 <div class="cta-buttons">
                     <a href="https://github.com/mastertyko/slaynode/releases/latest" class="btn btn-primary">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -353,33 +353,33 @@
                 <div class="features-grid">
                     <div class="feature-card">
                         <div class="feature-icon">🎯</div>
-                        <h3>Auto-Detection</h3>
-                        <p>Automatically finds local JavaScript runtimes, package-manager wrappers, and framework dev servers.</p>
+                        <h3>Unified Discovery</h3>
+                        <p>Automatically finds local development runtimes, Docker containers, Homebrew Services, and workspace-backed service stacks.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">⚡</div>
                         <h3>Context-Aware Actions</h3>
-                        <p>Stop a runtime, open its folder, or copy the underlying command without leaving the app.</p>
+                        <p>Use Stop, Force Stop, Restart, Logs, and Open Workspace without leaving the app.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">🔍</div>
                         <h3>Smart Recognition</h3>
-                        <p>Explains frameworks, ports, workspace paths, and runtime roles instead of showing raw process noise.</p>
+                        <p>Explains sources, ports, health, workspace paths, and runtime roles instead of showing raw process noise.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">📊</div>
-                        <h3>Live Updates</h3>
-                        <p>Configurable refresh intervals keep the dashboard current while preserving a stable, desktop-style layout.</p>
+                        <h3>Native macOS 26 UX</h3>
+                        <p>NavigationSplitView, toolbar search, inspector, restored windows, and menu bar triage all feel first-class on modern macOS.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">🔒</div>
                         <h3>Private & Secure</h3>
-                        <p>Everything runs locally. No data ever leaves your machine.</p>
+                        <p>Everything runs locally. No service data leaves your machine, and sensitive command flags are redacted in the UI.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">🔄</div>
                         <h3>Release Ready</h3>
-                        <p>Supports Sparkle-based update checks and release packaging when distribution metadata is configured.</p>
+                        <p>Supports signed app bundles, Sparkle-based updates, and a generated icon system aligned with the current SlayNode identity.</p>
                     </div>
                 </div>
             </div>
@@ -392,8 +392,8 @@
                     <div class="install-step">
                         <div class="step-number">1</div>
                         <div class="step-content">
-                            <h3>Download the DMG</h3>
-                            <p>Get the latest release from GitHub Releases page.</p>
+                            <h3>Download the Latest Release</h3>
+                            <p>Get the latest signed build from the GitHub Releases page.</p>
                             <div class="code-block">
                                 <code>https://github.com/mastertyko/slaynode/releases/latest</code>
                             </div>
@@ -410,7 +410,7 @@
                         <div class="step-number">3</div>
                         <div class="step-content">
                             <h3>Launch SlayNode</h3>
-                            <p>Open the app from Applications or Spotlight. The main dashboard window becomes your runtime control center.</p>
+                            <p>Open the app from Applications or Spotlight. The main dashboard window becomes your local service control center.</p>
                             <div class="code-block">
                                 <code>open /Applications/SlayNode.app</code>
                             </div>
@@ -428,7 +428,7 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="20,6 9,17 4,12"/>
                         </svg>
-                        macOS 13.0+
+                        macOS 26.0+
                     </div>
                     <div class="req-item">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -440,7 +440,7 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="20,6 9,17 4,12"/>
                         </svg>
-                        Node.js (for dev servers)
+                        Local services to inspect, such as a runtime, Docker container, or Homebrew Service
                     </div>
                 </div>
             </div>
@@ -450,7 +450,7 @@
     <footer>
         <div class="container">
             <p>
-                Made with ❤️ for the Node.js community &bull;
+                Built for local developers on modern macOS &bull;
                 <a href="https://github.com/mastertyko/slaynode">GitHub</a> &bull;
                 <a href="https://github.com/mastertyko/slaynode/issues">Report Issues</a>
             </p>
