@@ -63,7 +63,15 @@ swift test
 ./notarize.sh 1.0
 ```
 
-Pushes to `main` automatically create or update the GitHub release that matches the version in `XcodeSupport/Info.plist`.
+Successful CI runs on `main` automatically trigger the GitHub release workflow. Each release now gets:
+
+- the marketing version from `XcodeSupport/Info.plist`
+- a unique build number from `GITHUB_RUN_NUMBER`
+- a build-specific tag in the form `v<version>-build.<number>`
+- release notes generated from the current changelog section or recent commits
+- DMG and ZIP assets named with both version and build number
+
+You can also trigger the release workflow manually with `workflow_dispatch` if you need to target a specific ref.
 
 ### Running Tests
 ```bash
@@ -121,9 +129,10 @@ swift test
 
 - Local builds regenerate brand assets automatically through [build.sh](../build.sh).
 - The minimum deployment target is now `macOS 26.0`.
+- `build.sh` accepts `SLAYNODE_VERSION`, `SLAYNODE_BUILD_NUMBER`, and optional Sparkle metadata overrides so CI/release builds can stamp unique bundle metadata without editing tracked plist files.
 - The preferred state model is `@Observable` plus structured concurrency, not `ObservableObject` plus Combine, unless working in legacy compatibility code.
 - All user-facing command strings should be sanitized through the shared service model before they reach the UI.
-- Sparkle update checks are only active when `SUFeedURL` and `SUPublicEDKey` are valid.
+- Sparkle update checks are only active when release automation provides valid feed and EDDSA key metadata at build time.
 - Crash reporting is optional and depends on build-time configuration.
 - The Xcode project remains in the repo, but SwiftPM plus `script/build_and_run.sh` is the primary local workflow.
 

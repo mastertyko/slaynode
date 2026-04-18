@@ -13,8 +13,25 @@ ARCH_DIR="arm64-apple-macosx"
 INFO_PLIST_TEMPLATE="${ROOT_DIR}/XcodeSupport/Info.plist"
 PLIST_BUDDY="/usr/libexec/PlistBuddy"
 
-APP_VERSION="$("${PLIST_BUDDY}" -c 'Print :CFBundleShortVersionString' "${INFO_PLIST_TEMPLATE}")"
-APP_BUILD="$("${PLIST_BUDDY}" -c 'Print :CFBundleVersion' "${INFO_PLIST_TEMPLATE}")"
+APP_VERSION_DEFAULT="$("${PLIST_BUDDY}" -c 'Print :CFBundleShortVersionString' "${INFO_PLIST_TEMPLATE}")"
+APP_BUILD_DEFAULT="$("${PLIST_BUDDY}" -c 'Print :CFBundleVersion' "${INFO_PLIST_TEMPLATE}")"
+MIN_SYSTEM_VERSION="$("${PLIST_BUDDY}" -c 'Print :LSMinimumSystemVersion' "${INFO_PLIST_TEMPLATE}")"
+
+APP_VERSION="${SLAYNODE_VERSION:-${APP_VERSION_DEFAULT}}"
+APP_BUILD="${SLAYNODE_BUILD_NUMBER:-${APP_BUILD_DEFAULT}}"
+SPARKLE_FEED_URL="${SLAYNODE_SPARKLE_FEED_URL:-https://raw.githubusercontent.com/mastertyko/slaynode/main/appcast.xml}"
+SPARKLE_PUBLIC_ED_KEY="${SLAYNODE_SPARKLE_PUBLIC_ED_KEY:-}"
+
+SPARKLE_INFO=""
+if [[ -n "${SPARKLE_FEED_URL}" && -n "${SPARKLE_PUBLIC_ED_KEY}" ]]; then
+  SPARKLE_INFO=$(cat <<EOF
+    <key>SUFeedURL</key>
+    <string>${SPARKLE_FEED_URL}</string>
+    <key>SUPublicEDKey</key>
+    <string>${SPARKLE_PUBLIC_ED_KEY}</string>
+EOF
+)
+fi
 
 echo "🔨 Building SlayNodeMenuBar (${CONFIGURATION})..."
 echo "🎨 Regenerating brand assets..."
@@ -60,7 +77,7 @@ cat > "${APP_DIR}/Contents/Info.plist" <<EOF
     <key>CFBundleVersion</key>
     <string>${APP_BUILD}</string>
     <key>LSMinimumSystemVersion</key>
-    <string>26.0</string>
+    <string>${MIN_SYSTEM_VERSION}</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>CFBundleIconFile</key>
@@ -69,10 +86,7 @@ cat > "${APP_DIR}/Contents/Info.plist" <<EOF
     <string>SlayNode needs to monitor running development servers for process management.</string>
     <key>NSSystemAdministrationUsageDescription</key>
     <string>SlayNode needs to inspect system processes to detect development servers.</string>
-    <key>SUFeedURL</key>
-    <string>https://raw.githubusercontent.com/mastertyko/slaynode/main/appcast.xml</string>
-    <key>SUPublicEDKey</key>
-    <string></string>
+${SPARKLE_INFO}
 </dict>
 </plist>
 EOF

@@ -27,6 +27,13 @@ jobs:
         with:
           xcode-version: ${{ env.XCODE_VERSION }}
 
+      - name: Extract artifact metadata
+        id: metadata
+        run: |
+          VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' XcodeSupport/Info.plist)
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "build_number=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+
       - name: Cache Swift packages
         uses: actions/cache@v4
         with:
@@ -43,11 +50,13 @@ jobs:
         run: swift test --parallel
 
       - name: Build App Bundle
-        run: ./build.sh release
+        run: |
+          chmod +x build.sh
+          SLAYNODE_BUILD_NUMBER="${{ steps.metadata.outputs.build_number }}" ./build.sh release
 
       - name: Upload App Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SlayNode-${{ github.sha }}
+          name: SlayNode-v${{ steps.metadata.outputs.version }}-ci.${{ steps.metadata.outputs.build_number }}
           path: SlayNode.app
           retention-days: 7

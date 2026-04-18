@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Release script for SlayNode
-# Builds and creates GitHub releases
+# Builds local release artifacts that match the GitHub packaging flow
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INFO_PLIST="${ROOT_DIR}/XcodeSupport/Info.plist"
@@ -38,7 +38,8 @@ rm -rf "${DMG_TEMP_DIR}"
 
 echo "✅ Release ready: ${DMG_NAME}"
 echo ""
-echo "📋 To publish this version automatically:"
+echo "📋 To publish this version through GitHub Actions:"
 echo "1. Commit your changes"
 echo "2. Push to main"
-echo "3. GitHub Actions will create or update release v${VERSION}"
+echo "3. CI will validate the commit"
+echo "4. The release workflow will create a build-numbered GitHub release for v${VERSION}"

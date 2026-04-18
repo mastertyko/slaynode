@@ -5,13 +5,14 @@
         <link>https://github.com/mastertyko/slaynode</link>
         <description>Most recent updates to SlayNode</description>
         <language>en</language>
+        <!-- Placeholder feed. Release automation only enables Sparkle metadata when signing keys and feed data are configured. -->
         
         <item>
             <title>Version 1.0</title>
             <pubDate>Sat, 11 Apr 2026 12:00:00 +0000</pubDate>
             <sparkle:version>1</sparkle:version>
             <sparkle:shortVersionString>1.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <description><![CDATA[
                 <h2>What's New in 1.0</h2>
                 <ul>
