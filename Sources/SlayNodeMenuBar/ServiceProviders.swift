@@ -318,10 +318,13 @@ struct ProcessServiceProvider: DiscoveryProvider, ControlProvider {
             let days = TimeInterval(components[0]) ?? 0
             let parts = components[1].split(separator: ":")
             guard parts.count == 3 else { return 0 }
+            let hours = TimeInterval(parts[0]) ?? 0
+            let minutes = TimeInterval(parts[1]) ?? 0
+            let seconds = TimeInterval(parts[2]) ?? 0
             return days * 86_400
-                + (TimeInterval(parts[0]) ?? 0) * 3_600
-                + (TimeInterval(parts[1]) ?? 0) * 60
-                + (TimeInterval(parts[2]) ?? 0)
+                + hours * 3_600
+                + minutes * 60
+                + seconds
         }
 
         let parts = etime.split(separator: ":")
@@ -329,11 +332,16 @@ struct ProcessServiceProvider: DiscoveryProvider, ControlProvider {
         case 1:
             return TimeInterval(parts[0]) ?? 0
         case 2:
-            return (TimeInterval(parts[0]) ?? 0) * 60 + (TimeInterval(parts[1]) ?? 0)
+            let minutes = TimeInterval(parts[0]) ?? 0
+            let seconds = TimeInterval(parts[1]) ?? 0
+            return minutes * 60 + seconds
         case 3:
-            return (TimeInterval(parts[0]) ?? 0) * 3_600
-                + (TimeInterval(parts[1]) ?? 0) * 60
-                + (TimeInterval(parts[2]) ?? 0)
+            let hours = TimeInterval(parts[0]) ?? 0
+            let minutes = TimeInterval(parts[1]) ?? 0
+            let seconds = TimeInterval(parts[2]) ?? 0
+            return hours * 3_600
+                + minutes * 60
+                + seconds
         default:
             return 0
         }
