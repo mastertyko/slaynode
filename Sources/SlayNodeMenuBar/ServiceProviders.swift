@@ -750,10 +750,10 @@ enum ServiceHeuristics {
     }
 
     static func workspaceIdentity(from path: String?) -> WorkspaceIdentity? {
-        guard let path, !path.isEmpty, path != "/" else { return nil }
-        let name = URL(fileURLWithPath: path).lastPathComponent
-        let title = name.isEmpty ? path : name
-        return WorkspaceIdentity(id: path.lowercased(), name: title, rootPath: path)
+        guard let canonicalPath = canonicalWorkspaceRoot(from: path) else { return nil }
+        let name = URL(fileURLWithPath: canonicalPath).lastPathComponent
+        let title = name.isEmpty ? canonicalPath : name
+        return WorkspaceIdentity(id: canonicalPath.lowercased(), name: title, rootPath: canonicalPath)
     }
 
     static func classifyContainer(name: String, image: String) -> ServiceKind {
@@ -824,6 +824,22 @@ enum ServiceHeuristics {
             }
             return .runtime
         }
+    }
+
+    private static func canonicalWorkspaceRoot(from path: String?) -> String? {
+        guard let path, !path.isEmpty, path != "/" else { return nil }
+
+        var normalized = URL(fileURLWithPath: path).standardized.path
+        if normalized.hasSuffix("/") {
+            normalized.removeLast()
+        }
+
+        if let nodeModulesRange = normalized.range(of: "/node_modules/") {
+            normalized = String(normalized[..<nodeModulesRange.lowerBound])
+        }
+
+        guard !normalized.isEmpty, normalized != "/" else { return nil }
+        return normalized
     }
 
     private static func classifyTokens(_ values: [String]) -> ServiceKind {

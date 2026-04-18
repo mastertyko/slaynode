@@ -101,22 +101,30 @@ struct SlayNodeMenuBarApp: App {
         .restorationBehavior(.automatic)
 
         Settings {
-            SlayNodeSettingsView(center: center, updateController: updateController)
+            SettingsView(
+                settings: center.settings,
+                updateController: updateController
+            )
         }
 
         Window("Settings", id: AppWindowID.settings) {
-            SlayNodeSettingsView(center: center, updateController: updateController)
+            SettingsView(
+                settings: center.settings,
+                updateController: updateController
+            )
         }
         .defaultWindowPlacement { _, _ in
-            WindowPlacement(.center, width: 640, height: 460)
+            WindowPlacement(.center, width: 600, height: 448)
         }
+        .windowResizability(.contentSize)
 
         Window("About SlayNode", id: AppWindowID.about) {
-            SlayNodeAboutView()
+            AboutWindowView()
         }
         .defaultWindowPlacement { _, _ in
-            WindowPlacement(.center, width: 760, height: 560)
+            WindowPlacement(.center, width: 640, height: 500)
         }
+        .windowResizability(.contentSize)
 
         MenuBarExtra {
             ServiceMenuBarView(center: center)

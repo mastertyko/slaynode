@@ -45,12 +45,14 @@ struct ServiceDashboardWindowView: View {
     }
 
     private var selectedService: ManagedService? {
+        guard !filteredServices.isEmpty else { return nil }
+
         if let selectedServiceID {
             return filteredServices.first(where: { $0.id == selectedServiceID })
-                ?? scopedServices.first(where: { $0.id == selectedServiceID })
+                ?? filteredServices.first
         }
 
-        return filteredServices.first ?? scopedServices.first
+        return filteredServices.first
     }
 
     private var dependenciesForSelection: [ServiceDependency] {
@@ -159,6 +161,11 @@ struct ServiceDashboardWindowView: View {
                 center.start()
                 syncSelection()
             }
+            .onAppear {
+                if !searchText.isEmpty {
+                    searchText = ""
+                }
+            }
             .onChange(of: center.services.map(\.id)) {
                 syncSelection()
             }
@@ -179,6 +186,15 @@ struct ServiceDashboardWindowView: View {
         }
         .frame(minWidth: 1180, minHeight: 760)
         .background(.clear)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let lastError = center.lastError {
+                ServiceFeedbackBanner(message: lastError) {
+                    center.clearLastError()
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 8)
+            }
+        }
         .userActivity("se.slaynode.window.\(sceneStateID)") { activity in
             activity.title = lockedWorkspaceTitle ?? "SlayNode Services"
             activity.userInfo = [
@@ -197,20 +213,38 @@ struct ServiceDashboardWindowView: View {
                         .tag(Optional<String>.none)
                 }
 
-                if center.settings.showRecentHistory && !center.recentWorkspaces.isEmpty {
+                Section("Workspaces") {
+                    ForEach(availableWorkspaces, id: \.id) { workspace in
+                        ServiceWorkspaceRow(
+                            workspace: workspace,
+                            title: workspaceDisplayName(workspace)
+                        )
+                            .tag(Optional(workspace.id))
+                    }
+                }
+
+                if center.settings.showRecentHistory && !recentSidebarWorkspaces.isEmpty {
                     Section("Recent Workspaces") {
-                        ForEach(center.recentWorkspaces, id: \.id) { workspace in
-                            ServiceWorkspaceRow(workspace: workspace)
+                        ForEach(recentSidebarWorkspaces, id: \.id) { workspace in
+                            ServiceWorkspaceRow(
+                                workspace: workspace,
+                                title: workspaceDisplayName(workspace)
+                            )
                                 .tag(Optional(workspace.id))
                         }
                     }
                 }
             }
 
-            Section(lockedWorkspaceID == nil ? "Workspaces" : "Focused Workspace") {
-                ForEach(availableWorkspaces, id: \.id) { workspace in
-                    ServiceWorkspaceRow(workspace: workspace)
-                        .tag(Optional(workspace.id))
+            if lockedWorkspaceID != nil {
+                Section("Focused Workspace") {
+                    ForEach(availableWorkspaces, id: \.id) { workspace in
+                        ServiceWorkspaceRow(
+                            workspace: workspace,
+                            title: workspaceDisplayName(workspace)
+                        )
+                            .tag(Optional(workspace.id))
+                    }
                 }
             }
         }
@@ -219,15 +253,23 @@ struct ServiceDashboardWindowView: View {
     }
 
     private var serviceList: some View {
-        List(selection: $selectedServiceID) {
-            if filteredServices.isEmpty {
-                ContentUnavailableView(
-                    "No Services Found",
-                    systemImage: "bolt.slash",
-                    description: Text("Try a broader search or refresh local discovery.")
-                )
-            } else {
-                Section(sectionHeaderText) {
+        VStack(alignment: .leading, spacing: 12) {
+            ServiceColumnHeader(
+                title: sectionHeaderText,
+                subtitle: listSubtitleText,
+                systemImage: selectedWorkspace == nil ? "square.stack.3d.up" : "folder"
+            )
+            .padding(.horizontal, 18)
+            .padding(.top, 16)
+
+            List(selection: $selectedServiceID) {
+                if filteredServices.isEmpty {
+                    ContentUnavailableView(
+                        "No Services Found",
+                        systemImage: "bolt.slash",
+                        description: Text("Try a broader search or refresh local discovery.")
+                    )
+                } else {
                     ForEach(filteredServices, id: \.id) { service in
                         ServiceListRow(service: service)
                             .tag(Optional(service.id))
@@ -242,7 +284,7 @@ struct ServiceDashboardWindowView: View {
     private var serviceDetail: some View {
         if let service = selectedService {
             ScrollView {
-                GlassEffectContainer(spacing: 18) {
+                VStack(alignment: .leading, spacing: 24) {
                     ServiceHeroCard(
                         service: service,
                         namespace: glassNamespace,
@@ -251,7 +293,7 @@ struct ServiceDashboardWindowView: View {
                         primaryActions(for: service)
                     }
 
-                    LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 16) {
+                    LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 20) {
                         ServiceMetricCard(
                             title: "Ports",
                             value: portLabel(for: service),
@@ -285,29 +327,19 @@ struct ServiceDashboardWindowView: View {
                         )
                     }
 
-                    ServicePanel(title: "Summary", systemImage: "text.alignleft") {
-                        Text(service.summary)
-                            .font(.body)
-                            .foregroundStyle(.primary)
-
-                        if !service.tags.isEmpty {
-                            FlowLayout(spacing: 8) {
-                                ForEach(service.tags, id: \.self) { tag in
-                                    Text(tag)
-                                        .font(.caption.weight(.semibold))
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
-                                        .glassEffect(in: Capsule())
-                                }
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .top, spacing: 20) {
+                            summaryPanel(for: service)
+                            if let command = service.command {
+                                commandPanel(command)
                             }
                         }
-                    }
 
-                    if let command = service.command {
-                        ServicePanel(title: "Command", systemImage: "terminal") {
-                            Text(command)
-                                .font(.system(.body, design: .monospaced))
-                                .textSelection(.enabled)
+                        VStack(alignment: .leading, spacing: 20) {
+                            summaryPanel(for: service)
+                            if let command = service.command {
+                                commandPanel(command)
+                            }
                         }
                     }
 
@@ -329,6 +361,7 @@ struct ServiceDashboardWindowView: View {
                     }
                 }
                 .padding(24)
+                .frame(maxWidth: 920, alignment: .leading)
             }
             .userActivity("se.slaynode.service") { activity in
                 activity.title = service.name
@@ -347,7 +380,11 @@ struct ServiceDashboardWindowView: View {
     private func primaryActions(for service: ManagedService) -> some View {
         let primaryActions = service.availableActions.filter { [.stop, .forceStop, .restart].contains($0) }
 
-        return HStack(spacing: 10) {
+        return LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 132), spacing: 10, alignment: .leading)],
+            alignment: .leading,
+            spacing: 10
+        ) {
             ForEach(primaryActions, id: \.self) { action in
                 ServiceActionButton(action: action) {
                     Task { await center.perform(action, on: service) }
@@ -361,8 +398,11 @@ struct ServiceDashboardWindowView: View {
                     Label("Logs", systemImage: "doc.text.magnifyingglass")
                 }
                 .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.small)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var statusText: String {
@@ -388,6 +428,12 @@ struct ServiceDashboardWindowView: View {
         return discovered
     }
 
+    private var recentSidebarWorkspaces: [WorkspaceIdentity] {
+        center.recentWorkspaces.filter { workspace in
+            !availableWorkspaces.contains(workspace)
+        }
+    }
+
     private var sectionHeaderText: String {
         if let selectedWorkspace {
             return "\(selectedWorkspace.name) • \(filteredServices.count) services"
@@ -396,9 +442,20 @@ struct ServiceDashboardWindowView: View {
         return "All Services • \(filteredServices.count)"
     }
 
+    private var listSubtitleText: String {
+        if let selectedWorkspace {
+            return "Focused on \(selectedWorkspace.name) with live local services and recent status."
+        }
+
+        return "A unified view across processes, containers and managed local runtimes."
+    }
+
     private func syncSelection() {
         if lockedWorkspaceID != nil {
             selectedWorkspaceID = lockedWorkspaceID
+        } else if let currentWorkspaceID = selectedWorkspaceID,
+                  !selectableWorkspaceIDs.contains(currentWorkspaceID) {
+            selectedWorkspaceID = nil
         }
 
         guard !filteredServices.isEmpty else {
@@ -419,10 +476,10 @@ struct ServiceDashboardWindowView: View {
                 selectedWorkspaceID = state.selectedWorkspaceID
             }
             selectedServiceID = state.selectedServiceID
-            searchText = state.searchText
+            searchText = ""
             inspectorVisible = state.inspectorVisible
         } else if lockedWorkspaceID == nil {
-            selectedWorkspaceID = center.workspaces.first?.id
+            selectedWorkspaceID = nil
         } else {
             selectedWorkspaceID = lockedWorkspaceID
         }
@@ -433,7 +490,7 @@ struct ServiceDashboardWindowView: View {
             id: sceneStateID,
             selectedWorkspaceID: selectionWorkspaceID,
             selectedServiceID: selectedServiceID,
-            searchText: searchText,
+            searchText: "",
             inspectorVisible: inspectorVisible
         )
     }
@@ -444,6 +501,46 @@ struct ServiceDashboardWindowView: View {
         }
         return service.ports.map { ":\($0.value)" }.joined(separator: "  ")
     }
+
+    private var selectableWorkspaceIDs: Set<String> {
+        Set((recentSidebarWorkspaces + availableWorkspaces).map(\.id))
+    }
+
+    private func workspaceDisplayName(_ workspace: WorkspaceIdentity) -> String {
+        contextualWorkspaceTitle(for: workspace, within: recentSidebarWorkspaces + availableWorkspaces)
+    }
+
+    @ViewBuilder
+    private func summaryPanel(for service: ManagedService) -> some View {
+        ServicePanel(title: "Summary", systemImage: "text.alignleft") {
+            Text(service.summary)
+                .font(.body)
+                .foregroundStyle(.primary)
+
+            if !service.tags.isEmpty {
+                FlowLayout(spacing: 8) {
+                    ForEach(service.tags, id: \.self) { tag in
+                        Text(tag)
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .glassEffect(in: Capsule())
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func commandPanel(_ command: String) -> some View {
+        ServicePanel(title: "Command", systemImage: "terminal") {
+            Text(command)
+                .font(.system(.body, design: .monospaced))
+                .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 }
 
 struct ServiceMenuBarView: View {
@@ -451,194 +548,112 @@ struct ServiceMenuBarView: View {
     @Environment(\.openWindow) private var openWindow
 
     private var visibleServices: [ManagedService] {
-        center.services.prefix(6).map { $0 }
+        center.services
+            .sorted(by: menuBarPriority)
+            .prefix(6)
+            .map { $0 }
+    }
+
+    private var updatedLabel: String {
+        guard let lastRefreshAt = center.lastRefreshAt else {
+            return "Not refreshed yet"
+        }
+
+        return "Updated \(lastRefreshAt.formatted(date: .omitted, time: .shortened))"
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("SlayNode")
-                        .font(.headline.weight(.semibold))
-
-                    Text("\(center.activeServiceCount) active • \(center.unhealthyServiceCount) watch")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Button {
-                    Task { await center.refresh() }
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .buttonStyle(.plain)
+            ServiceMenuBarHeaderCard(
+                activeCount: center.activeServiceCount,
+                unhealthyCount: center.unhealthyServiceCount,
+                updatedLabel: updatedLabel
+            ) {
+                Task { await center.refresh() }
             }
 
-            if visibleServices.isEmpty {
-                ContentUnavailableView(
-                    "No Active Services",
-                    systemImage: "checkmark.circle",
-                    description: Text("Local infra will appear here when discovery finds something running.")
+            if let lastError = center.lastError {
+                ServiceFeedbackBanner(message: lastError, compact: true) {
+                    center.clearLastError()
+                }
+            }
+
+            if center.settings.showMenuBarSection {
+                ServiceMenuBarSummaryCard(
+                    activeCount: center.activeServiceCount,
+                    unhealthyCount: center.unhealthyServiceCount,
+                    updatedLabel: updatedLabel,
+                    recentAction: center.settings.showRecentHistory ? center.recentActions.first : nil
                 )
-            } else {
-                VStack(spacing: 8) {
-                    ForEach(visibleServices, id: \.id) { service in
-                        HStack(spacing: 10) {
-                            Image(systemName: service.kind.symbolName)
-                                .foregroundStyle(serviceTint(for: service.kind))
-                                .frame(width: 18)
+            }
 
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(service.name)
-                                    .font(.subheadline.weight(.semibold))
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Active Services")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
 
-                                Text(service.summary)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
+                    Spacer()
 
-                            Spacer()
+                    Text("\(visibleServices.count) shown")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.tertiary)
+                }
 
-                            if service.supports(.stop) {
-                                Button("Stop") {
+                if visibleServices.isEmpty {
+                    ContentUnavailableView(
+                        "No Active Services",
+                        systemImage: "checkmark.circle",
+                        description: Text("Local infra will appear here when discovery finds something running.")
+                    )
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(visibleServices, id: \.id) { service in
+                                ServiceMenuBarRow(
+                                    service: service,
+                                    workspaceTitle: service.workspace.map {
+                                        contextualWorkspaceTitle(
+                                            for: $0,
+                                            within: center.workspaces + center.recentWorkspaces
+                                        )
+                                    },
+                                    isExpanded: center.settings.showMenuBarSection
+                                ) {
                                     Task { await center.perform(.stop, on: service) }
                                 }
-                                .buttonStyle(.borderedProminent)
-                                .controlSize(.small)
                             }
                         }
                     }
+                    .scrollIndicators(.never)
+                    .frame(maxHeight: center.settings.showMenuBarSection ? 292 : 236)
                 }
             }
 
             Divider()
 
-            HStack {
+            HStack(spacing: 10) {
                 Button("Open Dashboard") {
                     openWindow(id: AppWindowID.dashboard)
                 }
                 .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
 
                 Spacer()
 
                 SettingsLink {
-                    Label("Settings", systemImage: "gearshape")
+                    Image(systemName: "gearshape")
                 }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
             }
         }
         .padding(18)
-        .frame(width: 420)
-    }
-}
-
-struct SlayNodeSettingsView: View {
-    @Bindable var center: ServiceCenterModel
-    @ObservedObject var updateController: UpdateController
-
-    var body: some View {
-        Form {
-            Section("Scanning") {
-                LabeledContent("Refresh cadence") {
-                    Text("\(Int(center.settings.refreshInterval)) seconds")
-                        .monospacedDigit()
-                }
-
-                Slider(value: $center.settings.refreshInterval, in: 3...60, step: 1)
-
-                Text("A lower cadence feels more live, while a higher cadence keeps the app lighter.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Experience") {
-                Toggle("Show recent history in the app and inspector", isOn: $center.settings.showRecentHistory)
-                Toggle("Show richer menu bar summary surface", isOn: $center.settings.showMenuBarSection)
-            }
-
-            Section("Updates") {
-                if updateController.canCheckForUpdates {
-                    Button("Check for Updates") {
-                        updateController.checkForUpdates()
-                    }
-                } else {
-                    Text("Update checks are unavailable in this local build configuration.")
-                        .foregroundStyle(.secondary)
-                }
-
-                Text("SlayNode now targets the latest macOS stack and is tuned for Tahoe-native windowing, search and glass effects.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .formStyle(.grouped)
-        .padding(24)
-        .frame(minWidth: 560, minHeight: 420)
-    }
-}
-
-struct SlayNodeAboutView: View {
-    var body: some View {
-        ZStack {
-            ServiceAtmosphereView(activeCount: 4, unhealthyCount: 1)
-                .ignoresSafeArea()
-
-            ScrollView {
-                GlassEffectContainer(spacing: 18) {
-                    VStack(alignment: .leading, spacing: 18) {
-                        HStack(alignment: .center, spacing: 18) {
-                            aboutMark
-                            .frame(width: 82, height: 82)
-                            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                            .glassEffect(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("SlayNode")
-                                    .font(.system(size: 34, weight: .bold, design: .rounded))
-
-                                Text("A native control room for local services on modern macOS.")
-                                    .font(.title3)
-                                    .foregroundStyle(.secondary)
-
-                                Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        ServicePanel(title: "What Changed", systemImage: "sparkles") {
-                            Text("The new SlayNode experience is built around Tahoe-native windowing, Liquid Glass surfaces, local service orchestration, and faster control over Docker, Homebrew Services and live development runtimes.")
-                        }
-
-                        ServicePanel(title: "Links", systemImage: "link") {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Link("GitHub Repository", destination: URL(string: "https://github.com/mastertyko/slaynode")!)
-                                Link("Issue Tracker", destination: URL(string: "https://github.com/mastertyko/slaynode/issues")!)
-                            }
-                        }
-                    }
-                    .padding(28)
-                }
-                .padding(24)
-            }
-        }
-        .frame(minWidth: 640, minHeight: 460)
-    }
-
-    @ViewBuilder
-    private var aboutMark: some View {
-        if let icon = slayNodeAppIcon() {
-            Image(nsImage: icon)
-                .resizable()
-                .interpolation(.high)
-        } else {
-            Image(systemName: "shippingbox.circle.fill")
-                .resizable()
-                .scaledToFit()
-                .foregroundStyle(Color.accentColor)
-        }
+        .frame(width: center.settings.showMenuBarSection ? 432 : 372)
     }
 }
 
@@ -656,6 +671,7 @@ private struct ServiceActionButton: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
             } else {
                 Button(action: perform) {
                     HStack(spacing: 8) {
@@ -664,8 +680,10 @@ private struct ServiceActionButton: View {
                     }
                 }
                 .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
             }
         }
+        .controlSize(.small)
         .tint(action == .forceStop ? .red : nil)
     }
 }
@@ -687,21 +705,22 @@ private struct ServiceHeroCard<Actions: View>: View {
                     .glassEffectID("service-icon-\(service.id)", in: namespace)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 10) {
-                        Text(service.name)
-                            .font(.system(size: 30, weight: .bold, design: .rounded))
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .firstTextBaseline, spacing: 10) {
+                            serviceTitle
+                            statusBadge
+                        }
 
-                        Text(service.status.title)
-                            .font(.caption.weight(.bold))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .foregroundStyle(.primary)
-                            .glassEffect(in: Capsule())
+                        VStack(alignment: .leading, spacing: 10) {
+                            serviceTitle
+                            statusBadge
+                        }
                     }
 
                     Text(service.summary)
                         .font(.body)
                         .foregroundStyle(.secondary)
+                        .lineLimit(3)
 
                     Text(refreshLabel)
                         .font(.caption)
@@ -715,6 +734,21 @@ private struct ServiceHeroCard<Actions: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassEffect(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
         .glassEffectID("service-card-\(service.id)", in: namespace)
+    }
+
+    private var serviceTitle: some View {
+        Text(service.name)
+            .font(.system(size: 30, weight: .bold, design: .rounded))
+            .lineLimit(2)
+    }
+
+    private var statusBadge: some View {
+        Text(service.status.title)
+            .font(.caption.weight(.bold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .foregroundStyle(.primary)
+            .glassEffect(in: Capsule())
     }
 
     private var refreshLabel: String {
@@ -741,6 +775,8 @@ private struct ServiceMetricCard: View {
 
             Text(value)
                 .font(.title3.weight(.semibold))
+                .lineLimit(3)
+                .minimumScaleFactor(0.82)
 
             Text(subtitle)
                 .font(.caption)
@@ -748,12 +784,12 @@ private struct ServiceMetricCard: View {
                 .lineLimit(2)
         }
         .padding(18)
-        .frame(maxWidth: .infinity, minHeight: 126, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 136, alignment: .leading)
         .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(alignment: .topTrailing) {
             Circle()
                 .fill(tint.opacity(0.18))
-                .frame(width: 42, height: 42)
+                .frame(width: 34, height: 34)
                 .padding(14)
         }
     }
@@ -776,20 +812,318 @@ private struct ServicePanel<Content: View>: View {
     }
 }
 
-private struct ServiceWorkspaceRow: View {
-    let workspace: WorkspaceIdentity
+private struct ServiceFeedbackBanner: View {
+    let message: String
+    var compact: Bool = false
+    let dismiss: () -> Void
 
     var body: some View {
-        Label {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+                .padding(.top, 2)
+
+            Text(message)
+                .font(compact ? .caption : .subheadline)
+                .foregroundStyle(.primary)
+                .lineLimit(compact ? 3 : 2)
+                .multilineTextAlignment(.leading)
+
+            Spacer(minLength: 8)
+
+            Button(action: dismiss) {
+                Image(systemName: "xmark")
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+        }
+        .padding(compact ? 12 : 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(in: RoundedRectangle(cornerRadius: compact ? 20 : 22, style: .continuous))
+    }
+}
+
+private struct ServiceMenuBarSummaryCard: View {
+    let activeCount: Int
+    let unhealthyCount: Int
+    let updatedLabel: String
+    let recentAction: ServiceActionSummary?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Now")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Text(updatedLabel)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 10) {
+                ServiceMenuBarMetricPill(
+                    title: "Active",
+                    value: "\(activeCount)",
+                    tint: .green
+                )
+                ServiceMenuBarMetricPill(
+                    title: "Watch",
+                    value: "\(unhealthyCount)",
+                    tint: unhealthyCount > 0 ? .orange : .secondary
+                )
+            }
+
+            if let recentAction {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Recent action")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+
+                    Text("\(recentAction.action.title) • \(recentAction.serviceName)")
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(1)
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+}
+
+private struct ServiceColumnHeader: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: systemImage)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.cyan)
+                .frame(width: 40, height: 40)
+                .glassEffect(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline.weight(.semibold))
+
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+private struct ServiceMenuBarRow: View {
+    let service: ManagedService
+    let workspaceTitle: String?
+    let isExpanded: Bool
+    let stop: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(serviceTint(for: service.kind).opacity(0.16))
+
+                Image(systemName: service.kind.symbolName)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(serviceTint(for: service.kind))
+            }
+            .frame(width: isExpanded ? 30 : 24, height: isExpanded ? 30 : 24)
+
+            VStack(alignment: .leading, spacing: isExpanded ? 4 : 2) {
+                HStack(spacing: 8) {
+                    Text(service.name)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+
+                    Text(service.status.title)
+                        .font(.caption2.weight(.bold))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(healthTint(for: service.health).opacity(0.14), in: Capsule())
+                        .foregroundStyle(healthTint(for: service.health))
+                        .lineLimit(1)
+                }
+
+                if isExpanded {
+                    Text(service.summary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+
+                    HStack(spacing: 6) {
+                        ServiceMenuBarMetaBadge(
+                            text: service.source.title,
+                            systemImage: sourceSymbol(for: service.source)
+                        )
+
+                        if let workspaceTitle {
+                            ServiceMenuBarMetaBadge(
+                                text: workspaceTitle,
+                                systemImage: "folder.fill"
+                            )
+                        }
+
+                        if !service.ports.isEmpty {
+                            ServiceMenuBarMetaBadge(
+                                text: service.ports.map { ":\($0.value)" }.joined(separator: "  "),
+                                systemImage: "dot.radiowaves.left.and.right",
+                                monospaced: true
+                            )
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            if service.supports(.stop) {
+                Button("Stop", action: stop)
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.small)
+            }
+        }
+        .padding(isExpanded ? 12 : 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+}
+
+private struct ServiceMenuBarHeaderCard: View {
+    let activeCount: Int
+    let unhealthyCount: Int
+    let updatedLabel: String
+    let refresh: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.accentColor.opacity(0.14))
+
+                Image(systemName: "shippingbox.circle.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+            }
+            .frame(width: 42, height: 42)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("SlayNode")
+                    .font(.headline.weight(.semibold))
+
+                Text(updatedLabel)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if unhealthyCount > 0 {
+                    Text("\(unhealthyCount) service\(unhealthyCount == 1 ? "" : "s") need attention")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.orange)
+                } else {
+                    Text("\(activeCount) active services")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer(minLength: 10)
+
+            Button(action: refresh) {
+                Image(systemName: "arrow.clockwise")
+            }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+            .controlSize(.small)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+}
+
+private struct ServiceMenuBarMetricPill: View {
+    let title: String
+    let value: String
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            Text(value)
+                .font(.subheadline.monospacedDigit().weight(.semibold))
+                .foregroundStyle(.primary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+private struct ServiceMenuBarMetaBadge: View {
+    let text: String
+    let systemImage: String
+    var monospaced: Bool = false
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: systemImage)
+                .font(.caption2)
+
+            Text(text)
+                .font(monospaced ? .caption2.monospacedDigit() : .caption2)
+                .lineLimit(1)
+        }
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 5)
+        .background(.white.opacity(0.06), in: Capsule())
+    }
+}
+
+private struct ServiceWorkspaceRow: View {
+    let workspace: WorkspaceIdentity
+    let title: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(.white.opacity(0.08))
+
+                Image(systemName: "folder.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.cyan)
+            }
+            .frame(width: 28, height: 28)
+
             VStack(alignment: .leading, spacing: 2) {
-                Text(workspace.name)
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+
                 Text(workspace.rootPath)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .truncationMode(.middle)
             }
-        } icon: {
-            Image(systemName: "folder")
+
+            Spacer(minLength: 0)
         }
     }
 }
@@ -811,8 +1145,12 @@ private struct ServiceListRow: View {
                 HStack(spacing: 8) {
                     Text(service.name)
                         .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
                     Text(service.status.title)
                         .font(.caption2.weight(.bold))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(healthTint(for: service.health).opacity(0.14), in: Capsule())
                         .foregroundStyle(healthTint(for: service.health))
                 }
 
@@ -894,12 +1232,13 @@ private struct ServiceInspectorPanel: View {
                         VStack(alignment: .leading, spacing: 10) {
                             ForEach(center.recentWorkspaces.prefix(5), id: \.id) { workspace in
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(workspace.name)
+                                    Text(contextualWorkspaceTitle(for: workspace, within: center.workspaces + center.recentWorkspaces))
                                         .font(.subheadline.weight(.semibold))
                                     Text(workspace.rootPath)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                         .lineLimit(1)
+                                        .truncationMode(.middle)
                                 }
                             }
                         }
@@ -947,6 +1286,71 @@ private struct ServiceAtmosphereView: View {
                 .blur(radius: 140)
                 .offset(x: 260, y: 260)
         }
+    }
+}
+
+private func contextualWorkspaceTitle(
+    for workspace: WorkspaceIdentity,
+    within candidates: [WorkspaceIdentity]
+) -> String {
+    let duplicateCount = candidates.filter { $0.name == workspace.name }.count
+
+    guard duplicateCount > 1 else { return workspace.name }
+
+    let parentName = URL(fileURLWithPath: workspace.rootPath)
+        .deletingLastPathComponent()
+        .lastPathComponent
+
+    guard !parentName.isEmpty, parentName != workspace.name else {
+        return workspace.name
+    }
+
+    return "\(workspace.name) • \(parentName)"
+}
+
+private func menuBarPriority(lhs: ManagedService, rhs: ManagedService) -> Bool {
+    let lhsScore = menuBarPriorityScore(for: lhs)
+    let rhsScore = menuBarPriorityScore(for: rhs)
+
+    if lhsScore != rhsScore {
+        return lhsScore > rhsScore
+    }
+
+    if lhs.lastSeenAt != rhs.lastSeenAt {
+        return lhs.lastSeenAt > rhs.lastSeenAt
+    }
+
+    return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+}
+
+private func menuBarPriorityScore(for service: ManagedService) -> Int {
+    let healthScore: Int
+    switch service.health {
+    case .critical: healthScore = 400
+    case .watch: healthScore = 300
+    case .healthy: healthScore = 200
+    case .passive: healthScore = 100
+    }
+
+    let statusScore: Int
+    switch service.status {
+    case .degraded: statusScore = 40
+    case .running: statusScore = 30
+    case .stopped: statusScore = 20
+    case .unavailable: statusScore = 10
+    }
+
+    return healthScore + statusScore
+}
+
+private func sourceSymbol(for source: ServiceSource) -> String {
+    switch source {
+    case .process:
+        return "terminal"
+    case .docker:
+        return "shippingbox.fill"
+    case .brewService:
+        return "cup.and.saucer.fill"
     }
 }
 

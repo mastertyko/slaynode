@@ -222,8 +222,6 @@ final class ServiceCenterModel {
     }
 
     func start() {
-        notifications.requestAuthorizationIfNeeded()
-
         if refreshLoopTask == nil {
             refreshLoopTask = Task { [weak self] in
                 guard let self else { return }
@@ -284,6 +282,8 @@ final class ServiceCenterModel {
 
     @discardableResult
     func perform(_ action: ServiceAction, on service: ManagedService) async -> String? {
+        lastError = nil
+
         do {
             let outcome = try await performInternal(action, on: service)
             historyStore.record(action: action, on: service, outcome: outcome)
@@ -302,6 +302,10 @@ final class ServiceCenterModel {
             recentActions = historyStore.recentActions()
             return nil
         }
+    }
+
+    func clearLastError() {
+        lastError = nil
     }
 
     private func performInternal(_ action: ServiceAction, on service: ManagedService) async throws -> String {

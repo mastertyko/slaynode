@@ -28,13 +28,15 @@ struct AuxiliaryWindowShell<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             AuxiliaryWindowBackdrop(accent: accent)
                 .ignoresSafeArea()
 
             content
                 .padding(24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
 
@@ -71,23 +73,15 @@ struct AuxiliaryHeroCard<Trailing: View>: View {
             trailing
         }
         .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.regularMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [accent.opacity(0.08), Color.clear],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color.white.opacity(0.12))
-                )
+                .fill(accent.opacity(0.04))
+        )
+        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .strokeBorder(accent.opacity(0.08))
         )
     }
 }
@@ -114,21 +108,12 @@ struct AuxiliarySectionCard<Content: View>: View {
         .padding(18)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.thinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [accent.opacity(0.05), Color.clear],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color.white.opacity(0.08))
-                )
+                .fill(accent.opacity(0.03))
+        )
+        .glassEffect(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .strokeBorder(accent.opacity(0.06))
         )
     }
 }

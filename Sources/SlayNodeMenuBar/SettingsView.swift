@@ -1,34 +1,39 @@
+import Observation
 import SwiftUI
 
 struct SettingsView: View {
-    @ObservedObject var preferences: PreferencesStore
+    @Bindable var settings: AppSettings
     @ObservedObject var updateController: UpdateController
     let openAboutAction: (() -> Void)?
 
     init(
-        preferences: PreferencesStore,
+        settings: AppSettings,
         updateController: UpdateController,
         openAboutAction: (() -> Void)? = nil
     ) {
-        self.preferences = preferences
+        self.settings = settings
         self.updateController = updateController
         self.openAboutAction = openAboutAction
     }
 
     var body: some View {
         AuxiliaryWindowShell(accent: Color.accentColor) {
-            SettingsContentView(
-                preferences: preferences,
-                updateController: updateController,
-                openAboutAction: openAboutAction
-            )
+            ScrollView {
+                SettingsContentView(
+                    settings: settings,
+                    updateController: updateController,
+                    openAboutAction: openAboutAction
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .scrollIndicators(.never)
         }
-        .frame(minWidth: 520, idealWidth: 580, maxWidth: 640, minHeight: 380, idealHeight: 430, maxHeight: 500)
+        .frame(minWidth: 520, idealWidth: 580, maxWidth: 640, minHeight: 400, idealHeight: 448, maxHeight: 520)
     }
 }
 
 struct SettingsContentView: View {
-    @ObservedObject var preferences: PreferencesStore
+    @Bindable var settings: AppSettings
     @ObservedObject var updateController: UpdateController
     @Environment(\.openWindow) private var openWindow
     private let openAboutAction: (() -> Void)?
@@ -36,11 +41,11 @@ struct SettingsContentView: View {
     private let accent = Color.accentColor
 
     init(
-        preferences: PreferencesStore,
+        settings: AppSettings,
         updateController: UpdateController,
         openAboutAction: (() -> Void)? = nil
     ) {
-        self.preferences = preferences
+        self.settings = settings
         self.updateController = updateController
         self.openAboutAction = openAboutAction
     }
@@ -54,7 +59,7 @@ struct SettingsContentView: View {
                 accent: accent
             ) {
                 VStack(alignment: .trailing, spacing: 8) {
-                    AuxiliaryPill(text: "\(Int(preferences.refreshInterval))s refresh", systemImage: "timer", tint: .orange)
+                    AuxiliaryPill(text: "\(Int(settings.refreshInterval))s refresh", systemImage: "timer", tint: .orange)
                     AuxiliaryPill(text: appVersion, systemImage: "app.badge", tint: accent)
                 }
             }
@@ -69,22 +74,31 @@ struct SettingsContentView: View {
                         Text("Refresh interval")
                             .font(.subheadline.weight(.semibold))
                         Spacer()
-                        Text("\(Int(preferences.refreshInterval)) seconds")
+                        Text("\(Int(settings.refreshInterval)) seconds")
                             .font(.subheadline.monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
 
-                    Slider(value: Binding(
-                        get: { preferences.refreshInterval },
-                        set: { preferences.setRefreshInterval($0) }
-                    ), in: 2...30, step: 1)
+                    Slider(value: $settings.refreshInterval, in: 3...60, step: 1)
                     .tint(.orange)
                     .accessibilityLabel("Refresh interval")
-                    .accessibilityValue("\(Int(preferences.refreshInterval)) seconds")
+                    .accessibilityValue("\(Int(settings.refreshInterval)) seconds")
 
                     Text("Use a faster interval when you want tighter feedback, or a slower one to keep scanning lighter.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+            }
+
+            AuxiliarySectionCard(
+                title: "Experience",
+                systemImage: "sparkles",
+                accent: .teal
+            ) {
+                VStack(alignment: .leading, spacing: 14) {
+                    Toggle("Show recent history in the app and inspector", isOn: $settings.showRecentHistory)
+                    Divider()
+                    Toggle("Show richer menu bar summary surface", isOn: $settings.showMenuBarSection)
                 }
             }
 
@@ -140,6 +154,10 @@ struct SettingsContentView: View {
                         Text("Version \(appVersion)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+
+                        Text("The utility windows now follow the same Tahoe-native material language as the main control room.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
@@ -157,6 +175,128 @@ struct SettingsContentView: View {
         }
     }
     
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "\(version) (\(build))"
+    }
+
+    private var lastCheckDescription: String {
+        if let lastCheck = updateController.lastUpdateCheckDate {
+            return "Last checked \(lastCheck.formatted(date: .abbreviated, time: .shortened))"
+        }
+
+        return "No update checks recorded yet."
+    }
+}
+
+struct LegacySettingsContentView: View {
+    @ObservedObject var preferences: PreferencesStore
+    @ObservedObject var updateController: UpdateController
+    @Environment(\.openWindow) private var openWindow
+    let openAboutAction: (() -> Void)?
+
+    private let accent = Color.accentColor
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            AuxiliaryHeroCard(
+                title: "Settings",
+                subtitle: "Tune scan cadence and supporting app behavior from the current workspace view.",
+                systemImage: "gearshape.2.fill",
+                accent: accent
+            ) {
+                VStack(alignment: .trailing, spacing: 8) {
+                    AuxiliaryPill(text: "\(Int(preferences.refreshInterval))s refresh", systemImage: "timer", tint: .orange)
+                    AuxiliaryPill(text: appVersion, systemImage: "app.badge", tint: accent)
+                }
+            }
+
+            AuxiliarySectionCard(
+                title: "Scan cadence",
+                systemImage: "timer",
+                accent: .orange
+            ) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Refresh interval")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Text("\(Int(preferences.refreshInterval)) seconds")
+                            .font(.subheadline.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Slider(value: Binding(
+                        get: { preferences.refreshInterval },
+                        set: { preferences.setRefreshInterval($0) }
+                    ), in: 2...30, step: 1)
+                    .tint(.orange)
+                }
+            }
+
+            AuxiliarySectionCard(
+                title: "Updates",
+                systemImage: "arrow.trianglehead.clockwise",
+                accent: accent
+            ) {
+                HStack(alignment: .top, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Automatic updates")
+                            .font(.subheadline.weight(.semibold))
+
+                        Text(lastCheckDescription)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    if updateController.canCheckForUpdates {
+                        Button("Check Now") {
+                            updateController.checkForUpdates()
+                        }
+                        .buttonStyle(AuxiliaryPrimaryButtonStyle(tint: accent))
+                    } else {
+                        AuxiliaryPill(
+                            text: "Unavailable in local build",
+                            systemImage: "wrench.and.screwdriver",
+                            tint: .secondary
+                        )
+                    }
+                }
+            }
+
+            AuxiliarySectionCard(
+                title: "App",
+                systemImage: "app.badge",
+                accent: .teal
+            ) {
+                HStack(alignment: .top, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("SlayNode")
+                            .font(.subheadline.weight(.semibold))
+
+                        Text("Version \(appVersion)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Button("Open About") {
+                        if let openAboutAction {
+                            openAboutAction()
+                        } else {
+                            openWindow(id: AppWindowID.about)
+                        }
+                    }
+                    .buttonStyle(AuxiliaryPrimaryButtonStyle(tint: accent))
+                }
+            }
+        }
+    }
+
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"

@@ -1,6 +1,47 @@
 import Foundation
 import SwiftData
 
+enum WorkspaceHistoryHeuristics {
+    private static let disallowedNames: Set<String> = [
+        ".bin",
+        "build",
+        "cache",
+        "dist",
+        "node_modules",
+        "temp",
+        "tmp",
+        "vitest"
+    ]
+
+    static func isEligibleRecentWorkspace(
+        _ workspace: WorkspaceIdentity,
+        fileManager: FileManager = .default
+    ) -> Bool {
+        let trimmedName = workspace.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return false }
+        guard !trimmedName.hasPrefix(".") else { return false }
+        guard !disallowedNames.contains(trimmedName.lowercased()) else { return false }
+        guard !looksOpaqueIdentifier(trimmedName) else { return false }
+        guard fileManager.fileExists(atPath: workspace.rootPath) else { return false }
+        return true
+    }
+
+    static func looksOpaqueIdentifier(_ value: String) -> Bool {
+        let normalized = value.lowercased()
+        guard normalized.count >= 12 else { return false }
+
+        let hexOnly = normalized.allSatisfy { $0.isHexDigit }
+        if hexOnly { return true }
+
+        let components = normalized.split(separator: "-")
+        if components.count == 5, components.allSatisfy({ $0.allSatisfy(\.isHexDigit) }) {
+            return true
+        }
+
+        return false
+    }
+}
+
 @MainActor
 final class ServiceHistoryStore {
     let container: ModelContainer
@@ -63,16 +104,28 @@ final class ServiceHistoryStore {
     }
 
     func recentWorkspaces(limit: Int = 8) -> [WorkspaceIdentity] {
+        pruneWorkspaceHistory()
+
         var descriptor = FetchDescriptor<WorkspaceHistoryRecord>(
             sortBy: [SortDescriptor(\.lastSeenAt, order: .reverse)]
         )
-        descriptor.fetchLimit = limit
+        descriptor.fetchLimit = limit * 4
 
         let records = (try? modelContext.fetch(descriptor)) ?? []
-        return records.compactMap {
-            guard !$0.rootPath.isEmpty, $0.rootPath != "/" else { return nil }
-            return WorkspaceIdentity(id: $0.id, name: $0.name, rootPath: $0.rootPath)
+        var seenIDs = Set<String>()
+        var resolved: [WorkspaceIdentity] = []
+
+        for record in records {
+            guard let workspace = ServiceHeuristics.workspaceIdentity(from: record.rootPath) else { continue }
+            guard seenIDs.insert(workspace.id).inserted else { continue }
+            resolved.append(workspace)
+
+            if resolved.count == limit {
+                break
+            }
         }
+
+        return resolved
     }
 
     func recentActions(limit: Int = 10) -> [ServiceActionSummary] {
@@ -175,7 +228,6 @@ final class ServiceHistoryStore {
         record.name = workspace.name
         record.rootPath = workspace.rootPath
         record.lastSeenAt = seenAt
-        record.openCount += 1
     }
 
     private func fetchWorkspaceRecord(id: String) -> WorkspaceHistoryRecord? {
@@ -194,6 +246,34 @@ final class ServiceHistoryStore {
         let predicate = #Predicate<WindowStateRecord> { $0.id == id }
         let descriptor = FetchDescriptor<WindowStateRecord>(predicate: predicate)
         return try? modelContext.fetch(descriptor).first
+    }
+
+    private func pruneWorkspaceHistory() {
+        let descriptor = FetchDescriptor<WorkspaceHistoryRecord>(
+            sortBy: [SortDescriptor(\.lastSeenAt, order: .reverse)]
+        )
+        let records = (try? modelContext.fetch(descriptor)) ?? []
+        guard !records.isEmpty else { return }
+
+        var keptCanonicalIDs = Set<String>()
+
+        for record in records {
+            guard let canonicalWorkspace = ServiceHeuristics.workspaceIdentity(from: record.rootPath),
+                  WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(canonicalWorkspace) else {
+                modelContext.delete(record)
+                continue
+            }
+
+            guard keptCanonicalIDs.insert(canonicalWorkspace.id).inserted else {
+                modelContext.delete(record)
+                continue
+            }
+
+            record.name = canonicalWorkspace.name
+            record.rootPath = canonicalWorkspace.rootPath
+        }
+
+        saveIfNeeded()
     }
 
     private func saveIfNeeded() {

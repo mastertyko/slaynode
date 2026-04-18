@@ -4,9 +4,13 @@ import SwiftUI
 struct AboutWindowView: View {
     var body: some View {
         AuxiliaryWindowShell(accent: Color.accentColor) {
-            AboutContentView()
+            ScrollView {
+                AboutContentView()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .scrollIndicators(.never)
         }
-        .frame(minWidth: 520, idealWidth: 580, maxWidth: 640, minHeight: 360, idealHeight: 400, maxHeight: 460)
+        .frame(minWidth: 540, idealWidth: 620, maxWidth: 700, minHeight: 400, idealHeight: 460, maxHeight: 560)
     }
 }
 
@@ -34,7 +38,33 @@ struct AboutContentView: View {
             HStack(spacing: 8) {
                 AuxiliaryPill(text: shortVersion, systemImage: "app.badge", tint: accent)
                 AuxiliaryPill(text: buildNumber, systemImage: "number", tint: .orange)
-                AuxiliaryPill(text: "macOS app", systemImage: "laptopcomputer", tint: .secondary)
+                AuxiliaryPill(text: "macOS 26+", systemImage: "laptopcomputer", tint: .secondary)
+            }
+
+            LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 18) {
+                AuxiliarySectionCard(
+                    title: "Built native",
+                    systemImage: "macwindow.on.rectangle",
+                    accent: accent
+                ) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        aboutBullet("NavigationSplitView with inspector-first workflows")
+                        aboutBullet("Workspace-aware restoration and focused windows")
+                        aboutBullet("Shared service model across dashboard and menu bar")
+                    }
+                }
+
+                AuxiliarySectionCard(
+                    title: "Baseline",
+                    systemImage: "checkmark.shield",
+                    accent: .orange
+                ) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        aboutFact(label: "Minimum macOS", value: "26")
+                        aboutFact(label: "Control sources", value: "Process, Docker, Brew")
+                        aboutFact(label: "Design system", value: "Tahoe-native Liquid Glass")
+                    }
+                }
             }
 
             AuxiliarySectionCard(
@@ -77,6 +107,27 @@ struct AboutContentView: View {
 
     private var buildNumber: String {
         "Build \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")"
+    }
+
+    @ViewBuilder
+    private func aboutBullet(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(accent)
+                .padding(.top, 2)
+
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+        }
+    }
+
+    @ViewBuilder
+    private func aboutFact(label: String, value: String) -> some View {
+        LabeledContent(label) {
+            Text(value)
+        }
     }
 }
 

@@ -352,7 +352,7 @@ private struct WindowWorkspaceDetailPanel: View {
             VStack(alignment: .leading, spacing: 18) {
                 switch activeAuxiliary {
                 case .settings:
-                    SettingsContentView(
+                    LegacySettingsContentView(
                         preferences: preferences,
                         updateController: updateController,
                         openAboutAction: openAboutAction

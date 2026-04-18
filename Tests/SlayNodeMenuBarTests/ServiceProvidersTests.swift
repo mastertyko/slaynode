@@ -99,5 +99,23 @@ final class ServiceProvidersTests: XCTestCase {
 
         XCTAssertNil(service)
     }
+
+    func testWorkspaceIdentityNormalizesNodeModulesPaths() {
+        let workspace = ServiceHeuristics.workspaceIdentity(
+            from: "/Volumes/ExtraDisk/Dev/julia-live/frontend/node_modules/.bin"
+        )
+
+        XCTAssertEqual(workspace?.name, "frontend")
+        XCTAssertEqual(workspace?.rootPath, "/Volumes/ExtraDisk/Dev/julia-live/frontend")
+    }
+
+    func testWorkspaceIdentityNormalizesPackageDirectories() {
+        let workspace = ServiceHeuristics.workspaceIdentity(
+            from: "/Volumes/ExtraDisk/Dev/julia-live/backend/node_modules/vitest"
+        )
+
+        XCTAssertEqual(workspace?.name, "backend")
+        XCTAssertEqual(workspace?.rootPath, "/Volumes/ExtraDisk/Dev/julia-live/backend")
+    }
 }
 #endif
