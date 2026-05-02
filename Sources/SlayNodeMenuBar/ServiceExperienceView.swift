@@ -113,8 +113,9 @@ struct ServiceDashboardWindowView: View {
 
                 ToolbarItem(placement: .primaryAction) {
                     if let selectedService, selectedService.supports(.openWorkspace) {
+                        let serviceID = selectedService.id
                         Button {
-                            Task { await center.perform(.openWorkspace, on: selectedService) }
+                            Task { await center.perform(.openWorkspace, onServiceID: serviceID) }
                         } label: {
                             Label("Open Workspace", systemImage: "folder")
                         }
@@ -386,14 +387,16 @@ struct ServiceDashboardWindowView: View {
             spacing: 10
         ) {
             ForEach(primaryActions, id: \.self) { action in
+                let serviceID = service.id
                 ServiceActionButton(action: action) {
-                    Task { await center.perform(action, on: service) }
+                    Task { await center.perform(action, onServiceID: serviceID) }
                 }
             }
 
             if service.supports(.openLogs) {
+                let serviceID = service.id
                 Button {
-                    Task { await center.perform(.openLogs, on: service) }
+                    Task { await center.perform(.openLogs, onServiceID: serviceID) }
                 } label: {
                     Label("Logs", systemImage: "doc.text.magnifyingglass")
                 }
@@ -614,6 +617,7 @@ struct ServiceMenuBarView: View {
                     ScrollView {
                         LazyVStack(spacing: 10) {
                             ForEach(visibleServices, id: \.id) { service in
+                                let serviceID = service.id
                                 ServiceMenuBarRow(
                                     service: service,
                                     workspaceTitle: service.workspace.map {
@@ -626,7 +630,7 @@ struct ServiceMenuBarView: View {
                                     primaryAction: service.supports(.stop) ? .stop : nil,
                                     quickActions: menuBarQuickActions(for: service)
                                 ) { action in
-                                    Task { await center.perform(action, on: service) }
+                                    Task { await center.perform(action, onServiceID: serviceID) }
                                 }
                             }
                         }

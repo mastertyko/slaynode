@@ -425,7 +425,22 @@ final class ServiceCenterModel {
 
     @discardableResult
     func perform(_ action: ServiceAction, on service: ManagedService) async -> String? {
+        await perform(action, onServiceID: service.id)
+    }
+
+    @discardableResult
+    func perform(_ action: ServiceAction, onServiceID serviceID: String) async -> String? {
         lastError = nil
+
+        guard let service = services.first(where: { $0.id == serviceID }) else {
+            lastError = "The selected service is no longer available."
+            return nil
+        }
+
+        guard service.supports(action) else {
+            lastError = "\(action.title) is no longer available for \(service.name)."
+            return nil
+        }
 
         do {
             let outcome = try await performInternal(action, on: service)
