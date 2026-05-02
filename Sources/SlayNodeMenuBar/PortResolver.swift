@@ -2,7 +2,7 @@ import Darwin
 import Foundation
 
 /// Resolves listening TCP ports for processes using lsof
-struct PortResolver {
+struct PortResolver: Sendable {
     private let timeoutNanoseconds: UInt64 = 2_000_000_000 // 2 seconds
     
     /// Resolves listening ports for given process IDs using lsof

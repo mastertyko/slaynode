@@ -120,66 +120,29 @@ actor DiscoveryOrchestrator {
 struct ProcessServiceProvider: DiscoveryProvider, ControlProvider {
     let id = "process-services"
 
-    private let shell: ShellExecuting
-    private let portResolver: PortResolver
+    private let discovery: ProcessDiscovery
     private let processKiller: ProcessGroupKiller
 
     init(
-        shell: ShellExecuting = SystemShellExecutor(),
+        shell: any ShellExecuting = SystemShellExecutor(),
         portResolver: PortResolver = PortResolver(),
         processKiller: ProcessGroupKiller = ProcessGroupKiller()
     ) {
-        self.shell = shell
-        self.portResolver = portResolver
+        self.discovery = ProcessDiscovery(shell: shell, portResolver: portResolver)
         self.processKiller = processKiller
     }
 
     func discoverServices() async -> DiscoveryBatch {
-        do {
-            let (status, output) = try await shell.run(
-                Constants.Path.ps,
-                arguments: ["-axo", "pid=,ppid=,etime=,command="],
-                timeout: Constants.Timeout.commandTimeout
+        let processes = await discovery.discoverProcesses()
+        let services = processes.compactMap { process in
+            ServiceHeuristics.makeProcessService(
+                from: process,
+                ports: process.ports,
+                workingDirectory: process.workingDirectory
             )
-            guard status == 0 else { return DiscoveryBatch(services: []) }
-
-            let processes = output
-                .split(whereSeparator: \.isNewline)
-                .compactMap { parseProcess(from: String($0)) }
-
-            guard !processes.isEmpty else {
-                return DiscoveryBatch(services: [])
-            }
-
-            let portsByPid = await portResolver.resolvePorts(for: processes.map(\.pid))
-            let candidatePids = processes
-                .filter { process in
-                    let resolvedPorts = portsByPid[process.pid] ?? []
-                    return ServiceHeuristics.isInterestingProcess(
-                        executable: process.executable,
-                        command: process.command,
-                        descriptor: process.descriptor,
-                        ports: resolvedPorts
-                    )
-                }
-                .map(\.pid)
-
-            let workingDirectories = await resolveWorkingDirectories(for: candidatePids)
-
-            let services = processes.compactMap { process -> ManagedService? in
-                let resolvedPorts = Set(process.ports + (portsByPid[process.pid] ?? []))
-                return ServiceHeuristics.makeProcessService(
-                    from: process,
-                    ports: Array(resolvedPorts).sorted(),
-                    workingDirectory: workingDirectories[process.pid] ?? process.workingDirectory
-                )
-            }
-
-            return DiscoveryBatch(services: services)
-        } catch {
-            Log.process.error("Process service discovery failed: \(error.localizedDescription)")
-            return DiscoveryBatch(services: [])
         }
+
+        return DiscoveryBatch(services: services)
     }
 
     func canControl(_ service: ManagedService) -> Bool {
@@ -213,89 +176,6 @@ struct ProcessServiceProvider: DiscoveryProvider, ControlProvider {
         }
     }
 
-    private func parseProcess(from line: String) -> NodeProcess? {
-        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-
-        let components = trimmed.split(separator: " ", maxSplits: 3, omittingEmptySubsequences: true)
-        guard components.count == 4,
-              let pidValue = Int32(components[0]),
-              let ppidValue = Int32(components[1]) else {
-            return nil
-        }
-
-        let elapsedSeconds = parseEtime(String(components[2]))
-        guard elapsedSeconds > 0 else { return nil }
-
-        let command = String(components[3])
-        let tokens = CommandParser.tokenize(command)
-        guard let executableToken = tokens.first else { return nil }
-
-        let arguments = Array(tokens.dropFirst())
-        let inferredPorts = CommandParser.inferPorts(from: tokens)
-        let inferredWorkingDirectory = CommandParser.inferWorkingDirectory(from: arguments)
-        let context = CommandParser.makeContext(
-            executable: executableToken,
-            tokens: tokens,
-            workingDirectory: inferredWorkingDirectory
-        )
-
-        return NodeProcess(
-            pid: pidValue,
-            ppid: ppidValue,
-            executable: executableToken,
-            command: command,
-            arguments: arguments,
-            ports: inferredPorts,
-            uptime: elapsedSeconds,
-            startTime: Date().addingTimeInterval(-elapsedSeconds),
-            workingDirectory: inferredWorkingDirectory,
-            descriptor: CommandParser.descriptor(from: context),
-            commandHash: command.hashValue
-        )
-    }
-
-    private func resolveWorkingDirectories(for pids: [Int32]) async -> [Int32: String] {
-        guard !pids.isEmpty else { return [:] }
-
-        let pidList = pids.map(String.init).joined(separator: ",")
-        do {
-            let (status, output) = try await shell.run(
-                Constants.Path.lsof,
-                arguments: ["-a", "-d", "cwd", "-Fn", "-p", pidList],
-                timeout: Constants.Timeout.commandTimeout
-            )
-
-            guard status == 0 else { return [:] }
-
-            var currentPid: Int32?
-            var result: [Int32: String] = [:]
-
-            for rawLine in output.split(whereSeparator: \.isNewline) {
-                let line = String(rawLine)
-                guard let prefix = line.first else { continue }
-
-                switch prefix {
-                case "p":
-                    currentPid = Int32(line.dropFirst())
-                case "n":
-                    guard let currentPid, result[currentPid] == nil else { continue }
-                    let path = String(line.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !path.isEmpty {
-                        result[currentPid] = path
-                    }
-                default:
-                    continue
-                }
-            }
-
-            return result
-        } catch {
-            Log.process.warning("Working-directory resolution failed: \(error.localizedDescription)")
-            return [:]
-        }
-    }
-
     private func forceTerminate(pid: Int32) throws {
         guard pid > 0 else {
             throw ServiceControlError.commandFailed("Invalid process id.")
@@ -311,41 +191,6 @@ struct ProcessServiceProvider: DiscoveryProvider, ControlProvider {
         }
     }
 
-    private func parseEtime(_ etime: String) -> TimeInterval {
-        if etime.contains("-") {
-            let components = etime.split(separator: "-")
-            guard components.count == 2 else { return 0 }
-            let days = TimeInterval(components[0]) ?? 0
-            let parts = components[1].split(separator: ":")
-            guard parts.count == 3 else { return 0 }
-            let hours = TimeInterval(parts[0]) ?? 0
-            let minutes = TimeInterval(parts[1]) ?? 0
-            let seconds = TimeInterval(parts[2]) ?? 0
-            return days * 86_400
-                + hours * 3_600
-                + minutes * 60
-                + seconds
-        }
-
-        let parts = etime.split(separator: ":")
-        switch parts.count {
-        case 1:
-            return TimeInterval(parts[0]) ?? 0
-        case 2:
-            let minutes = TimeInterval(parts[0]) ?? 0
-            let seconds = TimeInterval(parts[1]) ?? 0
-            return minutes * 60 + seconds
-        case 3:
-            let hours = TimeInterval(parts[0]) ?? 0
-            let minutes = TimeInterval(parts[1]) ?? 0
-            let seconds = TimeInterval(parts[2]) ?? 0
-            return hours * 3_600
-                + minutes * 60
-                + seconds
-        default:
-            return 0
-        }
-    }
 }
 
 struct DockerServiceProvider: DiscoveryProvider, ControlProvider {
