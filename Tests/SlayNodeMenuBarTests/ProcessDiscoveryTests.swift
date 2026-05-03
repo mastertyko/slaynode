@@ -85,6 +85,34 @@ final class ProcessDiscoveryTests: XCTestCase {
         XCTAssertEqual(service.name, "frontend")
         XCTAssertEqual(service.kind, .app)
     }
+
+    func testDiscoveryFiltersAgentBrowserToolingEvenWhenPortIsPresent() async throws {
+        let psOutput = """
+        21000     1 00:20 /opt/homebrew/Cellar/agent-browser/0.26.0/libexec/lib/node_modules/agent-browser/bin/agent-browser-darwin-arm64 --port=53754
+        21010     1 00:20 /usr/local/bin/npm run dev
+        21011 21010 00:19 node /Users/test/frontend/node_modules/.bin/vite --port=5173
+        """
+        let cwdOutput = """
+        p21010
+        fcwd
+        n/Users/test/frontend
+        p21011
+        fcwd
+        n/Users/test/frontend
+        """
+        let mock = MockShellExecutor()
+        mock.responses["\(Constants.Path.ps) -axo pid=,ppid=,etime=,command="] = (0, psOutput)
+        mock.responses["\(Constants.Path.lsof) -a -d cwd -Fn -p 21010,21011"] = (0, cwdOutput)
+        mock.defaultResponse = (0, "")
+
+        let discovery = ProcessDiscovery(shell: mock)
+        let processes = await discovery.discoverProcesses()
+
+        XCTAssertEqual(processes.map(\.pid), [21_010])
+        XCTAssertEqual(processes.first?.descriptor.displayName, "Vite")
+        XCTAssertEqual(processes.first?.ports, [5_173])
+        XCTAssertEqual(processes.first?.workingDirectory, "/Users/test/frontend")
+    }
     #endif
 }
 #endif

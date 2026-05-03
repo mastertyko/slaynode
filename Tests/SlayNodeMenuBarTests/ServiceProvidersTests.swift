@@ -100,6 +100,39 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertNil(service)
     }
 
+    func testAgentBrowserToolingDaemonIsFilteredOutEvenWithPort() {
+        let process = NodeProcess(
+            pid: 4141,
+            ppid: 1,
+            executable: "/opt/homebrew/Cellar/agent-browser/0.26.0/libexec/lib/node_modules/agent-browser/bin/agent-browser-darwin-arm64",
+            command: "/opt/homebrew/Cellar/agent-browser/0.26.0/libexec/lib/node_modules/agent-browser/bin/agent-browser-darwin-arm64 --port=53754",
+            arguments: ["--port=53754"],
+            ports: [53754],
+            uptime: 20,
+            startTime: Date(),
+            workingDirectory: nil,
+            descriptor: ServerDescriptor(
+                name: "Node.js",
+                displayName: "Node.js",
+                category: .runtime,
+                runtime: "Node.js",
+                packageManager: nil,
+                script: nil,
+                details: nil,
+                portHints: [53754]
+            ),
+            commandHash: 4
+        )
+
+        let service = ServiceHeuristics.makeProcessService(
+            from: process,
+            ports: [53754],
+            workingDirectory: nil
+        )
+
+        XCTAssertNil(service)
+    }
+
     func testWorkspaceIdentityNormalizesNodeModulesPaths() {
         let workspace = ServiceHeuristics.workspaceIdentity(
             from: "/Volumes/ExtraDisk/Dev/julia-live/frontend/node_modules/.bin"

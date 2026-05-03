@@ -419,6 +419,10 @@ struct ProcessDiscovery: Sendable {
             return true
         }
 
+        if ProcessToolingExclusions.isExcluded(executable: executable, command: command) {
+            return true
+        }
+
         if command.contains("/typescript/lib/tsserver.js") ||
             command.contains("/typescript/lib/typingsinstaller.js") ||
             command.contains("typescript-language-server") ||
