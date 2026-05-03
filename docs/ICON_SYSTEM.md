@@ -45,8 +45,9 @@ optically simpler and heavier than the dock icon to stay legible at 16-22 px.
 3. Run `./build.sh` to rebuild the app bundle and `AppIcon.icns`.
 4. Verify the icon in Dock, About, and menu bar contexts.
 
-`./build.sh` now regenerates brand assets automatically before building, so
-normal local builds stay in sync with the renderer.
+Normal `./build.sh` runs use the checked-in generated assets so local builds do
+not rewrite tracked PNG files. Pass `--generate-icons` to `build.sh` when you
+want the build to refresh assets before assembling the app bundle.
 
 ## Technical Notes
 

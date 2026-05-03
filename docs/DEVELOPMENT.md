@@ -28,7 +28,7 @@ SlayNode/
 ├── Tests/SlayNodeMenuBarTests/                   # Unit and integration tests
 ├── script/build_and_run.sh                       # Official local build/run entry point
 ├── generate-icons.swift                          # Source-of-truth renderer for brand assets
-├── build.sh                                      # Bundle assembly, icon generation, signing
+├── build.sh                                      # Bundle assembly, asset checks, signing
 ├── release.sh / notarize.sh                      # Packaging and distribution helpers
 └── .codex/environments/environment.toml          # Codex Run action wiring
 ```
@@ -51,6 +51,11 @@ swift test
 ### Build Release Bundle
 ```bash
 ./build.sh release
+```
+
+### Refresh Icon Assets
+```bash
+./build.sh --generate-icons debug
 ```
 
 ### Create DMG for Distribution
@@ -127,9 +132,10 @@ swift test
 
 ## Development Notes
 
-- Local builds regenerate brand assets automatically through [build.sh](../build.sh).
+- Local builds use checked-in brand assets through [build.sh](../build.sh); pass `--generate-icons` when intentionally refreshing generated PNGs.
 - The minimum deployment target is now `macOS 26.0`.
 - `build.sh` accepts `SLAYNODE_VERSION`, `SLAYNODE_BUILD_NUMBER`, and optional Sparkle metadata overrides so CI/release builds can stamp unique bundle metadata without editing tracked plist files.
+- When `DEVELOPER_DIR` is unset and `/Applications/Xcode.app/Contents/Developer` exists, `build.sh` uses that Xcode toolchain so SwiftData and Foundation macro plugins are available from scripted local builds.
 - The preferred state model is `@Observable` plus structured concurrency, not `ObservableObject` plus Combine, unless working in legacy compatibility code.
 - All user-facing command strings should be sanitized through the shared service model before they reach the UI.
 - Sparkle update checks are only active when release automation provides valid feed and EDDSA key metadata at build time.

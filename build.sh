@@ -8,10 +8,79 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="SlayNode"
 APP_DIR="${ROOT_DIR}/${APP_NAME}.app"
 EXECUTABLE_NAME="SlayNodeMenuBar"
-CONFIGURATION="${1:-debug}"
+CONFIGURATION="debug"
+GENERATE_ICONS=false
 ARCH_DIR="arm64-apple-macosx"
 INFO_PLIST_TEMPLATE="${ROOT_DIR}/XcodeSupport/Info.plist"
 PLIST_BUDDY="/usr/libexec/PlistBuddy"
+
+usage() {
+  cat <<EOF
+usage: $0 [debug|release] [--generate-icons]
+
+Options:
+  --generate-icons  Refresh tracked PNG assets from generate-icons.swift before building.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --generate-icons)
+      GENERATE_ICONS=true
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --*)
+      echo "❌ Unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+    *)
+      CONFIGURATION="$1"
+      ;;
+  esac
+  shift
+done
+
+if [[ -z "${DEVELOPER_DIR:-}" && -d "/Applications/Xcode.app/Contents/Developer" ]]; then
+  export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
+fi
+
+verify_brand_assets() {
+  local missing=()
+  local required_assets=(
+    "Sources/SlayNodeMenuBar/Resources/AppIcon.iconset/icon_16x16.png"
+    "Sources/SlayNodeMenuBar/Resources/AppIcon.iconset/icon_16x16@2x.png"
+    "Sources/SlayNodeMenuBar/Resources/AppIcon.iconset/icon_32x32.png"
+    "Sources/SlayNodeMenuBar/Resources/AppIcon.iconset/icon_32x32@2x.png"
+    "Sources/SlayNodeMenuBar/Resources/AppIcon.iconset/icon_128x128.png"
+    "Sources/SlayNodeMenuBar/Resources/AppIcon.iconset/icon_128x128@2x.png"
+    "Sources/SlayNodeMenuBar/Resources/AppIcon.iconset/icon_256x256.png"
+    "Sources/SlayNodeMenuBar/Resources/AppIcon.iconset/icon_256x256@2x.png"
+    "Sources/SlayNodeMenuBar/Resources/AppIcon.iconset/icon_512x512.png"
+    "Sources/SlayNodeMenuBar/Resources/AppIcon.iconset/icon_512x512@2x.png"
+    "Sources/SlayNodeMenuBar/Resources/MenuBarIcon.png"
+    "Sources/SlayNodeMenuBar/Resources/SlayNodeIcon.png"
+    "Sources/SlayNodeMenuBar/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon.png"
+    "Sources/SlayNodeMenuBar/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png"
+    "icon-iOS-Default-1024x1024@1x.png"
+  )
+
+  for asset in "${required_assets[@]}"; do
+    if [[ ! -f "${ROOT_DIR}/${asset}" ]]; then
+      missing+=("${asset}")
+    fi
+  done
+
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "❌ Missing brand assets:" >&2
+    printf '   %s\n' "${missing[@]}" >&2
+    echo "Run './build.sh --generate-icons' to recreate them." >&2
+    exit 1
+  fi
+}
 
 APP_VERSION_DEFAULT="$("${PLIST_BUDDY}" -c 'Print :CFBundleShortVersionString' "${INFO_PLIST_TEMPLATE}")"
 APP_BUILD_DEFAULT="$("${PLIST_BUDDY}" -c 'Print :CFBundleVersion' "${INFO_PLIST_TEMPLATE}")"
@@ -34,8 +103,13 @@ EOF
 fi
 
 echo "🔨 Building SlayNodeMenuBar (${CONFIGURATION})..."
-echo "🎨 Regenerating brand assets..."
-swift generate-icons.swift
+if [[ "${GENERATE_ICONS}" == "true" ]]; then
+  echo "🎨 Regenerating brand assets..."
+  swift generate-icons.swift
+else
+  echo "🎨 Using checked-in brand assets (pass --generate-icons to refresh them)..."
+fi
+verify_brand_assets
 swift build -c "${CONFIGURATION}"
 
 PRODUCT_DIR="${ROOT_DIR}/.build/${ARCH_DIR}/${CONFIGURATION}"
