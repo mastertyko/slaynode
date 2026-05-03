@@ -15,6 +15,7 @@ struct ServiceDashboardWindowView: View {
     @State private var selectedServiceID: String?
     @State private var searchText = ""
     @State private var inspectorVisible = true
+    @State private var processActionPreview: ServiceActionPreview?
     @Namespace private var glassNamespace
 
     private var selectionWorkspaceID: String? {
@@ -195,6 +196,16 @@ struct ServiceDashboardWindowView: View {
                 .padding(.horizontal, 18)
                 .padding(.top, 8)
             }
+        }
+        .sheet(item: $processActionPreview) { preview in
+            ServiceActionPreviewSheet(
+                preview: preview,
+                cancel: { processActionPreview = nil },
+                confirm: {
+                    processActionPreview = nil
+                    Task { await center.perform(preview.action, onServiceID: preview.serviceID) }
+                }
+            )
         }
         .userActivity("se.slaynode.window.\(sceneStateID)") { activity in
             activity.title = lockedWorkspaceTitle ?? "SlayNode Services"
@@ -389,7 +400,7 @@ struct ServiceDashboardWindowView: View {
             ForEach(primaryActions, id: \.self) { action in
                 let serviceID = service.id
                 ServiceActionButton(action: action) {
-                    Task { await center.perform(action, onServiceID: serviceID) }
+                    requestAction(action, onServiceID: serviceID)
                 }
             }
 
@@ -406,6 +417,16 @@ struct ServiceDashboardWindowView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func requestAction(_ action: ServiceAction, onServiceID serviceID: String) {
+        Task { @MainActor in
+            if let preview = await center.processImpactPreview(for: action, onServiceID: serviceID) {
+                processActionPreview = preview
+            } else if center.lastError == nil {
+                await center.perform(action, onServiceID: serviceID)
+            }
+        }
     }
 
     private var statusText: String {
@@ -549,6 +570,7 @@ struct ServiceDashboardWindowView: View {
 struct ServiceMenuBarView: View {
     @Bindable var center: ServiceCenterModel
     @Environment(\.openWindow) private var openWindow
+    @State private var processActionPreview: ServiceActionPreview?
 
     private var menuBarPresentation: MenuBarStatusPresentation {
         center.menuBarPresentation
@@ -630,7 +652,7 @@ struct ServiceMenuBarView: View {
                                     primaryAction: service.supports(.stop) ? .stop : nil,
                                     quickActions: menuBarQuickActions(for: service)
                                 ) { action in
-                                    Task { await center.perform(action, onServiceID: serviceID) }
+                                    requestAction(action, onServiceID: serviceID)
                                 }
                             }
                         }
@@ -661,6 +683,26 @@ struct ServiceMenuBarView: View {
         }
         .padding(18)
         .frame(width: center.settings.showMenuBarSection ? 448 : 380)
+        .sheet(item: $processActionPreview) { preview in
+            ServiceActionPreviewSheet(
+                preview: preview,
+                cancel: { processActionPreview = nil },
+                confirm: {
+                    processActionPreview = nil
+                    Task { await center.perform(preview.action, onServiceID: preview.serviceID) }
+                }
+            )
+        }
+    }
+
+    private func requestAction(_ action: ServiceAction, onServiceID serviceID: String) {
+        Task { @MainActor in
+            if let preview = await center.processImpactPreview(for: action, onServiceID: serviceID) {
+                processActionPreview = preview
+            } else if center.lastError == nil {
+                await center.perform(action, onServiceID: serviceID)
+            }
+        }
     }
 
     private func menuBarQuickActions(for service: ManagedService) -> [ServiceAction] {
@@ -703,6 +745,138 @@ private struct ServiceActionButton: View {
         }
         .controlSize(.small)
         .tint(action == .forceStop ? .red : nil)
+    }
+}
+
+private struct ServiceActionPreviewSheet: View {
+    let preview: ServiceActionPreview
+    let cancel: () -> Void
+    let confirm: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: preview.action == .forceStop ? "exclamationmark.octagon.fill" : "stop.circle.fill")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(preview.action == .forceStop ? .red : .orange)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("\(preview.action.title) \(preview.serviceName)?")
+                        .font(.title3.weight(.semibold))
+
+                    Text("\(preview.scope.title) • \(preview.processCount) process\(preview.processCount == 1 ? "" : "es") • \(preview.portSummary)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let warning = preview.warning {
+                Label(warning, systemImage: "exclamationmark.triangle.fill")
+                    .font(.callout)
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack(spacing: 10) {
+                PreviewMetaPill(text: preview.sourceTitle, systemImage: "shippingbox.fill")
+                PreviewMetaPill(text: "PID \(preview.targetPID)", systemImage: "number")
+                if let groupID = preview.targetProcessGroupID {
+                    PreviewMetaPill(text: "PGID \(groupID)", systemImage: "rectangle.3.group.fill")
+                }
+            }
+
+            ScrollView {
+                LazyVStack(spacing: 8) {
+                    ForEach(preview.processes) { process in
+                        ProcessActionPreviewRow(process: process)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .frame(maxHeight: 300)
+
+            HStack {
+                Button("Cancel", role: .cancel, action: cancel)
+                    .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button(preview.action.title, role: .destructive, action: confirm)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(22)
+        .frame(width: 620)
+    }
+}
+
+private struct PreviewMetaPill: View {
+    let text: String
+    let systemImage: String
+
+    var body: some View {
+        Label(text, systemImage: systemImage)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.quaternary, in: Capsule())
+    }
+}
+
+private struct ProcessActionPreviewRow: View {
+    let process: ProcessActionPreviewProcess
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(process.role.title)
+                    .font(.caption.weight(.bold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(roleTint.opacity(0.14), in: Capsule())
+                    .foregroundStyle(roleTint)
+
+                Text("PID \(process.pid)")
+                    .font(.caption.monospacedDigit().weight(.semibold))
+
+                if let parentPID = process.parentPID {
+                    Text("PPID \(parentPID)")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+
+                if let processGroupID = process.processGroupID {
+                    Text("PGID \(processGroupID)")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 8)
+
+                if !process.ports.isEmpty {
+                    Text(process.ports.map { ":\($0)" }.joined(separator: " "))
+                        .font(.caption.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Text(process.command)
+                .font(.caption.monospaced())
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .textSelection(.enabled)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.quinary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var roleTint: Color {
+        switch process.role {
+        case .target: return .red
+        case .child: return .orange
+        case .groupMember: return .purple
+        }
     }
 }
 

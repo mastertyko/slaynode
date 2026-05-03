@@ -322,6 +322,7 @@ final class ServiceCenterModel {
 
     private let orchestrator: DiscoveryOrchestrator
     private let historyStore: ServiceHistoryStore
+    private let actionPreviewer: ProcessActionPreviewer
     private let notifications = NotificationCoordinator()
     private let spotlight = SpotlightIndexer()
     private var refreshLoopTask: Task<Void, Never>?
@@ -330,11 +331,13 @@ final class ServiceCenterModel {
     init(
         orchestrator: DiscoveryOrchestrator,
         historyStore: ServiceHistoryStore,
-        settings: AppSettings
+        settings: AppSettings,
+        actionPreviewer: ProcessActionPreviewer = ProcessActionPreviewer()
     ) {
         self.orchestrator = orchestrator
         self.historyStore = historyStore
         self.settings = settings
+        self.actionPreviewer = actionPreviewer
     }
 
     var activeServiceCount: Int {
@@ -460,6 +463,22 @@ final class ServiceCenterModel {
             recentActions = historyStore.recentActions()
             return nil
         }
+    }
+
+    func processImpactPreview(for action: ServiceAction, onServiceID serviceID: String) async -> ServiceActionPreview? {
+        lastError = nil
+
+        guard let service = services.first(where: { $0.id == serviceID }) else {
+            lastError = "The selected service is no longer available."
+            return nil
+        }
+
+        guard service.supports(action) else {
+            lastError = "\(action.title) is no longer available for \(service.name)."
+            return nil
+        }
+
+        return await actionPreviewer.preview(action: action, service: service)
     }
 
     func clearLastError() {
