@@ -49,5 +49,34 @@ final class ProcessGroupKillerTests: XCTestCase {
         XCTAssertNotNil(ProcessGroupTerminationError.terminationFailed(1).errorDescription)
         XCTAssertNotNil(ProcessGroupTerminationError.processGroupNotFound.errorDescription)
     }
+
+    func testDescendantPIDsReturnsDeepestChildrenFirst() {
+        let descendants = ProcessGroupKiller.descendantPIDs(
+            parentPid: 100,
+            childrenByParent: [
+                100: [101, 102],
+                101: [201],
+                201: [301],
+                102: [202]
+            ]
+        )
+
+        XCTAssertEqual(Set(descendants), [101, 102, 201, 202, 301])
+        XCTAssertLessThan(descendants.firstIndex(of: 301)!, descendants.firstIndex(of: 201)!)
+        XCTAssertLessThan(descendants.firstIndex(of: 201)!, descendants.firstIndex(of: 101)!)
+        XCTAssertLessThan(descendants.firstIndex(of: 202)!, descendants.firstIndex(of: 102)!)
+    }
+
+    func testDescendantPIDsHandlesCycles() {
+        let descendants = ProcessGroupKiller.descendantPIDs(
+            parentPid: 100,
+            childrenByParent: [
+                100: [101],
+                101: [100, 102]
+            ]
+        )
+
+        XCTAssertEqual(descendants, [102, 101])
+    }
 }
 #endif

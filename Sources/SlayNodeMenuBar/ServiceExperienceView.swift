@@ -756,25 +756,29 @@ private struct ServiceActionPreviewSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top, spacing: 14) {
-                Image(systemName: preview.action == .forceStop ? "exclamationmark.octagon.fill" : "stop.circle.fill")
+                Image(systemName: preview.riskLevel.systemImage)
                     .font(.system(size: 28, weight: .semibold))
-                    .foregroundStyle(preview.action == .forceStop ? .red : .orange)
+                    .foregroundStyle(riskTint)
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("\(preview.action.title) \(preview.serviceName)?")
                         .font(.title3.weight(.semibold))
 
-                    Text("\(preview.scope.title) • \(preview.processCount) process\(preview.processCount == 1 ? "" : "es") • \(preview.portSummary)")
+                    Text("\(preview.riskLevel.title) • \(preview.scope.title) • \(preview.processCount) process\(preview.processCount == 1 ? "" : "es") • \(preview.portSummary)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
             }
 
-            if let warning = preview.warning {
-                Label(warning, systemImage: "exclamationmark.triangle.fill")
-                    .font(.callout)
-                    .foregroundStyle(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
+            if !preview.warnings.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(preview.warnings, id: \.self) { warning in
+                        Label(warning, systemImage: "exclamationmark.triangle.fill")
+                            .font(.callout)
+                            .foregroundStyle(riskTint)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
             }
 
             HStack(spacing: 10) {
@@ -782,6 +786,9 @@ private struct ServiceActionPreviewSheet: View {
                 PreviewMetaPill(text: "PID \(preview.targetPID)", systemImage: "number")
                 if let groupID = preview.targetProcessGroupID {
                     PreviewMetaPill(text: "PGID \(groupID)", systemImage: "rectangle.3.group.fill")
+                }
+                if preview.hasOmittedProcesses {
+                    PreviewMetaPill(text: "+\(preview.omittedProcessCount) hidden", systemImage: "ellipsis.circle.fill")
                 }
             }
 
@@ -798,15 +805,28 @@ private struct ServiceActionPreviewSheet: View {
             HStack {
                 Button("Cancel", role: .cancel, action: cancel)
                     .keyboardShortcut(.cancelAction)
+                    .accessibilityLabel("Cancel \(preview.action.title)")
 
                 Spacer()
 
                 Button(preview.action.title, role: .destructive, action: confirm)
                     .keyboardShortcut(.defaultAction)
+                    .accessibilityLabel("Confirm \(preview.action.title) for \(preview.serviceName)")
             }
         }
         .padding(22)
         .frame(width: 620)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var riskTint: Color {
+        switch preview.riskLevel {
+        case .low: return .green
+        case .moderate: return .orange
+        case .elevated: return .orange
+        case .high: return .red
+        case .unknown: return .secondary
+        }
     }
 }
 
@@ -867,16 +887,33 @@ private struct ProcessActionPreviewRow: View {
                 .textSelection(.enabled)
         }
         .padding(12)
+        .padding(.leading, CGFloat(min(process.depth, 4) * 10))
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.quinary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private var roleTint: Color {
         switch process.role {
         case .target: return .red
         case .child: return .orange
+        case .descendant: return .orange
         case .groupMember: return .purple
         }
+    }
+
+    private var accessibilityLabel: String {
+        var parts = [
+            process.role.title,
+            "PID \(process.pid)",
+            process.command
+        ]
+
+        if !process.ports.isEmpty {
+            parts.append("Ports \(process.ports.map(String.init).joined(separator: ", "))")
+        }
+
+        return parts.joined(separator: ", ")
     }
 }
 

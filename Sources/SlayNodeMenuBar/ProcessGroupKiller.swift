@@ -42,9 +42,9 @@ struct ProcessGroupKiller {
             try await terminateProcessGroup(pgid: pgid, gracePeriod: gracePeriod)
         } else {
             // Fallback: Find and kill children manually, then parent
-            let children = await findChildProcesses(parentPid: pid)
+            let children = await findDescendantProcesses(parentPid: pid)
             
-            // Kill children first
+            // Kill descendants deepest-first before the parent.
             for childPid in children {
                 try? await terminateSingleProcess(pid: childPid, gracePeriod: gracePeriod / 2)
             }
@@ -117,12 +117,33 @@ struct ProcessGroupKiller {
         }
     }
     
-    private func findChildProcesses(parentPid: Int32) async -> [Int32] {
+    static func descendantPIDs(parentPid: Int32, childrenByParent: [Int32: [Int32]]) -> [Int32] {
+        var result: [Int32] = []
+        var visited: Set<Int32> = [parentPid]
+        var queue = childrenByParent[parentPid, default: []].sorted()
+
+        while !queue.isEmpty {
+            let pid = queue.removeFirst()
+            guard !visited.contains(pid) else { continue }
+            visited.insert(pid)
+            result.append(pid)
+            queue.append(contentsOf: childrenByParent[pid, default: []].sorted())
+        }
+
+        return result.reversed()
+    }
+
+    private func findDescendantProcesses(parentPid: Int32) async -> [Int32] {
+        let childrenByParent = await fetchChildrenByParent()
+        return Self.descendantPIDs(parentPid: parentPid, childrenByParent: childrenByParent)
+    }
+
+    private func fetchChildrenByParent() async -> [Int32: [Int32]] {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
-                process.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
-                process.arguments = ["-P", String(parentPid)]
+                process.executableURL = URL(fileURLWithPath: Constants.Path.ps)
+                process.arguments = ["-axo", "pid=,ppid="]
                 
                 let outputPipe = Pipe()
                 process.standardOutput = outputPipe
@@ -134,17 +155,25 @@ struct ProcessGroupKiller {
                     process.waitUntilExit()
                     
                     guard let output = String(data: outputData, encoding: .utf8) else {
-                        continuation.resume(returning: [])
+                        continuation.resume(returning: [:])
                         return
                     }
                     
-                    let pids = output
+                    let pairs: [(parent: Int32, child: Int32)] = output
                         .split(whereSeparator: { $0.isNewline })
-                        .compactMap { Int32($0.trimmingCharacters(in: .whitespaces)) }
-                    continuation.resume(returning: pids)
+                        .compactMap { line in
+                            let components = line.split(omittingEmptySubsequences: true, whereSeparator: { $0.isWhitespace })
+                            guard components.count == 2,
+                                  let pid = Int32(components[0]),
+                                  let parentPid = Int32(components[1]) else {
+                                return nil
+                            }
+                            return (parent: parentPid, child: pid)
+                        }
+                    continuation.resume(returning: Dictionary(grouping: pairs, by: \.parent).mapValues { $0.map(\.child) })
                 } catch {
-                    Log.process.warning("Failed to find child processes for PID \(parentPid): \(error.localizedDescription)")
-                    continuation.resume(returning: [])
+                    Log.process.warning("Failed to find process tree: \(error.localizedDescription)")
+                    continuation.resume(returning: [:])
                 }
             }
         }

@@ -39,15 +39,17 @@ final class ProcessActionPreviewTests: XCTestCase {
         )
 
         XCTAssertEqual(preview.scope, .processGroup)
+        XCTAssertEqual(preview.riskLevel, .high)
         XCTAssertEqual(preview.processes.map(\.pid), [4100, 4101])
         XCTAssertEqual(preview.processes.map(\.role), [.target, .child])
         XCTAssertEqual(preview.processes[0].ports, [3000])
         XCTAssertEqual(preview.processes[1].ports, [5173])
         XCTAssertFalse(preview.processes[1].command.contains("secret-value"))
         XCTAssertTrue(preview.processes[1].command.contains("***"))
+        XCTAssertTrue(preview.warnings.contains { $0.contains("SIGKILL") })
     }
 
-    func testStopPreviewForGroupLeaderMatchesFallbackChildScope() throws {
+    func testStopPreviewForGroupLeaderIncludesRecursiveDescendants() throws {
         let service = makeProcessService(pid: 4200)
         let rows = [
             ProcessActionPreviewer.ProcessRow(pid: 4200, parentPID: 1, processGroupID: 4200, command: "npm run dev"),
@@ -67,8 +69,10 @@ final class ProcessActionPreviewTests: XCTestCase {
         )
 
         XCTAssertEqual(preview.scope, .processTree)
-        XCTAssertEqual(preview.processes.map(\.pid), [4200, 4201])
-        XCTAssertEqual(preview.processes.map(\.role), [.target, .child])
+        XCTAssertEqual(preview.riskLevel, .moderate)
+        XCTAssertEqual(preview.processes.map(\.pid), [4200, 4201, 4202])
+        XCTAssertEqual(preview.processes.map(\.role), [.target, .child, .descendant])
+        XCTAssertEqual(preview.processes.map(\.depth), [0, 1, 2])
     }
 
     func testPreviewFallsBackToServiceIdentityWhenLiveRowsAreUnavailable() throws {
@@ -86,10 +90,81 @@ final class ProcessActionPreviewTests: XCTestCase {
         )
 
         XCTAssertEqual(preview.scope, .unavailable)
+        XCTAssertEqual(preview.riskLevel, .unknown)
         XCTAssertEqual(preview.processes.map(\.pid), [4300])
         XCTAssertEqual(preview.processes.first?.ports, [3000])
         XCTAssertFalse(preview.processes.first?.command.contains("secret-value") ?? true)
         XCTAssertNotNil(preview.warning)
+    }
+
+    func testPreviewLimitsLargeProcessGroupsAndReportsHiddenCount() throws {
+        let service = makeProcessService(pid: 4400)
+        let rows = [ProcessActionPreviewer.ProcessRow(pid: 4400, parentPID: 1, processGroupID: 4400, command: "npm run dev")]
+            + (1...30).map { offset in
+                ProcessActionPreviewer.ProcessRow(
+                    pid: Int32(4400 + offset),
+                    parentPID: 4400,
+                    processGroupID: 4400,
+                    command: "node worker-\(offset).js"
+                )
+            }
+
+        let preview = try XCTUnwrap(
+            ProcessActionPreviewer.makePreview(
+                action: .forceStop,
+                service: service,
+                targetPID: 4400,
+                fallbackCommand: "npm run dev",
+                rows: rows,
+                portsByPid: [:]
+            )
+        )
+
+        XCTAssertEqual(preview.visibleProcessCount, ProcessActionPreviewer.maxProcessCount)
+        XCTAssertEqual(preview.omittedProcessCount, 31 - ProcessActionPreviewer.maxProcessCount)
+        XCTAssertEqual(preview.processCount, 31)
+        XCTAssertTrue(preview.hasOmittedProcesses)
+        XCTAssertTrue(preview.warnings.contains { $0.contains("hidden") })
+    }
+
+    func testPreviewWarnsWhenLiveCommandDiffersFromDiscoveredCommand() throws {
+        let service = makeProcessService(pid: 4500)
+        let rows = [
+            ProcessActionPreviewer.ProcessRow(pid: 4500, parentPID: 1, processGroupID: 4500, command: "pnpm dev")
+        ]
+
+        let preview = try XCTUnwrap(
+            ProcessActionPreviewer.makePreview(
+                action: .stop,
+                service: service,
+                targetPID: 4500,
+                fallbackCommand: "npm run dev",
+                rows: rows,
+                portsByPid: [:]
+            )
+        )
+
+        XCTAssertTrue(preview.warnings.contains { $0.contains("live command differs") })
+    }
+
+    func testPortSummaryCompactsLongPortLists() throws {
+        let service = makeProcessService(pid: 4600)
+        let rows = [
+            ProcessActionPreviewer.ProcessRow(pid: 4600, parentPID: 1, processGroupID: 4600, command: "npm run dev")
+        ]
+
+        let preview = try XCTUnwrap(
+            ProcessActionPreviewer.makePreview(
+                action: .stop,
+                service: service,
+                targetPID: 4600,
+                fallbackCommand: "npm run dev",
+                rows: rows,
+                portsByPid: [4600: [3000, 3001, 3002, 3003, 3004]]
+            )
+        )
+
+        XCTAssertEqual(preview.portSummary, ":3000 :3001 :3002 :3003 +1")
     }
 
     func testDockerServiceDoesNotNeedProcessPreview() async {
