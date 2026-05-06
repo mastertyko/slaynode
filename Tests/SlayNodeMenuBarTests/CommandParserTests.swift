@@ -115,5 +115,15 @@ extension CommandParserTests {
         XCTAssertEqual(descriptor.category, .utility)
         XCTAssertEqual(descriptor.portHints, [3000, 4000])
     }
+
+    func testHonoCommandIsDetectedAsBackend() {
+        let tokens = ["node", "src/hono-server.ts"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.displayName, "Hono")
+        XCTAssertEqual(descriptor.category, .backend)
+        XCTAssertEqual(descriptor.portHints, [3000])
+    }
 }
 #endif

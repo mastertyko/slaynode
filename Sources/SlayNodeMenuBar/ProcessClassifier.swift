@@ -191,6 +191,7 @@ enum ProcessClassifier {
         case express
         case fastify
         case koa
+        case hono
         case storybook
         case webpackDevServer
         case angular
@@ -216,6 +217,7 @@ enum ProcessClassifier {
             case .express: return "Express"
             case .fastify: return "Fastify"
             case .koa: return "Koa"
+            case .hono: return "Hono"
             case .storybook: return "Storybook"
             case .webpackDevServer: return "Webpack Dev Server"
             case .angular: return "Angular CLI"
@@ -249,7 +251,7 @@ enum ProcessClassifier {
                 return .componentWorkbench
             case .expo, .reactNative:
                 return .mobile
-            case .nest, .express, .fastify, .koa:
+            case .nest, .express, .fastify, .koa, .hono:
                 return .backend
             case .turbo, .nx:
                 return .monorepo
@@ -299,6 +301,7 @@ enum ProcessClassifier {
             case .express: return [3000, 4000]
             case .fastify: return [3000]
             case .koa: return [3000]
+            case .hono: return [3000]
             case .storybook: return [6006]
             case .webpackDevServer: return [8080, 3000]
             case .angular: return [4200]
@@ -326,6 +329,7 @@ enum ProcessClassifier {
         (.express, { tokens in tokens.contains { $0.contains("express") } }),
         (.fastify, { tokens in tokens.contains { $0.contains("fastify") } }),
         (.koa, { tokens in tokens.contains { $0.contains("koa") } }),
+        (.hono, { tokens in tokens.contains { $0.contains("hono") } }),
         (.storybook, { tokens in tokens.contains { $0.contains("storybook") } }),
         (.webpackDevServer, { tokens in tokens.contains { $0.contains("webpack-dev-server") } }),
         (.angular, { tokens in tokens.contains { $0 == "ng" || $0.contains("@angular/cli") } }),
@@ -351,7 +355,7 @@ enum ProcessClassifier {
         if lowered.contains("storybook") { return [6006] }
         if lowered.contains("expo") || lowered.contains("metro") { return [19000, 19006, 8081] }
         if lowered.contains("angular") || lowered == "ng" { return [4200] }
-        if lowered.contains("fastify") || lowered.contains("express") || lowered.contains("koa") {
+        if lowered.contains("fastify") || lowered.contains("express") || lowered.contains("koa") || lowered.contains("hono") {
             return [3000, 4000]
         }
         if lowered.contains("react-scripts") { return [3000] }
