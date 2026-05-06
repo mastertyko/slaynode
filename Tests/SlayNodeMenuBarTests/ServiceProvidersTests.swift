@@ -3,6 +3,15 @@ import XCTest
 @testable import SlayNodeMenuBar
 
 final class ServiceProvidersTests: XCTestCase {
+    func testSanitizerRedactsDatabaseUrlAssignments() {
+        let command = "DATABASE_URL=postgres://user:password@localhost/app REDIS_URL=redis://localhost:6379 npm run dev"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("password"))
+        XCTAssertFalse(redacted.contains("redis://"))
+        XCTAssertEqual(redacted, "DATABASE_URL=*** REDIS_URL=*** npm run dev")
+    }
+
     func testMakeProcessServiceRedactsSensitiveArguments() {
         let process = NodeProcess(
             pid: 4242,

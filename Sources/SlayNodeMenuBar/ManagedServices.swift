@@ -8,11 +8,17 @@ enum ServiceSanitizer {
         "apikey",
         "auth-token",
         "client-secret",
+        "database-uri",
+        "database-url",
+        "db-url",
+        "dsn",
         "password",
         "passwd",
         "private-key",
         "refresh-token",
+        "redis-url",
         "secret",
+        "sentry-dsn",
         "token"
     ]
 
