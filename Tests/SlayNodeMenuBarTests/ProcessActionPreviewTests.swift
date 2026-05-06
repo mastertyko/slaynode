@@ -75,6 +75,29 @@ final class ProcessActionPreviewTests: XCTestCase {
         XCTAssertEqual(preview.processes.map(\.depth), [0, 1, 2])
     }
 
+    func testStopPreviewOrdersDescendantsByTreeDepthBeforePid() throws {
+        let service = makeProcessService(pid: 4250)
+        let rows = [
+            ProcessActionPreviewer.ProcessRow(pid: 4250, parentPID: 1, processGroupID: 4250, command: "npm run dev"),
+            ProcessActionPreviewer.ProcessRow(pid: 4260, parentPID: 4250, processGroupID: 4250, command: "node vite"),
+            ProcessActionPreviewer.ProcessRow(pid: 4251, parentPID: 4260, processGroupID: 4250, command: "node worker")
+        ]
+
+        let preview = try XCTUnwrap(
+            ProcessActionPreviewer.makePreview(
+                action: .stop,
+                service: service,
+                targetPID: 4250,
+                fallbackCommand: "npm run dev",
+                rows: rows,
+                portsByPid: [:]
+            )
+        )
+
+        XCTAssertEqual(preview.processes.map(\.pid), [4250, 4260, 4251])
+        XCTAssertEqual(preview.processes.map(\.depth), [0, 1, 2])
+    }
+
     func testPreviewFallsBackToServiceIdentityWhenLiveRowsAreUnavailable() throws {
         let service = makeProcessService(pid: 4300)
 

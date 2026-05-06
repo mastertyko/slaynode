@@ -359,6 +359,11 @@ struct ProcessActionPreviewer: Sendable {
             .sorted { lhs, rhs in
                 if lhs.pid == target.pid { return true }
                 if rhs.pid == target.pid { return false }
+                let lhsDepth = tree.depth(of: lhs.pid, targetPID: target.pid)
+                let rhsDepth = tree.depth(of: rhs.pid, targetPID: target.pid)
+                if lhsDepth != rhsDepth {
+                    return lhsDepth < rhsDepth
+                }
                 return lhs.pid < rhs.pid
             }
 
