@@ -125,5 +125,15 @@ extension CommandParserTests {
         XCTAssertEqual(descriptor.category, .backend)
         XCTAssertEqual(descriptor.portHints, [3000])
     }
+
+    func testAdonisCommandIsDetectedAsBackend() {
+        let tokens = ["node", "ace", "serve", "--watch", "@adonisjs/core"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.displayName, "AdonisJS")
+        XCTAssertEqual(descriptor.category, .backend)
+        XCTAssertEqual(descriptor.portHints, [3333])
+    }
 }
 #endif

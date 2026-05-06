@@ -192,6 +192,7 @@ enum ProcessClassifier {
         case fastify
         case koa
         case hono
+        case adonis
         case storybook
         case webpackDevServer
         case angular
@@ -218,6 +219,7 @@ enum ProcessClassifier {
             case .fastify: return "Fastify"
             case .koa: return "Koa"
             case .hono: return "Hono"
+            case .adonis: return "AdonisJS"
             case .storybook: return "Storybook"
             case .webpackDevServer: return "Webpack Dev Server"
             case .angular: return "Angular CLI"
@@ -251,7 +253,7 @@ enum ProcessClassifier {
                 return .componentWorkbench
             case .expo, .reactNative:
                 return .mobile
-            case .nest, .express, .fastify, .koa, .hono:
+            case .nest, .express, .fastify, .koa, .hono, .adonis:
                 return .backend
             case .turbo, .nx:
                 return .monorepo
@@ -302,6 +304,7 @@ enum ProcessClassifier {
             case .fastify: return [3000]
             case .koa: return [3000]
             case .hono: return [3000]
+            case .adonis: return [3333]
             case .storybook: return [6006]
             case .webpackDevServer: return [8080, 3000]
             case .angular: return [4200]
@@ -330,6 +333,7 @@ enum ProcessClassifier {
         (.fastify, { tokens in tokens.contains { $0.contains("fastify") } }),
         (.koa, { tokens in tokens.contains { $0.contains("koa") } }),
         (.hono, { tokens in tokens.contains { $0.contains("hono") } }),
+        (.adonis, { tokens in tokens.contains { $0.contains("@adonisjs") || $0.contains("adonis") } }),
         (.storybook, { tokens in tokens.contains { $0.contains("storybook") } }),
         (.webpackDevServer, { tokens in tokens.contains { $0.contains("webpack-dev-server") } }),
         (.angular, { tokens in tokens.contains { $0 == "ng" || $0.contains("@angular/cli") } }),
@@ -358,6 +362,7 @@ enum ProcessClassifier {
         if lowered.contains("fastify") || lowered.contains("express") || lowered.contains("koa") || lowered.contains("hono") {
             return [3000, 4000]
         }
+        if lowered.contains("adonis") { return [3333] }
         if lowered.contains("react-scripts") { return [3000] }
         if lowered.contains("astro") { return [4321] }
         if lowered.contains("nuxt") { return [3000] }
