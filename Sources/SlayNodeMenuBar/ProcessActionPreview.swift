@@ -291,11 +291,13 @@ struct ProcessActionPreviewer: Sendable {
             )
         }
         let scope = scope(for: target, action: action, rows: scopedRows.rows)
+        let hasCommandDrift = sanitizedCommand(target.command) != sanitizedCommand(fallbackCommand)
         let riskLevel = riskLevel(
             action: action,
             scope: scope,
             processes: processes,
-            omittedProcessCount: scopedRows.omittedProcessCount
+            omittedProcessCount: scopedRows.omittedProcessCount,
+            hasCommandDrift: hasCommandDrift
         )
 
         return ServiceActionPreview(
@@ -439,12 +441,14 @@ struct ProcessActionPreviewer: Sendable {
         action: ServiceAction,
         scope: ProcessActionScope,
         processes: [ProcessActionPreviewProcess],
-        omittedProcessCount: Int
+        omittedProcessCount: Int,
+        hasCommandDrift: Bool
     ) -> ProcessActionRiskLevel {
         if scope == .unavailable { return .unknown }
         if action == .forceStop { return .high }
         if omittedProcessCount > 0 { return .elevated }
         if processes.contains(where: { $0.role == .groupMember }) { return .elevated }
+        if hasCommandDrift { return .elevated }
         if processes.count > 1 { return .moderate }
         return .low
     }

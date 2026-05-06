@@ -167,6 +167,7 @@ final class ProcessActionPreviewTests: XCTestCase {
             )
         )
 
+        XCTAssertEqual(preview.riskLevel, .elevated)
         XCTAssertTrue(preview.warnings.contains { $0.contains("live command differs") })
     }
 
