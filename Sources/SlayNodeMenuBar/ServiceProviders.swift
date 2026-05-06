@@ -619,13 +619,25 @@ enum ServiceHeuristics {
 
     static func parseDockerPorts(_ value: String) -> [Int] {
         guard !value.isEmpty else { return [] }
-        let pattern = #"[:](\d+)->"#
+        let pattern = #"[:](\d+)(?:-(\d+))?->"#
         let regex = try? NSRegularExpression(pattern: pattern)
         let range = NSRange(location: 0, length: value.utf16.count)
         let matches = regex?.matches(in: value, range: range) ?? []
-        let ports = matches.compactMap { match -> Int? in
-            guard let range = Range(match.range(at: 1), in: value) else { return nil }
-            return Int(value[range])
+        let ports = matches.flatMap { match -> [Int] in
+            guard let startRange = Range(match.range(at: 1), in: value),
+                  let start = Int(value[startRange]) else {
+                return []
+            }
+
+            guard match.range(at: 2).location != NSNotFound,
+                  let endRange = Range(match.range(at: 2), in: value),
+                  let end = Int(value[endRange]),
+                  end >= start,
+                  end - start <= 256 else {
+                return [start]
+            }
+
+            return Array(start...end)
         }
         return Array(Set(ports)).sorted()
     }

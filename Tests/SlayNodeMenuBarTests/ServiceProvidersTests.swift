@@ -178,5 +178,13 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(workspace?.name, "backend")
         XCTAssertEqual(workspace?.rootPath, "/Volumes/ExtraDisk/Dev/julia-live/backend")
     }
+
+    func testDockerPortParserExpandsHostPortRanges() {
+        let ports = ServiceHeuristics.parseDockerPorts(
+            "0.0.0.0:3000-3002->3000-3002/tcp, :::8080->80/tcp"
+        )
+
+        XCTAssertEqual(ports, [3000, 3001, 3002, 8080])
+    }
 }
 #endif
