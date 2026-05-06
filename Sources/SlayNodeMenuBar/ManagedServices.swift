@@ -27,7 +27,7 @@ enum ServiceSanitizer {
 
         let tokens = CommandParser.tokenize(value)
         guard !tokens.isEmpty else {
-            return redactURLCredentials(in: value)
+            return redactURLSecrets(in: value)
         }
 
         var redacted: [String] = []
@@ -53,7 +53,7 @@ enum ServiceSanitizer {
                 continue
             }
 
-            redacted.append(redactURLCredentials(in: token))
+            redacted.append(redactURLSecrets(in: token))
             index += 1
         }
 
@@ -78,6 +78,10 @@ enum ServiceSanitizer {
         return "\(flag)=***"
     }
 
+    private static func redactURLSecrets(in token: String) -> String {
+        redactQuerySecrets(in: redactURLCredentials(in: token))
+    }
+
     private static func redactURLCredentials(in token: String) -> String {
         guard let schemeRange = token.range(of: "://"),
               let atRange = token.range(of: "@", range: schemeRange.upperBound..<token.endIndex) else {
@@ -85,6 +89,32 @@ enum ServiceSanitizer {
         }
 
         return "\(token[..<schemeRange.upperBound])***\(token[atRange.lowerBound...])"
+    }
+
+    private static func redactQuerySecrets(in token: String) -> String {
+        guard let questionIndex = token.firstIndex(of: "?") else {
+            return token
+        }
+
+        let prefix = token[..<questionIndex]
+        let queryAndFragment = token[token.index(after: questionIndex)...]
+        let fragmentIndex = queryAndFragment.firstIndex(of: "#")
+        let query = fragmentIndex.map { queryAndFragment[..<$0] } ?? queryAndFragment[...]
+        let fragment = fragmentIndex.map { queryAndFragment[$0...] } ?? ""
+        let pairs = query.split(separator: "&", omittingEmptySubsequences: false).map { pair -> String in
+            let parts = pair.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+            guard let key = parts.first, parts.count == 2 else {
+                return String(pair)
+            }
+
+            if sensitiveFlagName(from: String(key)) != nil {
+                return "\(key)=***"
+            }
+
+            return String(pair)
+        }
+
+        return "\(prefix)?\(pairs.joined(separator: "&"))\(fragment)"
     }
 }
 

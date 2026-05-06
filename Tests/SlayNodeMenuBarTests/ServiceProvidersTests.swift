@@ -12,6 +12,16 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(redacted, "DATABASE_URL=*** REDIS_URL=*** npm run dev")
     }
 
+    func testSanitizerRedactsSecretQueryParameters() {
+        let command = "node server.js https://example.test/callback?token=secret&safe=1&api_key=abc#done"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("secret"))
+        XCTAssertFalse(redacted.contains("abc"))
+        XCTAssertTrue(redacted.contains("safe=1"))
+        XCTAssertTrue(redacted.contains("#done"))
+    }
+
     func testMakeProcessServiceRedactsSensitiveArguments() {
         let process = NodeProcess(
             pid: 4242,
