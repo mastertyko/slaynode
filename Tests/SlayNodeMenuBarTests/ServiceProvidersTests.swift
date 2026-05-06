@@ -22,6 +22,15 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertTrue(redacted.contains("#done"))
     }
 
+    func testSanitizerRedactsAuthorizationAssignments() {
+        let command = "AUTHORIZATION='Bearer secret-token' node server.js --proxy-authorization proxy-secret"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("secret-token"))
+        XCTAssertFalse(redacted.contains("proxy-secret"))
+        XCTAssertEqual(redacted, "AUTHORIZATION=*** node server.js --proxy-authorization ***")
+    }
+
     func testMakeProcessServiceRedactsSensitiveArguments() {
         let process = NodeProcess(
             pid: 4242,
