@@ -55,6 +55,10 @@ enum CommandParser {
             }
         }
 
+        if isEscaping {
+            current.append("\\")
+        }
+
         if !current.isEmpty {
             tokens.append(current)
         }

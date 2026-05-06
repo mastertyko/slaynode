@@ -16,6 +16,12 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(tokens[4], "other value")
     }
 
+    func testTokenizePreservesTrailingEscape() {
+        let tokens = CommandParser.tokenize("node server.js path\\\\")
+
+        XCTAssertEqual(tokens, ["node", "server.js", "path\\"])
+    }
+
     func testDescriptorDetectsNextJS() {
         let tokens = ["node_modules/.bin/next", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
