@@ -83,6 +83,11 @@ enum CommandParser {
         var collected: Set<Int> = []
 
         for (index, token) in tokens.enumerated() {
+            if let environmentPort = extractPortEnvironmentAssignment(from: token) {
+                collected.insert(environmentPort)
+                continue
+            }
+
             if let inlinePort = extractInlinePort(from: token) {
                 collected.insert(inlinePort)
                 continue
@@ -201,6 +206,26 @@ enum CommandParser {
         }
 
         return nil
+    }
+
+    private static func extractPortEnvironmentAssignment(from token: String) -> Int? {
+        guard let separator = token.firstIndex(of: "=") else { return nil }
+
+        let key = String(token[..<separator])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let value = String(token[token.index(after: separator)...])
+
+        guard isPortEnvironmentKey(key) else { return nil }
+        return extractPortCandidate(from: value)
+    }
+
+    private static func isPortEnvironmentKey(_ key: String) -> Bool {
+        guard !key.isEmpty else { return false }
+        let parts = key.split { character in
+            character == "_" || character == "-"
+        }
+        return parts.last == "port"
     }
 
     private static func extractPortCandidate(from value: String) -> Int? {
