@@ -6,8 +6,11 @@ enum WorkspaceHistoryHeuristics {
         ".bin",
         "build",
         "cache",
+        "coverage",
         "dist",
         "node_modules",
+        "out",
+        "storybook-static",
         "temp",
         "tmp",
         "vitest"

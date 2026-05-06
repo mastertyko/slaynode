@@ -43,6 +43,21 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
         XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
     }
 
+    func testEligibleRecentWorkspaceRejectsGeneratedOutputFolderNames() throws {
+        let tempRoot = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+
+        for name in ["coverage", "out", "storybook-static"] {
+            let workspace = WorkspaceIdentity(
+                id: tempRoot.appendingPathComponent(name).path.lowercased(),
+                name: name,
+                rootPath: tempRoot.path
+            )
+
+            XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
+        }
+    }
+
     private func makeTempDirectory() throws -> URL {
         let directory = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent(UUID().uuidString)
