@@ -119,25 +119,14 @@ enum CommandParser {
     static func inferWorkingDirectory(from tokens: [String]) -> String? {
         let tokenPairs = tokens.enumerated()
         for (index, token) in tokenPairs {
-            if token == "--cwd" || token == "--dir" || token == "--working-dir" {
+            if workingDirectoryValueFlags.contains(token) {
                 let nextIndex = index + 1
                 if nextIndex < tokens.count {
                     return sanitizePath(tokens[nextIndex])
                 }
             }
 
-            if token.hasPrefix("--cwd=") {
-                let path = String(token.dropFirst(6))
-                return sanitizePath(path)
-            }
-
-            if token.hasPrefix("--dir=") {
-                let path = String(token.dropFirst(6))
-                return sanitizePath(path)
-            }
-
-            if token.hasPrefix("--working-dir=") {
-                let path = String(token.dropFirst(14))
+            if let path = inlineWorkingDirectoryPath(from: token) {
                 return sanitizePath(path)
             }
         }
@@ -170,6 +159,25 @@ enum CommandParser {
 
     private static func sanitizePath(_ path: String) -> String {
         (path as NSString).expandingTildeInPath
+    }
+
+    private static let workingDirectoryValueFlags = Set([
+        "--cwd",
+        "--dir",
+        "--working-dir",
+        "--root",
+        "--project",
+        "--workspace"
+    ])
+
+    private static func inlineWorkingDirectoryPath(from token: String) -> String? {
+        for flag in workingDirectoryValueFlags {
+            let prefix = "\(flag)="
+            if token.hasPrefix(prefix) {
+                return String(token.dropFirst(prefix.count))
+            }
+        }
+        return nil
     }
 
     private static func isPortFlag(_ token: String) -> Bool {
