@@ -51,6 +51,12 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 5173])
     }
 
+    func testInferPortsFromSocketAddressFlags() {
+        let tokens = ["deno", "serve", "--listen", "0.0.0.0:8000", "--addr=127.0.0.1:9000"]
+        let ports = CommandParser.inferPorts(from: tokens)
+        XCTAssertEqual(ports, [8000, 9000])
+    }
+
     func testInferPortsIgnoresBareNumericArguments() {
         let tokens = ["sleep", "2", "--retries", "28"]
         let ports = CommandParser.inferPorts(from: tokens)

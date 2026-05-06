@@ -180,7 +180,11 @@ enum CommandParser {
             "--inspect",
             "--inspect-brk",
             "--http-port",
-            "--https-port"
+            "--https-port",
+            "--listen",
+            "--addr",
+            "--address",
+            "--bind"
         ].contains(normalized)
     }
 
@@ -188,6 +192,7 @@ enum CommandParser {
         let patterns = [
             #"^--?(?:port|p)=(.+)$"#,
             #"^--?(?:inspect|inspect-brk)=(.+)$"#,
+            #"^--?(?:listen|addr|address|bind)=(.+)$"#,
             #"^-p(\d+)$"#
         ]
 
