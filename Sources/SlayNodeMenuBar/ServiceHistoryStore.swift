@@ -25,6 +25,7 @@ enum WorkspaceHistoryHeuristics {
         guard !trimmedName.hasPrefix(".") else { return false }
         guard !disallowedNames.contains(trimmedName.lowercased()) else { return false }
         guard !looksOpaqueIdentifier(trimmedName) else { return false }
+        guard !hasDisallowedPathComponent(workspace.rootPath) else { return false }
         guard fileManager.fileExists(atPath: workspace.rootPath) else { return false }
         return true
     }
@@ -42,6 +43,11 @@ enum WorkspaceHistoryHeuristics {
         }
 
         return false
+    }
+
+    private static func hasDisallowedPathComponent(_ path: String) -> Bool {
+        let components = URL(fileURLWithPath: path).standardized.pathComponents.map { $0.lowercased() }
+        return components.contains("node_modules")
     }
 }
 

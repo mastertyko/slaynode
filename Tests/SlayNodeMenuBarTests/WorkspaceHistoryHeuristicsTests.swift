@@ -58,6 +58,23 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
         }
     }
 
+    func testEligibleRecentWorkspaceRejectsNodeModulesPaths() throws {
+        let tempRoot = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+        let packagePath = tempRoot
+            .appendingPathComponent("node_modules")
+            .appendingPathComponent("vite")
+        try FileManager.default.createDirectory(at: packagePath, withIntermediateDirectories: true)
+
+        let workspace = WorkspaceIdentity(
+            id: packagePath.path.lowercased(),
+            name: "vite",
+            rootPath: packagePath.path
+        )
+
+        XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
+    }
+
     private func makeTempDirectory() throws -> URL {
         let directory = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent(UUID().uuidString)
