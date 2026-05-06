@@ -31,6 +31,12 @@ final class ProcessMonitorAsyncTests: XCTestCase {
             XCTFail("Unexpected error: \(error)")
         }
     }
+
+    func testProcessKillerTreatsMissingPidAsAlreadyStopped() async throws {
+        let killer = ProcessKiller()
+
+        try await killer.terminate(pid: 999_999, forceAfter: 0)
+    }
     
     func testNodeProcessSendable() {
         let command = "node server.js"

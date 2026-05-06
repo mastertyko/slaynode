@@ -22,7 +22,14 @@ struct ProcessKiller {
     func terminate(pid: Int32, forceAfter gracePeriod: TimeInterval = 1.5) async throws {
         guard pid > 0 else { throw ProcessTerminationError.invalidPid }
 
+        guard kill(pid, 0) == 0 || errno != ESRCH else {
+            return
+        }
+
         if kill(pid, SIGTERM) != 0 {
+            if errno == ESRCH {
+                return
+            }
             if errno == EPERM {
                 throw ProcessTerminationError.permissionDenied
             }
@@ -40,6 +47,9 @@ struct ProcessKiller {
         }
 
         if kill(pid, SIGKILL) != 0 {
+            if errno == ESRCH {
+                return
+            }
             if errno == EPERM {
                 throw ProcessTerminationError.permissionDenied
             }
