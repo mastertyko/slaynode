@@ -79,7 +79,7 @@ final class ProcessMonitorIntegrationTests: XCTestCase {
         
         cancellable.cancel()
         
-        XCTAssertTrue(true)
+        XCTAssertFalse(receivedError)
     }
 }
 
