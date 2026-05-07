@@ -500,7 +500,7 @@ struct ServiceDashboardWindowView: View {
                 selectedWorkspaceID = state.selectedWorkspaceID
             }
             selectedServiceID = state.selectedServiceID
-            searchText = ""
+            searchText = state.searchText
             inspectorVisible = state.inspectorVisible
         } else if lockedWorkspaceID == nil {
             selectedWorkspaceID = nil
@@ -514,7 +514,7 @@ struct ServiceDashboardWindowView: View {
             id: sceneStateID,
             selectedWorkspaceID: selectionWorkspaceID,
             selectedServiceID: selectedServiceID,
-            searchText: "",
+            searchText: searchText,
             inspectorVisible: inspectorVisible
         )
     }
