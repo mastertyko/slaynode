@@ -374,7 +374,12 @@ final class ServiceCenterModel {
                 await self.refresh()
 
                 while !Task.isCancelled {
-                    try? await Task.sleep(nanoseconds: UInt64(self.settings.refreshInterval * 1_000_000_000))
+                    do {
+                        try await Task.sleep(nanoseconds: UInt64(self.settings.refreshInterval * 1_000_000_000))
+                    } catch {
+                        break
+                    }
+                    guard !Task.isCancelled else { break }
                     await self.refresh()
                 }
             }
