@@ -113,6 +113,8 @@ final class ServiceHistoryStore {
     }
 
     func recentWorkspaces(limit: Int = 8) -> [WorkspaceIdentity] {
+        guard limit > 0 else { return [] }
+
         pruneWorkspaceHistory()
 
         var descriptor = FetchDescriptor<WorkspaceHistoryRecord>(
@@ -138,6 +140,8 @@ final class ServiceHistoryStore {
     }
 
     func recentActions(limit: Int = 10) -> [ServiceActionSummary] {
+        guard limit > 0 else { return [] }
+
         var descriptor = FetchDescriptor<ServiceActionRecord>(
             sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
         )
