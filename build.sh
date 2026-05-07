@@ -136,7 +136,7 @@ cat > "${APP_DIR}/Contents/Info.plist" <<EOF
     <key>CFBundleExecutable</key>
     <string>SlayNodeMenuBar</string>
     <key>CFBundleIdentifier</key>
-    <string>com.slaynode.menubar</string>
+    <string>se.slaynode.menubar</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

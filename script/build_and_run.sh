@@ -5,7 +5,7 @@ MODE="${1:-run}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="SlayNode"
 PROCESS_NAME="SlayNodeMenuBar"
-BUNDLE_ID="com.slaynode.menubar"
+BUNDLE_ID="se.slaynode.menubar"
 APP_BUNDLE="$ROOT_DIR/${APP_NAME}.app"
 APP_BINARY="$APP_BUNDLE/Contents/MacOS/${PROCESS_NAME}"
 
