@@ -58,8 +58,7 @@ struct ProcessDiscovery: Sendable {
             return nil
         }
 
-        let elapsedSeconds = parseEtime(String(components[2]))
-        guard elapsedSeconds > 0 else { return nil }
+        guard let elapsedSeconds = parseValidEtime(String(components[2])) else { return nil }
 
         let command = String(components[3])
         let tokens = CommandParser.tokenize(command)
@@ -90,17 +89,23 @@ struct ProcessDiscovery: Sendable {
     }
 
     static func parseEtime(_ etime: String) -> TimeInterval {
+        parseValidEtime(etime) ?? 0
+    }
+
+    private static func parseValidEtime(_ etime: String) -> TimeInterval? {
         if etime.contains("-") {
             let components = etime.split(separator: "-")
-            guard components.count == 2 else { return 0 }
+            guard components.count == 2,
+                  let days = TimeInterval(components[0]) else { return nil }
 
-            let days = TimeInterval(components[0]) ?? 0
             let timeComponents = components[1].split(separator: ":")
-            guard timeComponents.count == 3 else { return 0 }
+            guard timeComponents.count == 3 else { return nil }
 
-            let hours = TimeInterval(timeComponents[0]) ?? 0
-            let minutes = TimeInterval(timeComponents[1]) ?? 0
-            let seconds = TimeInterval(timeComponents[2]) ?? 0
+            guard let hours = TimeInterval(timeComponents[0]),
+                  let minutes = TimeInterval(timeComponents[1]),
+                  let seconds = TimeInterval(timeComponents[2]) else {
+                return nil
+            }
 
             return days * Constants.Time.secondsPerDay
                 + hours * Constants.Time.secondsPerHour
@@ -111,20 +116,24 @@ struct ProcessDiscovery: Sendable {
         let parts = etime.split(separator: ":")
         switch parts.count {
         case 1:
-            return TimeInterval(parts[0]) ?? 0
+            return TimeInterval(parts[0])
         case 2:
-            let minutes = TimeInterval(parts[0]) ?? 0
-            let seconds = TimeInterval(parts[1]) ?? 0
+            guard let minutes = TimeInterval(parts[0]),
+                  let seconds = TimeInterval(parts[1]) else {
+                return nil
+            }
             return minutes * Constants.Time.secondsPerMinute + seconds
         case 3:
-            let hours = TimeInterval(parts[0]) ?? 0
-            let minutes = TimeInterval(parts[1]) ?? 0
-            let seconds = TimeInterval(parts[2]) ?? 0
+            guard let hours = TimeInterval(parts[0]),
+                  let minutes = TimeInterval(parts[1]),
+                  let seconds = TimeInterval(parts[2]) else {
+                return nil
+            }
             return hours * Constants.Time.secondsPerHour
                 + minutes * Constants.Time.secondsPerMinute
                 + seconds
         default:
-            return 0
+            return nil
         }
     }
 

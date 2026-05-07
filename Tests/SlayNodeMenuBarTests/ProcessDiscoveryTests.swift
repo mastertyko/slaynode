@@ -4,6 +4,7 @@ import XCTest
 
 final class ProcessDiscoveryTests: XCTestCase {
     func testParseEtimeSupportsCommonPsFormats() {
+        XCTAssertEqual(ProcessDiscovery.parseEtime("00:00"), 0)
         XCTAssertEqual(ProcessDiscovery.parseEtime("42"), 42)
         XCTAssertEqual(ProcessDiscovery.parseEtime("15:42"), 942)
         XCTAssertEqual(ProcessDiscovery.parseEtime("2:15:42"), 8_142)
@@ -25,6 +26,19 @@ final class ProcessDiscoveryTests: XCTestCase {
         XCTAssertEqual(process.ports, [3000])
         XCTAssertEqual(process.uptime, 15)
         XCTAssertEqual(process.startTime, now.addingTimeInterval(-15))
+    }
+
+    func testParseProcessLineKeepsFreshlyStartedProcess() throws {
+        let now = Date(timeIntervalSince1970: 2_000)
+        let process = try XCTUnwrap(
+            ProcessDiscovery.parseProcessLine(
+                "12345     1 00:00 node /Users/test/app/server.js --port=3000",
+                now: now
+            )
+        )
+
+        XCTAssertEqual(process.uptime, 0)
+        XCTAssertEqual(process.startTime, now)
     }
 
     func testParseWorkingDirectoriesKeepsFirstPathForPid() {
