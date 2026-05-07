@@ -186,5 +186,17 @@ final class ServiceProvidersTests: XCTestCase {
 
         XCTAssertEqual(ports, [3000, 3001, 3002, 8080])
     }
+
+    func testRedisContainerIsClassifiedAsCache() {
+        let kind = ServiceHeuristics.classifyContainer(name: "redis", image: "redis:7")
+
+        XCTAssertEqual(kind, .cache)
+    }
+
+    func testPostgresContainerRemainsDatabase() {
+        let kind = ServiceHeuristics.classifyContainer(name: "db", image: "postgres:16")
+
+        XCTAssertEqual(kind, .database)
+    }
 }
 #endif

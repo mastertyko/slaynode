@@ -712,8 +712,8 @@ enum ServiceHeuristics {
     private static func classifyTokens(_ values: [String]) -> ServiceKind {
         let haystack = values.joined(separator: " ")
 
-        if databaseKeywords.contains(where: haystack.contains) { return .database }
         if cacheKeywords.contains(where: haystack.contains) { return .cache }
+        if databaseKeywords.contains(where: haystack.contains) { return .database }
         if queueKeywords.contains(where: haystack.contains) { return .queue }
         if proxyKeywords.contains(where: haystack.contains) { return .proxy }
         if workerKeywords.contains(where: haystack.contains) { return .worker }
@@ -929,7 +929,7 @@ enum ServiceHeuristics {
     ]
 
     private static let databaseKeywords = [
-        "postgres", "postmaster", "mysql", "mariadb", "redis", "valkey", "mongo",
+        "postgres", "postmaster", "mysql", "mariadb", "mongo",
         "mongodb", "surrealdb", "clickhouse", "elasticsearch"
     ]
 
