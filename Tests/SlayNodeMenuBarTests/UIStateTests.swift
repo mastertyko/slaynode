@@ -259,9 +259,10 @@ final class UpdateControllerStateTests: XCTestCase {
     
     @MainActor
     func testUpdateControllerInitialState() {
-        let controller = UpdateController()
+        let controller = UpdateController(configuration: .init(feedURL: nil, publicEDKey: nil))
         
-        XCTAssertNotNil(controller.lastUpdateCheckDate == nil || controller.lastUpdateCheckDate != nil)
+        XCTAssertFalse(controller.canCheckForUpdates)
+        XCTAssertNil(controller.lastUpdateCheckDate)
     }
 
     @MainActor
