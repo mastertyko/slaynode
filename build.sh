@@ -10,7 +10,6 @@ APP_DIR="${ROOT_DIR}/${APP_NAME}.app"
 EXECUTABLE_NAME="SlayNodeMenuBar"
 CONFIGURATION="debug"
 GENERATE_ICONS=false
-ARCH_DIR="arm64-apple-macosx"
 INFO_PLIST_TEMPLATE="${ROOT_DIR}/XcodeSupport/Info.plist"
 PLIST_BUDDY="/usr/libexec/PlistBuddy"
 
@@ -112,7 +111,7 @@ fi
 verify_brand_assets
 swift build -c "${CONFIGURATION}"
 
-PRODUCT_DIR="${ROOT_DIR}/.build/${ARCH_DIR}/${CONFIGURATION}"
+PRODUCT_DIR="$(swift build --show-bin-path -c "${CONFIGURATION}")"
 BINARY_PATH="${PRODUCT_DIR}/${EXECUTABLE_NAME}"
 RESOURCE_BUNDLE="${PRODUCT_DIR}/${EXECUTABLE_NAME}_${EXECUTABLE_NAME}.bundle"
 
