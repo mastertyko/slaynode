@@ -148,11 +148,16 @@ final class MenuViewModel: ObservableObject {
         }
 
         // Enhanced process termination with verification
-        // Capture ports before UI potentially changes
+        // Capture verification inputs before UI or monitor state can change.
         let portsToMonitor = getPortsForProcess(pid: pid)
+        let expectedHash = latestProcesses.first(where: { $0.pid == pid })?.commandHash
 
         Task { [weak self] in
-            await self?.waitForCompleteShutdown(pid: pid, portsToMonitor: portsToMonitor)
+            await self?.waitForCompleteShutdown(
+                pid: pid,
+                portsToMonitor: portsToMonitor,
+                expectedHash: expectedHash
+            )
         }
     }
 
@@ -168,11 +173,8 @@ final class MenuViewModel: ObservableObject {
         Log.general.error("\(errorMessage)")
     }
 
-    private func waitForCompleteShutdown(pid: Int32, portsToMonitor: [Int]) async {
+    private func waitForCompleteShutdown(pid: Int32, portsToMonitor: [Int], expectedHash: Int?) async {
         do {
-            // Get expected command hash for verification
-            let expectedHash = latestProcesses.first(where: { $0.pid == pid })?.commandHash
-            
             // Verify process identity before termination
             if let expectedHash = expectedHash {
                 let isVerified = await monitor.verifyProcess(pid: pid, expectedHash: expectedHash)
