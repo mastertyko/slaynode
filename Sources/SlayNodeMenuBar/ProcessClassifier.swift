@@ -380,7 +380,7 @@ enum ProcessClassifier {
 
     private static let frameworkMatchers: [(Framework, FrameworkMatcher)] = [
         (.next, { tokens in tokens.contains { $0.contains("next") } }),
-        (.vite, { tokens in tokens.contains { $0.contains("vite") } }),
+        (.vite, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["vite"]) } }),
         (.nuxt, { tokens in tokens.contains { $0.contains("nuxt") } }),
         (.svelteKit, { tokens in tokens.contains { $0.contains("svelte-kit") || $0.contains("sveltekit") } }),
         (.remix, { tokens in tokens.contains { $0.contains("remix") } }),
@@ -427,5 +427,11 @@ enum ProcessClassifier {
         if lowered.contains("bun") { return [3000] }
         if lowered.contains("deno") { return [8000] }
         return []
+    }
+
+    private static func tokenMatchesCommand(_ token: String, names: Set<String>) -> Bool {
+        let component = (token.lowercased() as NSString).lastPathComponent
+        let stem = (component as NSString).deletingPathExtension
+        return names.contains(component) || names.contains(stem)
     }
 }
