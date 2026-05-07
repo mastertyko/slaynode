@@ -64,6 +64,25 @@ final class ServiceCenterModelTests: XCTestCase {
         XCTAssertEqual(performedServiceIDs, [service.id])
     }
 
+    func testRefreshDeduplicatesDependencyIDs() async throws {
+        let dependency = ServiceDependency(
+            id: "process:4401->process:4402",
+            sourceID: "process:4401",
+            targetID: "process:4402",
+            label: "Shared workspace"
+        )
+        let provider = StubServiceProvider(
+            batches: [
+                DiscoveryBatch(services: [], dependencies: [dependency, dependency])
+            ]
+        )
+        let center = try makeCenter(provider: provider)
+
+        await center.refresh()
+
+        XCTAssertEqual(center.dependencies, [dependency])
+    }
+
     private func makeCenter(provider: StubServiceProvider) throws -> ServiceCenterModel {
         let orchestrator = DiscoveryOrchestrator(
             discoveryProviders: [provider],

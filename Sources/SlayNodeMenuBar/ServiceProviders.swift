@@ -87,11 +87,13 @@ actor DiscoveryOrchestrator {
         }
 
         dependencies.append(contentsOf: ServiceHeuristics.dependencies(for: hydrated))
-        let uniqueDependencies = Dictionary(uniqueKeysWithValues: dependencies.map { ($0.id, $0) }).map(\.value)
+        let uniqueDependenciesByID = dependencies.reduce(into: [String: ServiceDependency]()) { result, dependency in
+            result[dependency.id] = dependency
+        }
 
         return ServiceSnapshot(
             services: hydrated,
-            dependencies: uniqueDependencies.sorted { $0.id < $1.id },
+            dependencies: uniqueDependenciesByID.values.sorted { $0.id < $1.id },
             generatedAt: Date()
         )
     }
