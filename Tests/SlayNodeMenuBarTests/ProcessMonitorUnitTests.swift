@@ -302,6 +302,23 @@ final class ShellExecutorTests: XCTestCase {
         
         XCTAssertNotEqual(status, 0)
     }
+
+    func testSystemShellExecutorDoesNotBlockOnLargeStderr() async throws {
+        let executor = SystemShellExecutor()
+        let script = """
+        i=0
+        while [ $i -lt 20000 ]; do
+          echo stderr-line >&2
+          i=$((i + 1))
+        done
+        echo done
+        """
+
+        let (status, output) = try await executor.run("/bin/sh", arguments: ["-c", script], timeout: 3.0)
+
+        XCTAssertEqual(status, 0)
+        XCTAssertEqual(output.trimmingCharacters(in: .whitespacesAndNewlines), "done")
+    }
     
     #if DEBUG
     func testMockShellExecutorReturnsConfiguredResponse() async throws {

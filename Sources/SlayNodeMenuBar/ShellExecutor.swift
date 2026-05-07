@@ -21,9 +21,8 @@ struct SystemShellExecutor: ShellExecuting {
                 process.arguments = arguments
                 
                 let outputPipe = Pipe()
-                let errorPipe = Pipe()
                 process.standardOutput = outputPipe
-                process.standardError = errorPipe
+                process.standardError = FileHandle.nullDevice
                 
                 let timeoutWork = DispatchWorkItem { [weak process] in
                     process?.terminate()
