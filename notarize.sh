@@ -131,6 +131,14 @@ create_dmg() {
     
     # Sign and notarize the DMG too
     codesign --force --sign "$SIGNING_IDENTITY" --timestamp "$DMG_PATH"
+
+    echo "🍎 Submitting DMG to Apple for notarization..."
+    xcrun notarytool submit "$DMG_PATH" \
+        --apple-id "$APPLE_ID" \
+        --password "$APPLE_APP_PASSWORD" \
+        --team-id "$APPLE_TEAM_ID" \
+        --wait \
+        --timeout 30m
     
     echo "📎 Stapling DMG..."
     xcrun stapler staple "$DMG_PATH"
