@@ -114,26 +114,83 @@ enum ProcessClassifier {
     private static func extractScriptName(from tokens: [String]) -> String? {
         guard tokens.count > 1 else { return nil }
         let first = (tokens[0] as NSString).lastPathComponent.lowercased()
-        let second = tokens[1].lowercased()
+        let arguments = Array(tokens.dropFirst())
+        guard let commandIndex = firstCommandIndex(in: arguments) else { return nil }
+        let command = arguments[commandIndex].lowercased()
 
-        if second == "run" || second == "run-script" {
-            return tokens.count > 2 ? tokens[2] : nil
+        if command == "run" || command == "run-script" {
+            return firstScriptArgument(in: arguments, startingAt: commandIndex + 1)
         }
 
-        if ["dlx", "exec", "create"].contains(second) {
-            return tokens.count > 2 ? tokens[2] : nil
+        if ["dlx", "exec", "create"].contains(command) {
+            return firstScriptArgument(in: arguments, startingAt: commandIndex + 1)
         }
 
-        if first == "bun" && (second == "run" || second == "wip") {
-            return tokens.count > 2 ? tokens[2] : nil
+        if first == "bun" && (command == "run" || command == "wip") {
+            return firstScriptArgument(in: arguments, startingAt: commandIndex + 1)
         }
 
         let commonManagers = Set(["npm", "pnpm", "pnpx", "yarn", "yarnx", "bun", "bunx"])
-        if commonManagers.contains(first), !second.hasPrefix("-") {
-            return tokens[1]
+        if commonManagers.contains(first), !command.hasPrefix("-") {
+            return arguments[commandIndex]
         }
 
         return nil
+    }
+
+    private static func firstCommandIndex(in arguments: [String]) -> Int? {
+        var index = 0
+        while index < arguments.count {
+            let argument = arguments[index].lowercased()
+            if optionTakesValue(argument), index + 1 < arguments.count {
+                index += 2
+                continue
+            }
+            if isSkippableOption(argument) {
+                index += 1
+                continue
+            }
+            return index
+        }
+        return nil
+    }
+
+    private static func firstScriptArgument(in arguments: [String], startingAt startIndex: Int) -> String? {
+        var index = startIndex
+        while index < arguments.count {
+            let argument = arguments[index].lowercased()
+            if optionTakesValue(argument), index + 1 < arguments.count {
+                index += 2
+                continue
+            }
+            if isSkippableOption(argument) {
+                index += 1
+                continue
+            }
+            return arguments[index]
+        }
+        return nil
+    }
+
+    private static func optionTakesValue(_ argument: String) -> Bool {
+        [
+            "--workspace",
+            "-w",
+            "--filter",
+            "-f",
+            "--cwd",
+            "-c",
+            "--prefix"
+        ].contains(argument)
+    }
+
+    private static func isSkippableOption(_ argument: String) -> Bool {
+        argument == "--" ||
+            argument.hasPrefix("--workspace=") ||
+            argument.hasPrefix("--filter=") ||
+            argument.hasPrefix("--cwd=") ||
+            argument.hasPrefix("--prefix=") ||
+            argument.hasPrefix("-")
     }
 
     private static func classifyKnownFramework(context: CommandParser.CommandContext) -> ServerDescriptor? {

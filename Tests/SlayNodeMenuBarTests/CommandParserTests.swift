@@ -95,6 +95,24 @@ extension CommandParserTests {
         XCTAssertTrue(summaries.contains(ServerDescriptor.Category.webFramework.displayName))
     }
 
+    func testPackageManagerWrapperSkipsWorkspaceFlagsBeforeRun() {
+        let tokens = ["npm", "--workspace", "web", "run", "dev"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.packageManager, "npm")
+        XCTAssertEqual(descriptor.script, "dev")
+    }
+
+    func testPackageManagerWrapperSkipsWorkspaceFlagsAfterRun() {
+        let tokens = ["npm", "run", "--workspace", "web", "dev"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.packageManager, "npm")
+        XCTAssertEqual(descriptor.script, "dev")
+    }
+
     func testViteCommandIsDetected() {
         let tokens = ["node", "/Users/demo/node_modules/.bin/vite", "preview", "--port", "4173"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
