@@ -33,6 +33,7 @@ env:
   APPLE_ID: ${{ secrets.APPLE_ID }}
   APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
   APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+  SPARKLE_FEED_URL: ${{ secrets.SPARKLE_FEED_URL }}
   SPARKLE_PUBLIC_ED_KEY: ${{ secrets.SPARKLE_PUBLIC_ED_KEY }}
 
 jobs:
@@ -97,6 +98,7 @@ jobs:
         run: |
           SLAYNODE_VERSION="${{ steps.metadata.outputs.version }}" \
           SLAYNODE_BUILD_NUMBER="${{ steps.metadata.outputs.build_number }}" \
+          SLAYNODE_SPARKLE_FEED_URL="${SPARKLE_FEED_URL}" \
           SLAYNODE_SPARKLE_PUBLIC_ED_KEY="${SPARKLE_PUBLIC_ED_KEY}" \
           ./build.sh release
 
