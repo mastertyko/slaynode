@@ -679,6 +679,8 @@ struct ServiceMenuBarView: View {
                 .labelStyle(.iconOnly)
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.capsule)
+                .help("Open Settings")
+                .accessibilityLabel("Open Settings")
             }
         }
         .padding(18)
@@ -1065,6 +1067,8 @@ private struct ServiceFeedbackBanner: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
+            .help("Dismiss")
+            .accessibilityLabel("Dismiss message")
         }
         .padding(compact ? 12 : 14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1231,8 +1235,8 @@ private struct ServiceMenuBarRow: View {
                             .buttonStyle(.bordered)
                             .buttonBorderShape(.capsule)
                             .controlSize(.small)
-                            .help(action.title)
-                            .accessibilityLabel(action.title)
+                            .help("\(action.title) \(service.name)")
+                            .accessibilityLabel("\(action.title) \(service.name)")
                         }
                     }
                 }
@@ -1303,6 +1307,8 @@ private struct ServiceMenuBarHeaderCard: View {
             .buttonStyle(.bordered)
             .buttonBorderShape(.capsule)
             .controlSize(.small)
+            .help("Refresh services")
+            .accessibilityLabel("Refresh services")
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
