@@ -404,6 +404,10 @@ struct BrewServiceProvider: DiscoveryProvider, ControlProvider {
                         status = .stopped
                         health = .passive
                     }
+                    var actions: [ServiceAction] = [.stop, .restart]
+                    if row.file != nil {
+                        actions.append(.revealConfig)
+                    }
 
                     return ManagedService(
                         id: ServiceSource.brewService(name: row.name, plistPath: row.file).id,
@@ -420,7 +424,7 @@ struct BrewServiceProvider: DiscoveryProvider, ControlProvider {
                         configPath: row.file,
                         logPath: nil,
                         tags: ["brew", row.status],
-                        availableActions: [.stop, .restart, .revealConfig],
+                        availableActions: actions,
                         startedAt: nil,
                         lastSeenAt: Date()
                     )

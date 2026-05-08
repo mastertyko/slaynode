@@ -250,5 +250,19 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(batch.services.count, 1)
         XCTAssertFalse(batch.services.first?.supports(.openWorkspace) ?? true)
     }
+
+    func testBrewServiceWithoutFileDoesNotOfferRevealConfig() async {
+        let mock = MockShellExecutor()
+        mock.responses["/usr/bin/env brew services list --json"] = (
+            0,
+            #"[{"name":"postgresql@16","status":"started","user":"tyko","file":null}]"#
+        )
+        let provider = BrewServiceProvider(shell: mock)
+
+        let batch = await provider.discoverServices()
+
+        XCTAssertEqual(batch.services.count, 1)
+        XCTAssertFalse(batch.services.first?.supports(.revealConfig) ?? true)
+    }
 }
 #endif
