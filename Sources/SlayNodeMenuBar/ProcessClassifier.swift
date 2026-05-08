@@ -379,7 +379,7 @@ enum ProcessClassifier {
     }
 
     private static let frameworkMatchers: [(Framework, FrameworkMatcher)] = [
-        (.next, { tokens in tokens.contains { $0.contains("next") } }),
+        (.next, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["next"]) } }),
         (.vite, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["vite"]) } }),
         (.nuxt, { tokens in tokens.contains { $0.contains("nuxt") } }),
         (.svelteKit, { tokens in tokens.contains { $0.contains("svelte-kit") || $0.contains("sveltekit") } }),

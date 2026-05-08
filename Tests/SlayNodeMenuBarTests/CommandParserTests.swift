@@ -33,6 +33,15 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(descriptor.portHints, [3000])
     }
 
+    func testNextClassifierDoesNotMatchSubstring() {
+        let tokens = ["node", "/Users/demo/app/nextdoor-server.js"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertNotEqual(descriptor.displayName, "Next.js")
+        XCTAssertEqual(descriptor.displayName, "nextdoor-server.js")
+    }
+
     func testInferPortsFromFlagsAndUrls() {
         let tokens = ["node", "server.js", "--port=3000", "--inspect=127.0.0.1:9229"]
         let ports = CommandParser.inferPorts(from: tokens)
