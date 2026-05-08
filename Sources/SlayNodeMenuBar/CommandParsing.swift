@@ -199,6 +199,7 @@ enum CommandParser {
             "-p",
             "--inspect",
             "--inspect-brk",
+            "--inspect-port",
             "--http-port",
             "--https-port",
             "--listen",
@@ -218,7 +219,7 @@ enum CommandParser {
     private static func extractInlinePort(from token: String) -> Int? {
         let patterns = [
             #"^--?(?:port|p)=(.+)$"#,
-            #"^--?(?:inspect|inspect-brk)=(.+)$"#,
+            #"^--?(?:inspect|inspect-brk|inspect-port)=(.+)$"#,
             #"^--?(?:listen|listen-address|addr|address|bind|socket)=(.+)$"#,
             #"^-p(\d+)$"#
         ]
