@@ -16,7 +16,7 @@ struct PortResolver: Sendable {
         
         do {
             let output = try await runLsofWithTimeout(pidList: pidList)
-            return parseLsofOutput(output)
+            return Self.parseLsofOutput(output)
         } catch {
             Log.network.warning("Port resolution failed: \(error.localizedDescription)")
             return [:]
@@ -61,7 +61,7 @@ struct PortResolver: Sendable {
         }
     }
     
-    private func parseLsofOutput(_ output: String) -> [Int32: [Int]] {
+    static func parseLsofOutput(_ output: String) -> [Int32: [Int]] {
         guard !output.isEmpty else { return [:] }
         
         var result: [Int32: [Int]] = [:]
@@ -82,7 +82,7 @@ struct PortResolver: Sendable {
                 nameToken = String(tokens.last ?? "")
             }
             
-            guard let port = extractPort(from: nameToken) else { continue }
+            guard let port = Self.extractPort(from: nameToken) else { continue }
             result[pid, default: []].append(port)
         }
         
@@ -93,7 +93,7 @@ struct PortResolver: Sendable {
         return result
     }
     
-    private func extractPort(from token: String) -> Int? {
+    static func extractPort(from token: String) -> Int? {
         var cleaned = token
         
         // Remove arrow suffix for established connections (e.g., "127.0.0.1:3000->127.0.0.1:52341")
