@@ -406,20 +406,20 @@ struct BrewServiceProvider: DiscoveryProvider, ControlProvider {
 
             let services = try JSONDecoder().decode([BrewRow].self, from: Data(output.utf8))
                 .compactMap { row -> ManagedService? in
-                    guard row.status.lowercased() != "none" else { return nil }
+                    let normalizedStatus = row.status.lowercased()
+                    guard normalizedStatus != "none" else { return nil }
 
                     let kind = ServiceHeuristics.classifyBrewService(name: row.name)
                     let status: ManagedServiceStatus
                     let health: ServiceHealth
 
-                    switch row.status.lowercased() {
-                    case "started", "running", "scheduled":
+                    if ["started", "running", "scheduled"].contains(normalizedStatus) {
                         status = .running
                         health = .healthy
-                    case "error":
+                    } else if normalizedStatus.hasPrefix("error") {
                         status = .degraded
                         health = .critical
-                    default:
+                    } else {
                         status = .stopped
                         health = .passive
                     }

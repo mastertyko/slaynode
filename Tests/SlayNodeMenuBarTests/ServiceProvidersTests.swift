@@ -334,5 +334,19 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(batch.services.count, 1)
         XCTAssertFalse(batch.services.first?.supports(.revealConfig) ?? true)
     }
+
+    func testBrewErrorStatusWithCodeIsCritical() async {
+        let mock = MockShellExecutor()
+        mock.responses["/usr/bin/env brew services list --json"] = (
+            0,
+            #"[{"name":"redis","status":"error 256","user":"tyko","file":"/tmp/redis.plist"}]"#
+        )
+        let provider = BrewServiceProvider(shell: mock)
+
+        let service = await provider.discoverServices().services.first
+
+        XCTAssertEqual(service?.status, .degraded)
+        XCTAssertEqual(service?.health, .critical)
+    }
 }
 #endif
