@@ -25,6 +25,13 @@ echo "🚀 Creating SlayNode release v${VERSION}..."
 echo "🔨 Building release version..."
 ./build.sh release
 
+if [[ -f "${ZIP_NAME}" ]]; then
+    rm "${ZIP_NAME}"
+fi
+
+echo "📦 Creating ZIP archive..."
+ditto -c -k --keepParent "${APP_NAME}.app" "${ZIP_NAME}"
+
 # Create DMG file
 DMG_NAME="${APP_NAME}-v${VERSION}.dmg"
 echo "📦 Creating DMG disk image..."
@@ -40,6 +47,7 @@ ln -s /Applications "${DMG_TEMP_DIR}/Applications"
 hdiutil create -volname "${APP_NAME}" -srcfolder "${DMG_TEMP_DIR}" -ov -format UDZO "${DMG_NAME}"
 
 echo "✅ Release ready: ${DMG_NAME}"
+echo "✅ Release ready: ${ZIP_NAME}"
 echo ""
 echo "📋 To publish this version through GitHub Actions:"
 echo "1. Commit your changes"
