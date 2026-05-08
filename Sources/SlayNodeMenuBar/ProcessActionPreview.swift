@@ -291,7 +291,7 @@ struct ProcessActionPreviewer: Sendable {
             )
         }
         let scope = scope(for: target, action: action, rows: scopedRows.rows)
-        let hasCommandDrift = sanitizedCommand(target.command) != sanitizedCommand(fallbackCommand)
+        let hasCommandDrift = commandsDiffer(target.command, fallbackCommand)
         let riskLevel = riskLevel(
             action: action,
             scope: scope,
@@ -426,7 +426,7 @@ struct ProcessActionPreviewer: Sendable {
             warnings.append("\(omittedProcessCount) additional process\(omittedProcessCount == 1 ? "" : "es") are hidden from this preview.")
         }
 
-        if sanitizedCommand(target.command) != sanitizedCommand(fallbackCommand) {
+        if commandsDiffer(target.command, fallbackCommand) {
             warnings.append("The live command differs from the last discovered command; SlayNode will still revalidate before acting.")
         }
 
@@ -455,6 +455,10 @@ struct ProcessActionPreviewer: Sendable {
 
     private static func sanitizedCommand(_ command: String) -> String {
         ServiceSanitizer.redactSecrets(in: command)
+    }
+
+    private static func commandsDiffer(_ lhs: String, _ rhs: String) -> Bool {
+        lhs.trimmingCharacters(in: .whitespacesAndNewlines) != rhs.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private static func fallbackPorts(

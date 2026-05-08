@@ -197,6 +197,33 @@ final class ProcessActionPreviewTests: XCTestCase {
         XCTAssertTrue(preview.warnings.contains { $0.contains("live command differs") })
     }
 
+    func testPreviewWarnsWhenLiveCommandDiffersOnlyBySecretValue() throws {
+        let service = makeProcessService(pid: 4550)
+        let rows = [
+            ProcessActionPreviewer.ProcessRow(
+                pid: 4550,
+                parentPID: 1,
+                processGroupID: 4550,
+                command: "npm run dev --token live-secret"
+            )
+        ]
+
+        let preview = try XCTUnwrap(
+            ProcessActionPreviewer.makePreview(
+                action: .stop,
+                service: service,
+                targetPID: 4550,
+                fallbackCommand: "npm run dev --token stale-secret",
+                rows: rows,
+                portsByPid: [:]
+            )
+        )
+
+        XCTAssertEqual(preview.riskLevel, .elevated)
+        XCTAssertTrue(preview.warnings.contains { $0.contains("live command differs") })
+        XCTAssertFalse(preview.processes.first?.command.contains("live-secret") ?? true)
+    }
+
     func testPortSummaryCompactsLongPortLists() throws {
         let service = makeProcessService(pid: 4600)
         let rows = [
