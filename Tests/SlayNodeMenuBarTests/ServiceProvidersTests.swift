@@ -251,6 +251,19 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertFalse(batch.services.first?.supports(.openWorkspace) ?? true)
     }
 
+    func testDockerDiscoveryIgnoresFailedPsOutput() async {
+        let mock = MockShellExecutor()
+        mock.responses["/usr/bin/env docker ps --format {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"] = (
+            1,
+            "abc123\tweb\tnginx:latest\t0.0.0.0:8080->80/tcp\tUp 2 minutes"
+        )
+        let provider = DockerServiceProvider(shell: mock)
+
+        let batch = await provider.discoverServices()
+
+        XCTAssertTrue(batch.services.isEmpty)
+    }
+
     func testBrewServiceWithoutFileDoesNotOfferRevealConfig() async {
         let mock = MockShellExecutor()
         mock.responses["/usr/bin/env brew services list --json"] = (

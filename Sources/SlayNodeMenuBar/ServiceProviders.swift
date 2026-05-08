@@ -292,7 +292,16 @@ struct DockerServiceProvider: DiscoveryProvider, ControlProvider {
 
     private func dockerRows() async -> [DockerRow]? {
         do {
-            let output = try await runDocker(["ps", "--format", "{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"], allowFailure: true)
+            let (status, output) = try await shell.run(
+                "/usr/bin/env",
+                arguments: ["docker", "ps", "--format", "{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"],
+                timeout: Constants.Timeout.commandTimeout
+            )
+            guard status == 0 else {
+                Log.process.info("Docker discovery unavailable: docker ps exited with \(status)")
+                return nil
+            }
+
             return output
                 .split(whereSeparator: \.isNewline)
                 .map { line in
