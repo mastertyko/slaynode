@@ -48,13 +48,9 @@ final class ProcessMonitorUnitTests: XCTestCase {
     @MainActor
     func testMonitorRefreshWithMockedShell() async {
         #if DEBUG
-        let mock = MockShellExecutor()
-        mock.responses["/bin/ps -axo pid=,ppid=,etime=,command="] = (0, "")
-        
-        let monitor = ProcessMonitor(interval: 5.0, shell: mock)
-        await monitor.refresh()
-        
-        XCTAssertTrue(true)
+        let processes = await collectProcesses(from: "")
+
+        XCTAssertTrue(processes.isEmpty)
         #endif
     }
     
