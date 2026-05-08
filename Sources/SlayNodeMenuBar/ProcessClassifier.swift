@@ -130,6 +130,10 @@ enum ProcessClassifier {
             return firstScriptArgument(in: arguments, startingAt: commandIndex + 1)
         }
 
+        if first == "yarn" && command == "workspace" {
+            return firstScriptArgument(in: arguments, startingAt: commandIndex + 2)
+        }
+
         let commonManagers = Set(["npm", "pnpm", "pnpx", "yarn", "yarnx", "bun", "bunx"])
         if commonManagers.contains(first), !command.hasPrefix("-") {
             return arguments[commandIndex]
