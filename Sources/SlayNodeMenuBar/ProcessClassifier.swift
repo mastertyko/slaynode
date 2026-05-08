@@ -405,7 +405,10 @@ enum ProcessClassifier {
         (.hono, { tokens in tokens.contains { $0.contains("hono") } }),
         (.adonis, { tokens in tokens.contains { $0.contains("@adonisjs") || $0.contains("adonis") } }),
         (.storybook, { tokens in tokens.contains { $0.contains("storybook") } }),
-        (.webpackDevServer, { tokens in tokens.contains { $0.contains("webpack-dev-server") } }),
+        (.webpackDevServer, { tokens in
+            tokens.contains { tokenMatchesCommand($0, names: ["webpack-dev-server"]) } ||
+                (tokens.contains { tokenMatchesCommand($0, names: ["webpack"]) } && tokens.contains("serve"))
+        }),
         (.angular, { tokens in tokens.contains { $0 == "ng" || $0.contains("@angular/cli") } }),
         (.createReactApp, { tokens in tokens.contains { $0.contains("react-scripts") } }),
         (.expo, { tokens in tokens.contains { $0.contains("expo") } }),
