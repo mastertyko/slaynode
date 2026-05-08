@@ -103,6 +103,12 @@ final class ServiceHistoryStore {
         serviceRecord.lastActionRawValue = action.rawValue
         serviceRecord.lastActionAt = now
         serviceRecord.lastSeenAt = now
+        serviceRecord.name = service.name
+        serviceRecord.kindRawValue = service.kind.rawValue
+        serviceRecord.sourceRawValue = service.source.title
+        serviceRecord.workspaceID = service.workspace?.id
+        serviceRecord.workspaceName = service.workspace?.name
+        serviceRecord.workspacePath = service.workspace?.rootPath
         serviceRecord.statusRawValue = service.status.rawValue
 
         if let workspace = service.workspace {

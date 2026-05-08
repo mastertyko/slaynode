@@ -61,6 +61,31 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertEqual(actions.first?.action, .stop)
     }
 
+    func testRecordActionRefreshesExistingServiceMetadata() throws {
+        let store = try makeStore()
+        let oldWorkspace = WorkspaceIdentity(id: "old", name: "old", rootPath: "/tmp")
+        let newWorkspace = WorkspaceIdentity(id: "new", name: "new", rootPath: NSTemporaryDirectory())
+
+        store.record(snapshot: ServiceSnapshot(
+            services: [makeService(name: "old-api", kind: .app, workspace: oldWorkspace, status: .running)],
+            dependencies: [],
+            generatedAt: Date(timeIntervalSince1970: 1)
+        ))
+        store.record(
+            action: .stop,
+            on: makeService(name: "new-worker", kind: .worker, workspace: newWorkspace, status: .degraded),
+            outcome: "Stopped"
+        )
+
+        let descriptor = FetchDescriptor<ServiceHistoryRecord>()
+        let record = try XCTUnwrap(store.modelContext.fetch(descriptor).first)
+        XCTAssertEqual(record.name, "new-worker")
+        XCTAssertEqual(record.kindRawValue, ServiceKind.worker.rawValue)
+        XCTAssertEqual(record.workspaceID, "new")
+        XCTAssertEqual(record.workspaceName, "new")
+        XCTAssertEqual(record.statusRawValue, ManagedServiceStatus.degraded.rawValue)
+    }
+
     private func makeStore() throws -> ServiceHistoryStore {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
@@ -71,6 +96,33 @@ final class ServiceHistoryStoreTests: XCTestCase {
             configurations: configuration
         )
         return ServiceHistoryStore(container: container)
+    }
+
+    private func makeService(
+        name: String,
+        kind: ServiceKind,
+        workspace: WorkspaceIdentity?,
+        status: ManagedServiceStatus
+    ) -> ManagedService {
+        ManagedService(
+            id: "process:999",
+            name: name,
+            kind: kind,
+            status: status,
+            health: status == .degraded ? .watch : .healthy,
+            source: .process(pid: 999, command: "npm run dev"),
+            workspace: workspace,
+            ports: [ServicePort(value: 999, isInferred: false)],
+            runtime: "Node.js",
+            summary: "test service",
+            command: "npm run dev",
+            configPath: nil,
+            logPath: nil,
+            tags: ["test"],
+            availableActions: [.stop],
+            startedAt: nil,
+            lastSeenAt: Date()
+        )
     }
 }
 #endif
