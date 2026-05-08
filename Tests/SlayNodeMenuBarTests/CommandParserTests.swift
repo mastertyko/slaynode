@@ -120,6 +120,15 @@ extension CommandParserTests {
         XCTAssertEqual(descriptor.script, "dev")
     }
 
+    func testPackageManagerWrapperSkipsDirectoryFlagsBeforeRun() {
+        let tokens = ["pnpm", "--dir", "frontend", "run", "dev"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.packageManager, "pnpm")
+        XCTAssertEqual(descriptor.script, "dev")
+    }
+
     func testPackageManagerWrapperSkipsWorkspaceFlagsAfterRun() {
         let tokens = ["npm", "run", "--workspace", "web", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")

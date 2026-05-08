@@ -176,10 +176,14 @@ enum ProcessClassifier {
         [
             "--workspace",
             "-w",
+            "--dir",
             "--filter",
             "-f",
             "--cwd",
             "-c",
+            "--root",
+            "--project",
+            "--working-dir",
             "--prefix"
         ].contains(argument)
     }
@@ -187,8 +191,12 @@ enum ProcessClassifier {
     private static func isSkippableOption(_ argument: String) -> Bool {
         argument == "--" ||
             argument.hasPrefix("--workspace=") ||
+            argument.hasPrefix("--dir=") ||
             argument.hasPrefix("--filter=") ||
             argument.hasPrefix("--cwd=") ||
+            argument.hasPrefix("--root=") ||
+            argument.hasPrefix("--project=") ||
+            argument.hasPrefix("--working-dir=") ||
             argument.hasPrefix("--prefix=") ||
             argument.hasPrefix("-")
     }
