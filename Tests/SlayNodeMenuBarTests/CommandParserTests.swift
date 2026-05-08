@@ -80,6 +80,13 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [8000, 9000])
     }
 
+    func testInferPortsFromIPv6HostPortToken() {
+        let tokens = ["node", "server.js", "http://[::1]:5173"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [5173])
+    }
+
     func testInferPortsIgnoresBareNumericArguments() {
         let tokens = ["sleep", "2", "--retries", "28"]
         let ports = CommandParser.inferPorts(from: tokens)
