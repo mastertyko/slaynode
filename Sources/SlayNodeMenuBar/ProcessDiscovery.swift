@@ -525,6 +525,8 @@ struct ProcessDiscovery: Sendable {
         " run serve",
         " preview",
         " run preview",
+        " start",
+        " run start",
         " start-storybook",
         " storybook",
         " start:web",
@@ -550,6 +552,7 @@ struct ProcessDiscovery: Sendable {
         "dev",
         "serve",
         "preview",
+        "start",
         "storybook",
         "start-storybook",
         "start:web"

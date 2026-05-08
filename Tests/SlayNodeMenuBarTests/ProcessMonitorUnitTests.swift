@@ -136,6 +136,19 @@ final class ProcessMonitorUnitTests: XCTestCase {
     }
 
     @MainActor
+    func testMonitorKeepsPackageManagerStartScriptsVisible() async {
+        let psOutput = """
+        12346     1 00:10 /usr/local/bin/npm start
+        """
+
+        let processes = await collectProcesses(from: psOutput)
+
+        XCTAssertEqual(processes.count, 1)
+        XCTAssertEqual(processes.first?.descriptor.script, "start")
+        XCTAssertEqual(processes.first?.descriptor.packageManager, "npm")
+    }
+
+    @MainActor
     func testMonitorResolvesWorkingDirectoryFromLsof() async {
         let psOutput = """
         12346     1 00:10 /usr/local/bin/npm run dev
