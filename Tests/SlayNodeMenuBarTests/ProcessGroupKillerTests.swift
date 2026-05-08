@@ -44,10 +44,10 @@ final class ProcessGroupKillerTests: XCTestCase {
     }
     
     func testErrorDescriptions() {
-        XCTAssertNotNil(ProcessGroupTerminationError.invalidPid.errorDescription)
-        XCTAssertNotNil(ProcessGroupTerminationError.permissionDenied.errorDescription)
-        XCTAssertNotNil(ProcessGroupTerminationError.terminationFailed(1).errorDescription)
-        XCTAssertNotNil(ProcessGroupTerminationError.processGroupNotFound.errorDescription)
+        XCTAssertEqual(ProcessGroupTerminationError.invalidPid.errorDescription, "Invalid process ID.")
+        XCTAssertEqual(ProcessGroupTerminationError.permissionDenied.errorDescription, "Permission denied to stop process.")
+        XCTAssertEqual(ProcessGroupTerminationError.terminationFailed(1).errorDescription, "Could not stop process (errno: 1).")
+        XCTAssertEqual(ProcessGroupTerminationError.processGroupNotFound.errorDescription, "Could not find process group.")
     }
 
     func testDescendantPIDsReturnsDeepestChildrenFirst() throws {
