@@ -93,6 +93,16 @@ enum CommandParser {
                 continue
             }
 
+            if isDefaultInspectFlag(token) {
+                if index + 1 < tokens.count,
+                   let port = extractPortCandidate(from: tokens[index + 1]) {
+                    collected.insert(port)
+                } else {
+                    collected.insert(9_229)
+                }
+                continue
+            }
+
             if isPortFlag(token),
                index + 1 < tokens.count,
                let port = extractPortCandidate(from: tokens[index + 1]) {
@@ -194,6 +204,11 @@ enum CommandParser {
             "--address",
             "--bind"
         ].contains(normalized)
+    }
+
+    private static func isDefaultInspectFlag(_ token: String) -> Bool {
+        let normalized = token.lowercased()
+        return normalized == "--inspect" || normalized == "--inspect-brk"
     }
 
     private static func extractInlinePort(from token: String) -> Int? {
