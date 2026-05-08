@@ -268,6 +268,25 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(batch.services.first?.availableActions, [.stop, .forceStop, .restart, .openLogs])
     }
 
+    func testPausedAndStartingDockerContainersNeedAttention() async {
+        let mock = MockShellExecutor()
+        mock.responses["/usr/bin/env docker ps --format {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"] = (
+            0,
+            """
+            abc123\tpaused-web\tnginx:latest\t0.0.0.0:8080->80/tcp\tUp 2 minutes (Paused)
+            def456\tstarting-api\tnginx:latest\t0.0.0.0:3000->80/tcp\tUp 10 seconds (health: starting)
+            """
+        )
+        mock.responses["/usr/bin/env docker inspect --format {{json .Mounts}}@@{{.LogPath}} abc123"] = (0, "[]@@")
+        mock.responses["/usr/bin/env docker inspect --format {{json .Mounts}}@@{{.LogPath}} def456"] = (0, "[]@@")
+        let provider = DockerServiceProvider(shell: mock)
+
+        let services = await provider.discoverServices().services
+
+        XCTAssertEqual(services.map(\.status), [.degraded, .degraded])
+        XCTAssertEqual(services.map(\.health), [.watch, .watch])
+    }
+
     func testDockerDiscoveryIgnoresFailedPsOutput() async {
         let mock = MockShellExecutor()
         mock.responses["/usr/bin/env docker ps --format {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"] = (

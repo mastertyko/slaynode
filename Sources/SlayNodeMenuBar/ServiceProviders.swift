@@ -217,8 +217,14 @@ struct DockerServiceProvider: DiscoveryProvider, ControlProvider {
             let workspace = ServiceHeuristics.workspaceIdentity(from: mounts.first(where: { $0.type == "bind" })?.source)
             let kind = ServiceHeuristics.classifyContainer(name: row.name, image: row.image)
             let hostPorts = ServiceHeuristics.parseDockerPorts(row.ports).map { ServicePort(value: $0, isInferred: false) }
-            let status = row.status.lowercased().contains("up") ? (row.status.lowercased().contains("unhealthy") ? ManagedServiceStatus.degraded : .running) : .stopped
-            let health: ServiceHealth = row.status.lowercased().contains("unhealthy") ? .critical : (status == .running ? .healthy : .passive)
+            let normalizedStatus = row.status.lowercased()
+            let isRunning = normalizedStatus.contains("up")
+            let isUnhealthy = normalizedStatus.contains("unhealthy")
+            let needsAttention = isUnhealthy ||
+                normalizedStatus.contains("paused") ||
+                normalizedStatus.contains("health: starting")
+            let status: ManagedServiceStatus = isRunning ? (needsAttention ? .degraded : .running) : .stopped
+            let health: ServiceHealth = isUnhealthy ? .critical : (status == .degraded ? .watch : (status == .running ? .healthy : .passive))
             let summary = row.image + (row.status.isEmpty ? "" : " • \(row.status)")
             var actions: [ServiceAction] = [.stop, .forceStop, .restart, .openLogs]
             if workspace != nil {
