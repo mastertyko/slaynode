@@ -79,6 +79,13 @@ final class CommandParserTests: XCTestCase {
         XCTAssertTrue(ports.isEmpty)
     }
 
+    func testInferPortsIgnoresOutOfRangeValues() {
+        let tokens = ["node", "server.js", "--port=0", "--inspect=127.0.0.1:65536"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertTrue(ports.isEmpty)
+    }
+
     func testInferWorkingDirectoryFromFlag() {
         let path = CommandParser.inferWorkingDirectory(from: ["--cwd", "~/Projects/demo"])
         XCTAssertTrue(path?.hasSuffix("Projects/demo") ?? false)
