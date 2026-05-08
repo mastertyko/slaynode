@@ -188,7 +188,8 @@ enum ProcessClassifier {
             "--root",
             "--project",
             "--working-dir",
-            "--prefix"
+            "--prefix",
+            "-c"
         ].contains(argument)
     }
 

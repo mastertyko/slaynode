@@ -140,6 +140,12 @@ final class CommandParserTests: XCTestCase {
 
         XCTAssertTrue(path?.hasSuffix("Projects/app") ?? false)
     }
+
+    func testInferWorkingDirectoryFromShortCFlag() {
+        let path = CommandParser.inferWorkingDirectory(from: ["pnpm", "-C", "~/Projects/api", "dev"])
+
+        XCTAssertTrue(path?.hasSuffix("Projects/api") ?? false)
+    }
 }
 extension CommandParserTests {
     func testPackageManagerWrapperAddsMetadata() {
@@ -171,6 +177,15 @@ extension CommandParserTests {
 
     func testPackageManagerWrapperSkipsDirectoryFlagsBeforeRun() {
         let tokens = ["pnpm", "--dir", "frontend", "run", "dev"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.packageManager, "pnpm")
+        XCTAssertEqual(descriptor.script, "dev")
+    }
+
+    func testPackageManagerWrapperSkipsShortDirectoryFlagBeforeRun() {
+        let tokens = ["pnpm", "-C", "frontend", "run", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
         let descriptor = CommandParser.descriptor(from: context)
 

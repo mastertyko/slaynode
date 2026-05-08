@@ -178,7 +178,8 @@ enum CommandParser {
         "--root",
         "--project",
         "--workspace",
-        "--prefix"
+        "--prefix",
+        "-C"
     ])
 
     private static func inlineWorkingDirectoryPath(from token: String) -> String? {
