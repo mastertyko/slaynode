@@ -30,7 +30,7 @@ SlayNode/
 ├── generate-icons.swift                          # Source-of-truth renderer for brand assets
 ├── build.sh                                      # Bundle assembly, asset checks, signing
 ├── release.sh / notarize.sh                      # Packaging and distribution helpers
-└── .codex/environments/environment.toml          # Codex Run action wiring
+└── .codex/environments/environment.toml          # Local-only Codex Run action wiring (ignored)
 ```
 
 ## Building From Source
