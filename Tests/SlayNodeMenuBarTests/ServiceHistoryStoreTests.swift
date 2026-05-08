@@ -37,6 +37,30 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertFalse(state.inspectorVisible)
     }
 
+    func testRecentActionsSkipsUnknownLegacyRows() throws {
+        let store = try makeStore()
+        store.modelContext.insert(ServiceActionRecord(
+            serviceID: "process:1",
+            serviceName: "legacy",
+            actionRawValue: "obsolete",
+            outcome: "Ignored",
+            timestamp: Date(timeIntervalSince1970: 2)
+        ))
+        store.modelContext.insert(ServiceActionRecord(
+            serviceID: "process:2",
+            serviceName: "server",
+            actionRawValue: ServiceAction.stop.rawValue,
+            outcome: "Stopped",
+            timestamp: Date(timeIntervalSince1970: 1)
+        ))
+        try store.modelContext.save()
+
+        let actions = store.recentActions(limit: 1)
+
+        XCTAssertEqual(actions.count, 1)
+        XCTAssertEqual(actions.first?.action, .stop)
+    }
+
     private func makeStore() throws -> ServiceHistoryStore {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(

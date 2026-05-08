@@ -145,20 +145,28 @@ final class ServiceHistoryStore {
         var descriptor = FetchDescriptor<ServiceActionRecord>(
             sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
         )
-        descriptor.fetchLimit = limit
+        descriptor.fetchLimit = limit * 4
 
         let records = (try? modelContext.fetch(descriptor)) ?? []
-        return records.compactMap { record in
-            guard let action = ServiceAction(rawValue: record.actionRawValue) else { return nil }
-            return ServiceActionSummary(
+        var summaries: [ServiceActionSummary] = []
+
+        for record in records {
+            guard let action = ServiceAction(rawValue: record.actionRawValue) else { continue }
+            summaries.append(ServiceActionSummary(
                 id: record.id,
                 serviceID: record.serviceID,
                 serviceName: record.serviceName,
                 action: action,
                 outcome: record.outcome,
                 timestamp: record.timestamp
-            )
+            ))
+
+            if summaries.count == limit {
+                break
+            }
         }
+
+        return summaries
     }
 
     func loadWindowState(id: String) -> PersistedWindowState? {
