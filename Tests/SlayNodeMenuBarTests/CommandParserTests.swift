@@ -75,9 +75,18 @@ final class CommandParserTests: XCTestCase {
     }
 
     func testInferPortsFromSocketAddressFlags() {
-        let tokens = ["deno", "serve", "--listen", "0.0.0.0:8000", "--addr=127.0.0.1:9000"]
+        let tokens = [
+            "deno",
+            "serve",
+            "--listen",
+            "0.0.0.0:8000",
+            "--addr=127.0.0.1:9000",
+            "--listen-address",
+            "localhost:9100",
+            "--socket=127.0.0.1:9200"
+        ]
         let ports = CommandParser.inferPorts(from: tokens)
-        XCTAssertEqual(ports, [8000, 9000])
+        XCTAssertEqual(ports, [8000, 9000, 9100, 9200])
     }
 
     func testInferPortsFromIPv6HostPortToken() {
