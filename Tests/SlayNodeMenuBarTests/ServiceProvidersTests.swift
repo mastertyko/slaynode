@@ -48,6 +48,15 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(redacted, "OPENAI_API_KEY=*** ANTHROPIC_API_KEY=*** npm run dev")
     }
 
+    func testSanitizerRedactsInlineSecretFlags() {
+        let command = "node server.js --password=secret --client-secret=client-secret"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("=secret"))
+        XCTAssertFalse(redacted.contains("=client-secret"))
+        XCTAssertEqual(redacted, "node server.js --password=*** --client-secret=***")
+    }
+
     func testMakeProcessServiceRedactsSensitiveArguments() {
         let process = NodeProcess(
             pid: 4242,
