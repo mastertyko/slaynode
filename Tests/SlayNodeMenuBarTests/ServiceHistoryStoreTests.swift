@@ -61,6 +61,32 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertEqual(actions.first?.action, .stop)
     }
 
+    func testRecentActionsFindsValidRowsPastLegacyRows() throws {
+        let store = try makeStore()
+        for offset in 0..<12 {
+            store.modelContext.insert(ServiceActionRecord(
+                serviceID: "process:legacy-\(offset)",
+                serviceName: "legacy",
+                actionRawValue: "obsolete",
+                outcome: "Ignored",
+                timestamp: Date(timeIntervalSince1970: TimeInterval(100 + offset))
+            ))
+        }
+        store.modelContext.insert(ServiceActionRecord(
+            serviceID: "process:valid",
+            serviceName: "server",
+            actionRawValue: ServiceAction.restart.rawValue,
+            outcome: "Restarted",
+            timestamp: Date(timeIntervalSince1970: 1)
+        ))
+        try store.modelContext.save()
+
+        let actions = store.recentActions(limit: 1)
+
+        XCTAssertEqual(actions.count, 1)
+        XCTAssertEqual(actions.first?.action, .restart)
+    }
+
     func testRecordActionRefreshesExistingServiceMetadata() throws {
         let store = try makeStore()
         let oldWorkspace = WorkspaceIdentity(id: "old", name: "old", rootPath: "/tmp")

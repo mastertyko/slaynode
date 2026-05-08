@@ -151,7 +151,7 @@ final class ServiceHistoryStore {
         var descriptor = FetchDescriptor<ServiceActionRecord>(
             sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
         )
-        descriptor.fetchLimit = limit * 4
+        descriptor.fetchLimit = max(limit * 8, limit + 32)
 
         let records = (try? modelContext.fetch(descriptor)) ?? []
         var summaries: [ServiceActionSummary] = []
