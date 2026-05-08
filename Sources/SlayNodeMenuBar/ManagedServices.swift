@@ -81,6 +81,7 @@ enum ServiceSanitizer {
         guard let separator = token.firstIndex(of: "=") else { return nil }
 
         let flag = String(token[..<separator])
+        guard !flag.contains("://"), !flag.contains("?") else { return nil }
         guard sensitiveFlagName(from: flag) != nil else { return nil }
 
         return "\(flag)=***"
