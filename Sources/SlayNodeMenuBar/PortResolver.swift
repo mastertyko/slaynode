@@ -86,8 +86,8 @@ struct PortResolver: Sendable {
             result[pid, default: []].append(port)
         }
         
-        for key in result.keys {
-            result[key] = Array(Set(result[key]!)).sorted()
+        for (pid, ports) in result {
+            result[pid] = Array(Set(ports)).sorted()
         }
         
         return result
