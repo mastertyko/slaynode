@@ -235,11 +235,22 @@ final class ProcessMonitorUnitTests: XCTestCase {
     func testMonitorHandlesPsFailure() async {
         let mock = MockShellExecutor()
         mock.responses["/bin/ps -axo pid=,ppid=,etime=,command="] = (1, "")
-        
         let monitor = ProcessMonitor(interval: 5.0, shell: mock)
+
+        var receivedProcesses: [NodeProcess] = []
+        let expectation = XCTestExpectation(description: "Receive empty process list")
+        let cancellable = monitor.processesPublisher
+            .dropFirst()
+            .sink { processes in
+                receivedProcesses = processes
+                expectation.fulfill()
+            }
+
         await monitor.refresh()
-        
-        XCTAssertTrue(true)
+        await fulfillment(of: [expectation], timeout: 2.0)
+        cancellable.cancel()
+
+        XCTAssertTrue(receivedProcesses.isEmpty)
     }
 
     @MainActor
