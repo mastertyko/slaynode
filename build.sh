@@ -81,6 +81,16 @@ verify_brand_assets() {
   fi
 }
 
+xml_escape() {
+  local value="$1"
+  value="${value//&/&amp;}"
+  value="${value//</&lt;}"
+  value="${value//>/&gt;}"
+  value="${value//\"/&quot;}"
+  value="${value//\'/&apos;}"
+  printf '%s' "${value}"
+}
+
 APP_VERSION_DEFAULT="$("${PLIST_BUDDY}" -c 'Print :CFBundleShortVersionString' "${INFO_PLIST_TEMPLATE}")"
 APP_BUILD_DEFAULT="$("${PLIST_BUDDY}" -c 'Print :CFBundleVersion' "${INFO_PLIST_TEMPLATE}")"
 MIN_SYSTEM_VERSION="$("${PLIST_BUDDY}" -c 'Print :LSMinimumSystemVersion' "${INFO_PLIST_TEMPLATE}")"
@@ -92,11 +102,13 @@ SPARKLE_PUBLIC_ED_KEY="${SLAYNODE_SPARKLE_PUBLIC_ED_KEY:-}"
 
 SPARKLE_INFO=""
 if [[ -n "${SPARKLE_FEED_URL}" && -n "${SPARKLE_PUBLIC_ED_KEY}" ]]; then
+  SPARKLE_FEED_URL_XML="$(xml_escape "${SPARKLE_FEED_URL}")"
+  SPARKLE_PUBLIC_ED_KEY_XML="$(xml_escape "${SPARKLE_PUBLIC_ED_KEY}")"
   SPARKLE_INFO=$(cat <<EOF
     <key>SUFeedURL</key>
-    <string>${SPARKLE_FEED_URL}</string>
+    <string>${SPARKLE_FEED_URL_XML}</string>
     <key>SUPublicEDKey</key>
-    <string>${SPARKLE_PUBLIC_ED_KEY}</string>
+    <string>${SPARKLE_PUBLIC_ED_KEY_XML}</string>
 EOF
 )
 fi
