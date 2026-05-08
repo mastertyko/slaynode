@@ -10,9 +10,10 @@ struct PortResolver: Sendable {
     /// - Returns: Dictionary mapping PID to array of listening ports
     /// - Note: Returns empty dictionary on timeout rather than throwing
     func resolvePorts(for pids: [Int32]) async -> [Int32: [Int]] {
-        guard !pids.isEmpty else { return [:] }
+        let normalizedPids = Self.normalizedPIDs(pids)
+        guard !normalizedPids.isEmpty else { return [:] }
         
-        let pidList = pids.map(String.init).joined(separator: ",")
+        let pidList = normalizedPids.map(String.init).joined(separator: ",")
         
         do {
             let output = try await runLsofWithTimeout(pidList: pidList)
@@ -21,6 +22,10 @@ struct PortResolver: Sendable {
             Log.network.warning("Port resolution failed: \(error.localizedDescription)")
             return [:]
         }
+    }
+
+    static func normalizedPIDs(_ pids: [Int32]) -> [Int32] {
+        Array(Set(pids.filter { $0 > 0 })).sorted()
     }
     
     private func runLsofWithTimeout(pidList: String) async throws -> String {

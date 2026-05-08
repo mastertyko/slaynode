@@ -4,6 +4,10 @@ import XCTest
 
 final class PortResolverTests: XCTestCase {
 
+    func testNormalizedPIDsFiltersInvalidAndSortsUniqueValues() {
+        XCTAssertEqual(PortResolver.normalizedPIDs([3, -1, 2, 3, 0, 1]), [1, 2, 3])
+    }
+
     func testParseLsofOutputExtractsListeningPorts() {
         let output = """
         COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
