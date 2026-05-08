@@ -98,6 +98,32 @@ final class ProcessActionPreviewTests: XCTestCase {
         XCTAssertEqual(preview.processes.map(\.depth), [0, 1, 2])
     }
 
+    func testStopPreviewForNonLeaderIncludesProcessGroupMembers() throws {
+        let service = makeProcessService(pid: 4261)
+        let rows = [
+            ProcessActionPreviewer.ProcessRow(pid: 4260, parentPID: 1, processGroupID: 4260, command: "npm run dev"),
+            ProcessActionPreviewer.ProcessRow(pid: 4261, parentPID: 4260, processGroupID: 4260, command: "node vite"),
+            ProcessActionPreviewer.ProcessRow(pid: 4262, parentPID: 4260, processGroupID: 4260, command: "node worker")
+        ]
+
+        let preview = try XCTUnwrap(
+            ProcessActionPreviewer.makePreview(
+                action: .stop,
+                service: service,
+                targetPID: 4261,
+                fallbackCommand: "node vite",
+                rows: rows,
+                portsByPid: [:]
+            )
+        )
+
+        XCTAssertEqual(preview.scope, .processGroup)
+        XCTAssertEqual(preview.riskLevel, .elevated)
+        XCTAssertEqual(preview.processes.map(\.pid), [4261, 4260, 4262])
+        XCTAssertTrue(preview.processes.contains { $0.role == .groupMember })
+        XCTAssertTrue(preview.warnings.contains { $0.contains("additional process-group member") })
+    }
+
     func testPreviewFallsBackToServiceIdentityWhenLiveRowsAreUnavailable() throws {
         let service = makeProcessService(pid: 4300)
 
