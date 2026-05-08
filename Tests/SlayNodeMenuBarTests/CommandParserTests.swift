@@ -232,6 +232,16 @@ extension CommandParserTests {
         XCTAssertEqual(descriptor.portHints, [8080, 3000])
     }
 
+    func testParcelCommandIsDetected() {
+        let tokens = ["parcel", "src/index.html"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.displayName, "Parcel")
+        XCTAssertEqual(descriptor.category, .bundler)
+        XCTAssertEqual(descriptor.portHints, [1234])
+    }
+
     func testViteClassifierDoesNotMatchInviteSubstring() {
         let tokens = ["node", "/Users/demo/app/invite-server.js"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)

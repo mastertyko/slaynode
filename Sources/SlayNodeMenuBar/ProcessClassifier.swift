@@ -264,6 +264,7 @@ enum ProcessClassifier {
         case hono
         case adonis
         case storybook
+        case parcel
         case webpackDevServer
         case angular
         case createReactApp
@@ -291,6 +292,7 @@ enum ProcessClassifier {
             case .hono: return "Hono"
             case .adonis: return "AdonisJS"
             case .storybook: return "Storybook"
+            case .parcel: return "Parcel"
             case .webpackDevServer: return "Webpack Dev Server"
             case .angular: return "Angular CLI"
             case .createReactApp: return "Create React App"
@@ -317,7 +319,7 @@ enum ProcessClassifier {
             switch self {
             case .next, .nuxt, .remix, .astro, .angular, .createReactApp, .svelteKit:
                 return .webFramework
-            case .vite, .webpackDevServer:
+            case .vite, .parcel, .webpackDevServer:
                 return .bundler
             case .storybook:
                 return .componentWorkbench
@@ -376,6 +378,7 @@ enum ProcessClassifier {
             case .hono: return [3000]
             case .adonis: return [3333]
             case .storybook: return [6006]
+            case .parcel: return [1234]
             case .webpackDevServer: return [8080, 3000]
             case .angular: return [4200]
             case .createReactApp: return [3000]
@@ -405,6 +408,7 @@ enum ProcessClassifier {
         (.hono, { tokens in tokens.contains { $0.contains("hono") } }),
         (.adonis, { tokens in tokens.contains { $0.contains("@adonisjs") || $0.contains("adonis") } }),
         (.storybook, { tokens in tokens.contains { $0.contains("storybook") } }),
+        (.parcel, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["parcel"]) } }),
         (.webpackDevServer, { tokens in
             tokens.contains { tokenMatchesCommand($0, names: ["webpack-dev-server"]) } ||
                 (tokens.contains { tokenMatchesCommand($0, names: ["webpack"]) } && tokens.contains("serve"))
@@ -429,6 +433,7 @@ enum ProcessClassifier {
         let lowered = name.lowercased()
         if lowered.contains("next") { return [3000] }
         if lowered.contains("vite") { return [5173] }
+        if lowered.contains("parcel") { return [1234] }
         if lowered.contains("storybook") { return [6006] }
         if lowered.contains("expo") || lowered.contains("metro") { return [19000, 19006, 8081] }
         if lowered.contains("angular") || lowered == "ng" { return [4200] }
