@@ -31,6 +31,15 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(redacted, "AUTHORIZATION=*** node server.js --proxy-authorization ***")
     }
 
+    func testSanitizerRedactsPrefixedApiKeyAssignments() {
+        let command = "OPENAI_API_KEY=sk-secret ANTHROPIC_API_KEY=claude-secret npm run dev"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("sk-secret"))
+        XCTAssertFalse(redacted.contains("claude-secret"))
+        XCTAssertEqual(redacted, "OPENAI_API_KEY=*** ANTHROPIC_API_KEY=*** npm run dev")
+    }
+
     func testMakeProcessServiceRedactsSensitiveArguments() {
         let process = NodeProcess(
             pid: 4242,

@@ -68,7 +68,13 @@ enum ServiceSanitizer {
             .lowercased()
             .replacingOccurrences(of: "_", with: "-")
 
-        return sensitiveFlags.contains(normalized) ? normalized : nil
+        if sensitiveFlags.contains(normalized) {
+            return normalized
+        }
+
+        return sensitiveFlags.first { flag in
+            normalized.hasSuffix("-\(flag)")
+        }
     }
 
     private static func redactInlineAssignment(_ token: String) -> String? {
