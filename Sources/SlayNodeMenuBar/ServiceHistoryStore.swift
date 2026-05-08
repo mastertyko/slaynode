@@ -66,7 +66,8 @@ final class ServiceHistoryStore {
             upsert(service: service, seenAt: snapshot.generatedAt)
         }
 
-        for workspace in Set(snapshot.services.compactMap(\.workspace)) {
+        for workspace in Set(snapshot.services.compactMap(\.workspace))
+            where WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace) {
             upsert(workspace: workspace, seenAt: snapshot.generatedAt)
         }
 

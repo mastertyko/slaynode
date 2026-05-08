@@ -124,6 +124,21 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertEqual(record.openCount, 2)
     }
 
+    func testRecordSnapshotSkipsIneligibleWorkspaceHistory() throws {
+        let store = try makeStore()
+        let workspace = WorkspaceIdentity(
+            id: "node-modules-vite",
+            name: "vite",
+            rootPath: "/tmp/demo/node_modules/vite"
+        )
+        let service = makeService(name: "vite", kind: .app, workspace: workspace, status: .running)
+
+        store.record(snapshot: ServiceSnapshot(services: [service], dependencies: [], generatedAt: Date()))
+
+        let records = try store.modelContext.fetch(FetchDescriptor<WorkspaceHistoryRecord>())
+        XCTAssertTrue(records.isEmpty)
+    }
+
     private func makeStore() throws -> ServiceHistoryStore {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
