@@ -232,5 +232,23 @@ final class ServiceProvidersTests: XCTestCase {
 
         XCTAssertEqual(kind, .database)
     }
+
+    func testDockerServiceWithoutBindMountDoesNotOfferOpenWorkspace() async {
+        let mock = MockShellExecutor()
+        mock.responses["/usr/bin/env docker ps --format {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"] = (
+            0,
+            "abc123\tweb\tnginx:latest\t0.0.0.0:8080->80/tcp\tUp 2 minutes"
+        )
+        mock.responses["/usr/bin/env docker inspect --format {{json .Mounts}}@@{{.LogPath}} abc123"] = (
+            0,
+            "[]@@/tmp/web.log"
+        )
+        let provider = DockerServiceProvider(shell: mock)
+
+        let batch = await provider.discoverServices()
+
+        XCTAssertEqual(batch.services.count, 1)
+        XCTAssertFalse(batch.services.first?.supports(.openWorkspace) ?? true)
+    }
 }
 #endif
