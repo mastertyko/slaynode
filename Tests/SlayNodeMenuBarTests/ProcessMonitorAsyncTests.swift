@@ -6,15 +6,28 @@ final class ProcessMonitorAsyncTests: XCTestCase {
     
     @MainActor
     func testProcessMonitorStartStop() async {
-        let monitor = ProcessMonitor(interval: 1.0)
-        
+        #if DEBUG
+        let mock = MockShellExecutor()
+        mock.responses["/bin/ps -axo pid=,ppid=,etime=,command="] = (0, "")
+        let monitor = ProcessMonitor(interval: 1.0, shell: mock)
+        let expectation = XCTestExpectation(description: "Receive refresh update")
+        var updateCount = 0
+        let cancellable = monitor.processesPublisher
+            .dropFirst()
+            .sink { processes in
+                updateCount += 1
+                XCTAssertTrue(processes.isEmpty)
+                expectation.fulfill()
+            }
+
         monitor.start()
-        
         await monitor.refresh()
-        
         monitor.stop()
-        
-        XCTAssertTrue(true, "ProcessMonitor should handle async operations correctly")
+        await fulfillment(of: [expectation], timeout: 2.0)
+        cancellable.cancel()
+
+        XCTAssertGreaterThanOrEqual(updateCount, 1)
+        #endif
     }
     
     @MainActor
