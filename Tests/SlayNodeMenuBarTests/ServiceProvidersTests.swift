@@ -264,6 +264,27 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertTrue(batch.services.isEmpty)
     }
 
+    func testDockerDiscoverySkipsMalformedRows() async {
+        let mock = MockShellExecutor()
+        mock.responses["/usr/bin/env docker ps --format {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"] = (
+            0,
+            """
+            abc123\t\tnginx:latest\t0.0.0.0:8080->80/tcp\tUp 2 minutes
+            def456\tapi\t\t0.0.0.0:3000->3000/tcp\tUp 2 minutes
+            ghi789\tworker\tredis:7\t\tUp 2 minutes
+            """
+        )
+        mock.responses["/usr/bin/env docker inspect --format {{json .Mounts}}@@{{.LogPath}} ghi789"] = (
+            0,
+            "[]@@"
+        )
+        let provider = DockerServiceProvider(shell: mock)
+
+        let batch = await provider.discoverServices()
+
+        XCTAssertEqual(batch.services.map(\.name), ["worker"])
+    }
+
     func testBrewServiceWithoutFileDoesNotOfferRevealConfig() async {
         let mock = MockShellExecutor()
         mock.responses["/usr/bin/env brew services list --json"] = (

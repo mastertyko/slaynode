@@ -211,7 +211,7 @@ struct DockerServiceProvider: DiscoveryProvider, ControlProvider {
 
         var services: [ManagedService] = []
 
-        for row in rows where !row.id.isEmpty {
+        for row in rows where row.isValid {
             let inspection = await inspect(containerID: row.id)
             let mounts = inspection.mounts
             let workspace = ServiceHeuristics.workspaceIdentity(from: mounts.first(where: { $0.type == "bind" })?.source)
@@ -362,6 +362,10 @@ struct DockerServiceProvider: DiscoveryProvider, ControlProvider {
         let image: String
         let ports: String
         let status: String
+
+        var isValid: Bool {
+            !id.isEmpty && !name.isEmpty && !image.isEmpty
+        }
     }
 
     private struct DockerMount: Codable, Sendable {
