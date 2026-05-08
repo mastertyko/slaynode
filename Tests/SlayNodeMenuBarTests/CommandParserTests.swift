@@ -91,6 +91,12 @@ final class CommandParserTests: XCTestCase {
         XCTAssertTrue(rootPath?.hasSuffix("Projects/frontend") ?? false)
         XCTAssertEqual(inlinePath, "/tmp/slaynode-web")
     }
+
+    func testInferWorkingDirectoryFromPrefixFlag() {
+        let path = CommandParser.inferWorkingDirectory(from: ["npm", "--prefix", "~/Projects/app", "run", "dev"])
+
+        XCTAssertTrue(path?.hasSuffix("Projects/app") ?? false)
+    }
 }
 extension CommandParserTests {
     func testPackageManagerWrapperAddsMetadata() {
