@@ -423,7 +423,7 @@ enum ProcessClassifier {
         (.reactNative, { tokens in tokens.contains { $0.contains("react-native") || $0.contains("metro") } }),
         (.turbo, { tokens in tokens.contains { $0.contains("turbo") } }),
         (.nx, { tokens in tokens.contains { $0.contains("nx") } }),
-        (.tsx, { tokens in tokens.contains { $0.contains("tsx") } }),
+        (.tsx, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["tsx"]) } }),
         (.nodemon, { tokens in tokens.contains { $0.contains("nodemon") } }),
         (.deno, { tokens in tokens.contains { $0.contains("deno") } }),
         (.bunServe, { tokens in

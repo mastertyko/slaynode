@@ -277,6 +277,24 @@ extension CommandParserTests {
         XCTAssertEqual(descriptor.portHints, [3000, 4000])
     }
 
+    func testTsxRunnerIsClassifiedAsTool() {
+        let tokens = ["tsx", "watch", "server.ts"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.displayName, "TSX")
+        XCTAssertEqual(descriptor.category, .utility)
+        XCTAssertEqual(descriptor.portHints, [3000, 4000])
+    }
+
+    func testTsxSourceFileDoesNotClassifyAsRunner() {
+        let tokens = ["node", "src/App.tsx"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertNotEqual(descriptor.displayName, "TSX")
+    }
+
     func testHonoCommandIsDetectedAsBackend() {
         let tokens = ["node", "src/hono-server.ts"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
