@@ -220,7 +220,7 @@ struct DockerServiceProvider: DiscoveryProvider, ControlProvider {
             let status = row.status.lowercased().contains("up") ? (row.status.lowercased().contains("unhealthy") ? ManagedServiceStatus.degraded : .running) : .stopped
             let health: ServiceHealth = row.status.lowercased().contains("unhealthy") ? .critical : (status == .running ? .healthy : .passive)
             let summary = row.image + (row.status.isEmpty ? "" : " • \(row.status)")
-            var actions: [ServiceAction] = [.stop, .restart, .openLogs]
+            var actions: [ServiceAction] = [.stop, .forceStop, .restart, .openLogs]
             if workspace != nil {
                 actions.append(.openWorkspace)
             }
