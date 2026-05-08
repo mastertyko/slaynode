@@ -101,7 +101,7 @@ Or open Console.app and filter on `SlayNodeMenuBar`.
 2. Remove `SlayNode.app` from `/Applications`.
 3. Optionally clear stored local preferences:
    ```bash
-   defaults delete com.slaynode.preferences.refreshInterval
+   defaults delete se.slaynode.menubar
    ```
 
 ## Getting Help
