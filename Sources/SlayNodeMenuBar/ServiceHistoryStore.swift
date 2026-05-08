@@ -241,16 +241,19 @@ final class ServiceHistoryStore {
     }
 
     private func upsert(workspace: WorkspaceIdentity, seenAt: Date) {
-        let record = fetchWorkspaceRecord(id: workspace.id) ?? {
-            let newRecord = WorkspaceHistoryRecord(
+        let record: WorkspaceHistoryRecord
+        if let existingRecord = fetchWorkspaceRecord(id: workspace.id) {
+            record = existingRecord
+            record.openCount += 1
+        } else {
+            record = WorkspaceHistoryRecord(
                 id: workspace.id,
                 name: workspace.name,
                 rootPath: workspace.rootPath,
                 lastSeenAt: seenAt
             )
-            modelContext.insert(newRecord)
-            return newRecord
-        }()
+            modelContext.insert(record)
+        }
 
         record.name = workspace.name
         record.rootPath = workspace.rootPath
