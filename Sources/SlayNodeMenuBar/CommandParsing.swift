@@ -266,12 +266,31 @@ enum CommandParser {
     }
 
     private static func extractTrailingPort(from value: String) -> Int? {
-        guard let candidate = value.split(separator: ":").last,
-              let port = Int(candidate),
-              isValidPort(port) else {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if trimmed.hasPrefix("[") {
+            guard let bracketEnd = trimmed.lastIndex(of: "]") else { return nil }
+            let colonIndex = trimmed.index(after: bracketEnd)
+            guard colonIndex < trimmed.endIndex, trimmed[colonIndex] == ":" else { return nil }
+            let portStart = trimmed.index(after: colonIndex)
+            return parsePortPrefix(String(trimmed[portStart...]))
+        }
+
+        guard let colonIndex = trimmed.lastIndex(of: ":") else {
             return nil
         }
 
+        let portStart = trimmed.index(after: colonIndex)
+        return parsePortPrefix(String(trimmed[portStart...]))
+    }
+
+    private static func parsePortPrefix(_ value: String) -> Int? {
+        let digits = value.prefix { $0.isNumber }
+        guard !digits.isEmpty,
+              let port = Int(digits),
+              isValidPort(port) else {
+            return nil
+        }
         return port
     }
 

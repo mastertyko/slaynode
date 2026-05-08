@@ -87,6 +87,19 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [5173])
     }
 
+    func testInferPortsFromBareHostPortWithSuffix() {
+        let tokens = ["node", "server.js", "localhost:5173/api", "0.0.0.0:3000,"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000, 5173])
+    }
+
+    func testInferPortsDoesNotTreatBareIPv6AddressAsPort() {
+        let ports = CommandParser.inferPorts(from: ["node", "server.js", "[::1]"])
+
+        XCTAssertTrue(ports.isEmpty)
+    }
+
     func testInferPortsIgnoresBareNumericArguments() {
         let tokens = ["sleep", "2", "--retries", "28"]
         let ports = CommandParser.inferPorts(from: tokens)
