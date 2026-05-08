@@ -24,8 +24,10 @@ final class PortResolverTests: XCTestCase {
     
     func testResolverHandlesMultiplePids() async {
         let resolver = PortResolver()
-        let result = await resolver.resolvePorts(for: [1, 2, 3])
-        XCTAssertNotNil(result)
+        let requestedPids: [Int32] = [1, 2, 3]
+        let result = await resolver.resolvePorts(for: requestedPids)
+
+        XCTAssertTrue(result.keys.allSatisfy { requestedPids.contains($0) })
     }
 }
 #endif
