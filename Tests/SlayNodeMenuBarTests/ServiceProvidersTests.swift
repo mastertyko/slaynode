@@ -22,6 +22,14 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertTrue(redacted.contains("#done"))
     }
 
+    func testSanitizerRedactsURLCredentials() {
+        let command = "node server.js postgres://user:password@localhost:5432/app"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("user:password"))
+        XCTAssertEqual(redacted, "node server.js postgres://***@localhost:5432/app")
+    }
+
     func testSanitizerRedactsAuthorizationAssignments() {
         let command = "AUTHORIZATION='Bearer secret-token' node server.js --proxy-authorization proxy-secret"
         let redacted = ServiceSanitizer.redactSecrets(in: command)
