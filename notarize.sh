@@ -19,6 +19,8 @@ set -euo pipefail
 #   SIGNING_IDENTITY  - "Developer ID Application: Your Name (TEAM_ID)"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${ROOT_DIR}"
+
 INFO_PLIST="${ROOT_DIR}/XcodeSupport/Info.plist"
 VERSION_DEFAULT="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${INFO_PLIST}")"
 VERSION="${1:-${VERSION_DEFAULT}}"
@@ -26,6 +28,7 @@ APP_NAME="SlayNode"
 APP_PATH="${APP_NAME}.app"
 DMG_PATH="${APP_NAME}-v${VERSION}.dmg"
 ZIP_PATH="${APP_NAME}-notarize.zip"
+DMG_TEMP="$(mktemp -d "${TMPDIR:-/tmp}/slaynode-notarize-dmg.XXXXXX")"
 
 # Load credentials from file if exists
 CREDENTIALS_FILE=".notarize-credentials"
@@ -114,10 +117,8 @@ staple_ticket() {
 # Step 6: Create DMG
 create_dmg() {
     echo "💿 Creating DMG..."
-    
-    DMG_TEMP="dmg-contents"
+
     rm -rf "$DMG_TEMP" "$DMG_PATH"
-    
     mkdir -p "$DMG_TEMP"
     cp -R "$APP_PATH" "$DMG_TEMP/"
     ln -s /Applications "$DMG_TEMP/Applications"
@@ -147,7 +148,9 @@ create_dmg() {
 # Cleanup
 cleanup() {
     rm -f "$ZIP_PATH"
+    rm -rf "$DMG_TEMP"
 }
+trap cleanup EXIT
 
 # Main
 main() {
@@ -161,7 +164,6 @@ main() {
     submit_notarization
     staple_ticket
     create_dmg
-    cleanup
     
     echo ""
     echo "==========================================="
