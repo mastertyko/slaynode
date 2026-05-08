@@ -131,7 +131,11 @@ enum ProcessClassifier {
         }
 
         if first == "yarn" && command == "workspace" {
-            return firstScriptArgument(in: arguments, startingAt: commandIndex + 2)
+            let script = firstScriptArgument(in: arguments, startingAt: commandIndex + 2)
+            if script?.lowercased() == "run" {
+                return firstScriptArgument(in: arguments, startingAt: commandIndex + 3)
+            }
+            return script
         }
 
         let commonManagers = Set(["npm", "pnpm", "pnpx", "yarn", "yarnx", "bun", "bunx"])
