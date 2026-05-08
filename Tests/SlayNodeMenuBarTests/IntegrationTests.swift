@@ -36,14 +36,16 @@ final class ProcessMonitorIntegrationTests: XCTestCase {
         let tasks = (0..<5).map { _ in
             Task {
                 await monitor.refresh()
+                return 1
             }
         }
         
+        var completedRefreshes = 0
         for task in tasks {
-            await task.value
+            completedRefreshes += await task.value
         }
         
-        XCTAssertTrue(true)
+        XCTAssertEqual(completedRefreshes, 5)
     }
     
     @MainActor
