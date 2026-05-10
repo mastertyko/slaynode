@@ -56,6 +56,15 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(redacted, "OPENAI_API_KEY=*** ANTHROPIC_API_KEY=*** npm run dev")
     }
 
+    func testSanitizerRedactsConnectionStringAssignments() {
+        let command = "MONGODB_URL=mongodb://user:password@localhost/app --connection-string postgres://secret@localhost/app"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("password"))
+        XCTAssertFalse(redacted.contains("postgres://secret"))
+        XCTAssertEqual(redacted, "MONGODB_URL=*** --connection-string ***")
+    }
+
     func testSanitizerRedactsInlineSecretFlags() {
         let command = "node server.js --password=secret --client-secret=client-secret"
         let redacted = ServiceSanitizer.redactSecrets(in: command)
