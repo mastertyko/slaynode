@@ -41,6 +41,14 @@ final class ProcessDiscoveryTests: XCTestCase {
         XCTAssertEqual(process.startTime, now)
     }
 
+    func testParseProcessLineRejectsNegativeElapsedTime() {
+        let process = ProcessDiscovery.parseProcessLine(
+            "12345     1 -1 node /Users/test/app/server.js --port=3000"
+        )
+
+        XCTAssertNil(process)
+    }
+
     func testParseWorkingDirectoriesKeepsFirstPathForPid() {
         let output = """
         p100

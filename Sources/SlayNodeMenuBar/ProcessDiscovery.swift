@@ -96,14 +96,14 @@ struct ProcessDiscovery: Sendable {
         if etime.contains("-") {
             let components = etime.split(separator: "-")
             guard components.count == 2,
-                  let days = TimeInterval(components[0]) else { return nil }
+                  let days = parseNonNegativeComponent(components[0]) else { return nil }
 
             let timeComponents = components[1].split(separator: ":")
             guard timeComponents.count == 3 else { return nil }
 
-            guard let hours = TimeInterval(timeComponents[0]),
-                  let minutes = TimeInterval(timeComponents[1]),
-                  let seconds = TimeInterval(timeComponents[2]) else {
+            guard let hours = parseNonNegativeComponent(timeComponents[0]),
+                  let minutes = parseNonNegativeComponent(timeComponents[1]),
+                  let seconds = parseNonNegativeComponent(timeComponents[2]) else {
                 return nil
             }
 
@@ -116,17 +116,17 @@ struct ProcessDiscovery: Sendable {
         let parts = etime.split(separator: ":")
         switch parts.count {
         case 1:
-            return TimeInterval(parts[0])
+            return parseNonNegativeComponent(parts[0])
         case 2:
-            guard let minutes = TimeInterval(parts[0]),
-                  let seconds = TimeInterval(parts[1]) else {
+            guard let minutes = parseNonNegativeComponent(parts[0]),
+                  let seconds = parseNonNegativeComponent(parts[1]) else {
                 return nil
             }
             return minutes * Constants.Time.secondsPerMinute + seconds
         case 3:
-            guard let hours = TimeInterval(parts[0]),
-                  let minutes = TimeInterval(parts[1]),
-                  let seconds = TimeInterval(parts[2]) else {
+            guard let hours = parseNonNegativeComponent(parts[0]),
+                  let minutes = parseNonNegativeComponent(parts[1]),
+                  let seconds = parseNonNegativeComponent(parts[2]) else {
                 return nil
             }
             return hours * Constants.Time.secondsPerHour
@@ -135,6 +135,13 @@ struct ProcessDiscovery: Sendable {
         default:
             return nil
         }
+    }
+
+    private static func parseNonNegativeComponent(_ value: Substring) -> TimeInterval? {
+        guard let component = TimeInterval(value), component >= 0 else {
+            return nil
+        }
+        return component
     }
 
     static func parseWorkingDirectories(from output: String) -> [Int32: String] {
