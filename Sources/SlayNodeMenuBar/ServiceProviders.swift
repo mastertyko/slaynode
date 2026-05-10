@@ -848,22 +848,35 @@ enum ServiceHeuristics {
     }
 
     private static func inferRuntime(from command: String) -> String? {
-        let lowered = command.lowercased()
-        if lowered.contains("bun") { return "Bun" }
-        if lowered.contains("deno") { return "Deno" }
-        if lowered.contains("python") || lowered.contains("uvicorn") || lowered.contains("gunicorn") {
+        let tokens = CommandParser.tokenize(command).map { $0.lowercased() }
+        let executable = tokens.first.map(commandStem)
+
+        if ["bun", "bunx"].contains(executable) { return "Bun" }
+        if executable == "deno" { return "Deno" }
+        if ["python", "python3"].contains(executable) || containsCommand(tokens, names: ["uvicorn", "gunicorn"]) {
             return "Python"
         }
-        if lowered.contains("ruby") || lowered.contains("rails") || lowered.contains("puma") {
+        if ["ruby", "bundle"].contains(executable) || containsCommand(tokens, names: ["rails", "puma"]) {
             return "Ruby"
         }
-        if lowered.contains("go ") || lowered.contains("/go") || lowered.contains("air ") {
+        if executable == "go" || containsCommand(tokens, names: ["air"]) {
             return "Go"
         }
-        if lowered.contains("node") || lowered.contains("vite") || lowered.contains("next") {
+        if ["node", "nodejs"].contains(executable) || containsCommand(tokens, names: ["vite", "next"]) {
             return "Node.js"
         }
         return nil
+    }
+
+    private static func containsCommand(_ tokens: [String], names: Set<String>) -> Bool {
+        tokens.contains { token in
+            names.contains(commandStem(token))
+        }
+    }
+
+    private static func commandStem(_ token: String) -> String {
+        let component = (token as NSString).lastPathComponent
+        return (component as NSString).deletingPathExtension
     }
 
     private static func containsServiceSignals(command: String, executable: String) -> Bool {

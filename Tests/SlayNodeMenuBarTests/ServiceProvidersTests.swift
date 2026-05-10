@@ -110,6 +110,39 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertTrue(service?.command?.contains("***") ?? false)
     }
 
+    func testRuntimeInferenceAvoidsBundleSubstringMatch() {
+        let process = NodeProcess(
+            pid: 4343,
+            ppid: 1,
+            executable: "bundle",
+            command: "bundle exec puma -p 3000",
+            arguments: ["exec", "puma", "-p", "3000"],
+            ports: [3000],
+            uptime: 12,
+            startTime: Date(),
+            workingDirectory: "/Users/test/app",
+            descriptor: ServerDescriptor(
+                name: "bundle",
+                displayName: "bundle",
+                category: .runtime,
+                runtime: nil,
+                packageManager: nil,
+                script: nil,
+                details: nil,
+                portHints: []
+            ),
+            commandHash: 9
+        )
+
+        let service = ServiceHeuristics.makeProcessService(
+            from: process,
+            ports: [3000],
+            workingDirectory: "/Users/test/app"
+        )
+
+        XCTAssertEqual(service?.runtime, "Ruby")
+    }
+
     func testRuntimeProcessWithoutServiceSignalsIsFilteredOut() {
         let process = NodeProcess(
             pid: 2121,
