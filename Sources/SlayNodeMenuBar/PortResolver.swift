@@ -116,19 +116,26 @@ struct PortResolver: Sendable {
                cleaned[colonIndex] == ":" {
                 let portStart = cleaned.index(after: colonIndex)
                 let portString = String(cleaned[portStart...]).trimmingCharacters(in: .whitespaces)
-                return Int(portString)
+                return validPort(from: portString)
             }
         }
         
         // Handle wildcard *:3000
         if cleaned.hasPrefix("*:") {
             let portString = String(cleaned.dropFirst(2)).trimmingCharacters(in: .whitespaces)
-            return Int(portString)
+            return validPort(from: portString)
         }
         
         // Handle standard format 127.0.0.1:3000
         guard let colonIndex = cleaned.lastIndex(of: ":") else { return nil }
         let portString = String(cleaned[cleaned.index(after: colonIndex)...]).trimmingCharacters(in: .whitespaces)
-        return Int(portString)
+        return validPort(from: portString)
+    }
+
+    private static func validPort(from value: String) -> Int? {
+        guard let port = Int(value), (1...65_535).contains(port) else {
+            return nil
+        }
+        return port
     }
 }

@@ -19,6 +19,17 @@ final class PortResolverTests: XCTestCase {
 
         XCTAssertEqual(PortResolver.parseLsofOutput(output), [12345: [3000, 5173], 22345: [8080]])
     }
+
+    func testParseLsofOutputIgnoresInvalidPortBounds() {
+        let output = """
+        COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+        node    12345 user   22u  IPv4 0x0   0t0      TCP  127.0.0.1:0 (LISTEN)
+        node    12345 user   23u  IPv4 0x0   0t0      TCP  127.0.0.1:65536 (LISTEN)
+        node    12345 user   24u  IPv4 0x0   0t0      TCP  *:3000 (LISTEN)
+        """
+
+        XCTAssertEqual(PortResolver.parseLsofOutput(output), [12345: [3000]])
+    }
     
     func testResolvesEmptyPidListReturnsEmptyDict() async {
         let resolver = PortResolver()
