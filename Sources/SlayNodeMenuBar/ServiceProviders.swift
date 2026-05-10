@@ -734,6 +734,10 @@ enum ServiceHeuristics {
             normalized.removeLast()
         }
 
+        if normalized.hasSuffix("/node_modules") {
+            normalized = String(normalized.dropLast("/node_modules".count))
+        }
+
         if let nodeModulesRange = normalized.range(of: "/node_modules/") {
             normalized = String(normalized[..<nodeModulesRange.lowerBound])
         }

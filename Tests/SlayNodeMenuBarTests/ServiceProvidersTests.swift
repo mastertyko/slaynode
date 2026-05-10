@@ -204,6 +204,15 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(workspace?.rootPath, "/Volumes/ExtraDisk/Dev/julia-live/frontend")
     }
 
+    func testWorkspaceIdentityNormalizesTerminalNodeModulesPath() {
+        let workspace = ServiceHeuristics.workspaceIdentity(
+            from: "/Volumes/ExtraDisk/Dev/julia-live/frontend/node_modules"
+        )
+
+        XCTAssertEqual(workspace?.name, "frontend")
+        XCTAssertEqual(workspace?.rootPath, "/Volumes/ExtraDisk/Dev/julia-live/frontend")
+    }
+
     func testWorkspaceIdentityNormalizesPackageDirectories() {
         let workspace = ServiceHeuristics.workspaceIdentity(
             from: "/Volumes/ExtraDisk/Dev/julia-live/backend/node_modules/vitest"
