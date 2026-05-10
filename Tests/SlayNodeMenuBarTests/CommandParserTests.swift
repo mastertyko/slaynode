@@ -276,6 +276,37 @@ extension CommandParserTests {
         XCTAssertEqual(descriptor.displayName, "invite-server.js")
     }
 
+    func testMonorepoToolCommandsAreDetected() {
+        let turbo = CommandParser.descriptor(from: CommandParser.makeContext(
+            executable: "turbo",
+            tokens: ["turbo", "run", "dev"],
+            workingDirectory: nil
+        ))
+        let nx = CommandParser.descriptor(from: CommandParser.makeContext(
+            executable: "nx",
+            tokens: ["nx", "serve", "web"],
+            workingDirectory: nil
+        ))
+
+        XCTAssertEqual(turbo.displayName, "Turborepo")
+        XCTAssertEqual(turbo.category, .monorepo)
+        XCTAssertEqual(nx.displayName, "Nx")
+        XCTAssertEqual(nx.category, .monorepo)
+    }
+
+    func testMonorepoToolClassifiersDoNotMatchSubstrings() {
+        let turboTokens = ["node", "/Users/demo/app/turbofan-server.js"]
+        let turboContext = CommandParser.makeContext(executable: turboTokens[0], tokens: turboTokens, workingDirectory: nil)
+        let turboDescriptor = CommandParser.descriptor(from: turboContext)
+
+        let nxTokens = ["node", "/Users/demo/app/lynx-server.js"]
+        let nxContext = CommandParser.makeContext(executable: nxTokens[0], tokens: nxTokens, workingDirectory: nil)
+        let nxDescriptor = CommandParser.descriptor(from: nxContext)
+
+        XCTAssertEqual(turboDescriptor.displayName, "turbofan-server.js")
+        XCTAssertEqual(nxDescriptor.displayName, "lynx-server.js")
+    }
+
     func testNodemonClassifiedAsTool() {
         let tokens = ["nodemon", "server.js"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
