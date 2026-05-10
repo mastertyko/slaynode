@@ -653,13 +653,13 @@ enum ServiceHeuristics {
         let matches = regex?.matches(in: value, range: range) ?? []
         let ports = matches.flatMap { match -> [Int] in
             guard let startRange = Range(match.range(at: 1), in: value),
-                  let start = Int(value[startRange]) else {
+                  let start = validPort(String(value[startRange])) else {
                 return []
             }
 
             guard match.range(at: 2).location != NSNotFound,
                   let endRange = Range(match.range(at: 2), in: value),
-                  let end = Int(value[endRange]),
+                  let end = validPort(String(value[endRange])),
                   end >= start,
                   end - start <= 256 else {
                 return [start]
@@ -668,6 +668,13 @@ enum ServiceHeuristics {
             return Array(start...end)
         }
         return Array(Set(ports)).sorted()
+    }
+
+    private static func validPort(_ value: String) -> Int? {
+        guard let port = Int(value), (1...65_535).contains(port) else {
+            return nil
+        }
+        return port
     }
 
     static func dependencies(for services: [ManagedService]) -> [ServiceDependency] {
