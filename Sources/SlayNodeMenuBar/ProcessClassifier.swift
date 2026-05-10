@@ -223,13 +223,13 @@ enum ProcessClassifier {
     }
 
     private static func runtime(from context: CommandParser.CommandContext) -> String? {
-        if context.lowercasedTokens.contains(where: { $0.contains("deno") }) {
+        if context.lowercasedTokens.contains(where: { tokenMatchesCommand($0, names: ["deno"]) }) {
             return "Deno"
         }
-        if context.lowercasedTokens.contains(where: { $0.contains("bun") }) {
+        if context.lowercasedTokens.contains(where: { tokenMatchesCommand($0, names: ["bun", "bunx"]) }) {
             return "Bun"
         }
-        if context.lowercasedTokens.contains(where: { $0.contains("node") }) {
+        if context.lowercasedTokens.contains(where: { tokenMatchesCommand($0, names: ["node", "nodejs"]) }) {
             return "Node.js"
         }
         return nil

@@ -42,6 +42,15 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(descriptor.displayName, "nextdoor-server.js")
     }
 
+    func testNodeRuntimeDoesNotMatchBundleScriptName() {
+        let tokens = ["node", "/Users/demo/app/bundle.js"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.displayName, "bundle.js")
+        XCTAssertEqual(descriptor.runtime, "Node.js")
+    }
+
     func testInferPortsFromFlagsAndUrls() {
         let tokens = ["node", "server.js", "--port=3000", "--inspect=127.0.0.1:9229"]
         let ports = CommandParser.inferPorts(from: tokens)
