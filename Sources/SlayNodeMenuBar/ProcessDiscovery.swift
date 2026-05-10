@@ -106,6 +106,7 @@ struct ProcessDiscovery: Sendable {
                   let seconds = parseNonNegativeComponent(timeComponents[2]) else {
                 return nil
             }
+            guard hours < 24, minutes < 60, seconds < 60 else { return nil }
 
             return days * Constants.Time.secondsPerDay
                 + hours * Constants.Time.secondsPerHour
@@ -122,6 +123,7 @@ struct ProcessDiscovery: Sendable {
                   let seconds = parseNonNegativeComponent(parts[1]) else {
                 return nil
             }
+            guard seconds < 60 else { return nil }
             return minutes * Constants.Time.secondsPerMinute + seconds
         case 3:
             guard let hours = parseNonNegativeComponent(parts[0]),
@@ -129,6 +131,7 @@ struct ProcessDiscovery: Sendable {
                   let seconds = parseNonNegativeComponent(parts[2]) else {
                 return nil
             }
+            guard minutes < 60, seconds < 60 else { return nil }
             return hours * Constants.Time.secondsPerHour
                 + minutes * Constants.Time.secondsPerMinute
                 + seconds

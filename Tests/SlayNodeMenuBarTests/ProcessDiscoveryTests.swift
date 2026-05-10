@@ -49,6 +49,18 @@ final class ProcessDiscoveryTests: XCTestCase {
         XCTAssertNil(process)
     }
 
+    func testParseProcessLineRejectsInvalidElapsedClockFields() {
+        let invalidRows = [
+            "12345     1 00:75 node /Users/test/app/server.js --port=3000",
+            "12345     1 1:99:00 node /Users/test/app/server.js --port=3000",
+            "12345     1 1-24:00:00 node /Users/test/app/server.js --port=3000"
+        ]
+
+        for row in invalidRows {
+            XCTAssertNil(ProcessDiscovery.parseProcessLine(row), row)
+        }
+    }
+
     func testParseWorkingDirectoriesKeepsFirstPathForPid() {
         let output = """
         p100
