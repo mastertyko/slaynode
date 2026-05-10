@@ -112,7 +112,8 @@ final class ServiceHistoryStore {
         serviceRecord.workspacePath = service.workspace?.rootPath
         serviceRecord.statusRawValue = service.status.rawValue
 
-        if let workspace = service.workspace {
+        if let workspace = service.workspace,
+           WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace) {
             upsert(workspace: workspace, seenAt: now)
         }
 

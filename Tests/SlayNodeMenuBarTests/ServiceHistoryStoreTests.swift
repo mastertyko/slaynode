@@ -139,6 +139,32 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertTrue(records.isEmpty)
     }
 
+    func testRecordActionSkipsIneligibleWorkspaceHistory() throws {
+        let store = try makeStore()
+        let root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent(UUID().uuidString)
+        let packagePath = root
+            .appendingPathComponent("node_modules")
+            .appendingPathComponent("vite")
+        try FileManager.default.createDirectory(at: packagePath, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let workspace = WorkspaceIdentity(
+            id: packagePath.path.lowercased(),
+            name: "vite",
+            rootPath: packagePath.path
+        )
+
+        store.record(
+            action: .stop,
+            on: makeService(name: "vite", kind: .app, workspace: workspace, status: .running),
+            outcome: "Stopped"
+        )
+
+        let records = try store.modelContext.fetch(FetchDescriptor<WorkspaceHistoryRecord>())
+        XCTAssertTrue(records.isEmpty)
+    }
+
     private func makeStore() throws -> ServiceHistoryStore {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
