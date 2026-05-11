@@ -7,9 +7,47 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${ROOT_DIR}"
 
+usage() {
+    cat <<USAGE
+usage: ./release.sh [version]
+
+Examples:
+  ./release.sh
+  ./release.sh 1.0.3
+USAGE
+}
+
+require_cmd() {
+    command -v "$1" >/dev/null 2>&1 || {
+        echo "❌ Missing command: $1" >&2
+        exit 1
+    }
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+fi
+
+if [[ $# -gt 1 ]]; then
+    echo "❌ Too many arguments." >&2
+    usage >&2
+    exit 2
+fi
+
+for cmd in swift ditto hdiutil /usr/libexec/PlistBuddy; do
+    require_cmd "$cmd"
+done
+
 INFO_PLIST="${ROOT_DIR}/XcodeSupport/Info.plist"
 VERSION_DEFAULT="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${INFO_PLIST}")"
 VERSION="${1:-${VERSION_DEFAULT}}"
+
+if ! [[ "${VERSION}" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
+    echo "❌ Invalid version: ${VERSION}" >&2
+    exit 2
+fi
+
 APP_NAME="SlayNode"
 ZIP_NAME="${APP_NAME}-v${VERSION}.zip"
 DMG_TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/slaynode-dmg.XXXXXX")"
