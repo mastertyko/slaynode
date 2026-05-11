@@ -90,6 +90,7 @@ final class ProcessMonitorUnitTests: XCTestCase {
         XCTAssertFalse(isValid)
     }
     
+
     #if DEBUG
     @MainActor
     func testMonitorWithMockedPsOutput() async {
@@ -305,6 +306,18 @@ final class ProcessMonitorErrorTests: XCTestCase {
 }
 
 final class ShellExecutorTests: XCTestCase {
+
+    func testSystemShellExecutorThrowsForMissingExecutableWithoutCrashing() async {
+        let executor = SystemShellExecutor()
+
+        do {
+            _ = try await executor.run("/definitely/missing/slaynode-binary", arguments: [], timeout: 1.0)
+            XCTFail("Expected launch failure to throw")
+        } catch {
+            XCTAssertFalse(error.localizedDescription.isEmpty)
+        }
+    }
+
     
     func testSystemShellExecutorRunsEchoCommand() async throws {
         let executor = SystemShellExecutor()
