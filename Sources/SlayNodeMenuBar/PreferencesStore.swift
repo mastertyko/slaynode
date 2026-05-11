@@ -13,12 +13,14 @@ final class PreferencesStore: ObservableObject {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         let storedValue = defaults.double(forKey: Keys.refreshInterval)
-        if storedValue == 0 {
-            refreshInterval = 5
-        } else {
-            refreshInterval = storedValue
+        let initialValue = storedValue == 0 ? 5 : storedValue
+        let clampedValue = max(intervalRange.lowerBound, min(intervalRange.upperBound, initialValue))
+
+        refreshInterval = clampedValue
+
+        if storedValue != 0, abs(clampedValue - storedValue) > 0.01 {
+            defaults.set(clampedValue, forKey: Keys.refreshInterval)
         }
-        refreshInterval = clamp(refreshInterval)
     }
 
     func setRefreshInterval(_ value: TimeInterval) {
