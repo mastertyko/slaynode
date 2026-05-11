@@ -25,7 +25,8 @@ struct SystemShellExecutor: ShellExecuting {
                 process.standardError = FileHandle.nullDevice
                 
                 let timeoutWork = DispatchWorkItem { [weak process] in
-                    process?.terminate()
+                    guard let process, process.isRunning else { return }
+                    process.terminate()
                 }
                 DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: timeoutWork)
                 
@@ -43,7 +44,9 @@ struct SystemShellExecutor: ShellExecuting {
                     continuation.resume(returning: (status, outputString))
                 } catch {
                     timeoutWork.cancel()
-                    process.terminate()
+                    if process.isRunning {
+                        process.terminate()
+                    }
                     continuation.resume(throwing: error)
                 }
             }
