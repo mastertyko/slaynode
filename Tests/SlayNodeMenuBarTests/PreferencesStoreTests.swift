@@ -57,5 +57,18 @@ final class PreferencesStoreTests: XCTestCase {
         store.setRefreshInterval(10.005)
         XCTAssertEqual(store.refreshInterval, 10.0, accuracy: 0.01)
     }
+
+    func testInitializationClampsAndPersistsOutOfRangeValue() {
+        testDefaults.set(120.0, forKey: "com.slaynode.preferences.refreshInterval")
+
+        let store = PreferencesStore(defaults: testDefaults)
+
+        XCTAssertEqual(store.refreshInterval, 30.0, accuracy: 0.01)
+        XCTAssertEqual(
+            testDefaults.double(forKey: "com.slaynode.preferences.refreshInterval"),
+            30.0,
+            accuracy: 0.01
+        )
+    }
 }
 #endif
