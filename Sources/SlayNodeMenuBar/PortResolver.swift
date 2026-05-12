@@ -3,7 +3,7 @@ import Foundation
 
 /// Resolves listening TCP ports for processes using lsof
 struct PortResolver: Sendable {
-    private let timeoutNanoseconds: UInt64 = 2_000_000_000 // 2 seconds
+    private let timeoutNanoseconds: UInt64 = Constants.Time.nanosecondsPerSecond * 2
     
     /// Resolves listening ports for given process IDs using lsof
     /// - Parameter pids: Array of process IDs to check
@@ -32,7 +32,7 @@ struct PortResolver: Sendable {
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
-                process.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
+                process.executableURL = URL(fileURLWithPath: Constants.Path.lsof)
                 process.arguments = ["-Pan", "-p", pidList, "-iTCP", "-sTCP:LISTEN"]
                 
                 let outputPipe = Pipe()
@@ -43,7 +43,8 @@ struct PortResolver: Sendable {
                 let timeoutWork = DispatchWorkItem { [weak process] in
                     process?.terminate()
                 }
-                DispatchQueue.global().asyncAfter(deadline: .now() + 2.0, execute: timeoutWork)
+                let timeoutSeconds = Double(timeoutNanoseconds) / Double(Constants.Time.nanosecondsPerSecond)
+                DispatchQueue.global().asyncAfter(deadline: .now() + timeoutSeconds, execute: timeoutWork)
                 
                 do {
                     try process.run()
@@ -111,13 +112,13 @@ struct PortResolver: Sendable {
         
         // Handle IPv6 format [::1]:3000 or [::]:3000
         if cleaned.hasPrefix("[") {
-            if let bracketEnd = cleaned.lastIndex(of: "]"),
-               let colonIndex = cleaned.index(bracketEnd, offsetBy: 1, limitedBy: cleaned.endIndex),
-               cleaned[colonIndex] == ":" {
-                let portStart = cleaned.index(after: colonIndex)
-                let portString = String(cleaned[portStart...]).trimmingCharacters(in: .whitespaces)
-                return validPort(from: portString)
-            }
+            guard let bracketEnd = cleaned.lastIndex(of: "]") else { return nil }
+            let colonIndex = cleaned.index(after: bracketEnd)
+            guard colonIndex < cleaned.endIndex, cleaned[colonIndex] == ":" else { return nil }
+
+            let portStart = cleaned.index(after: colonIndex)
+            let portString = String(cleaned[portStart...]).trimmingCharacters(in: .whitespaces)
+            return validPort(from: portString)
         }
         
         // Handle wildcard *:3000

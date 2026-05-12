@@ -30,6 +30,17 @@ final class PortResolverTests: XCTestCase {
 
         XCTAssertEqual(PortResolver.parseLsofOutput(output), [12345: [3000]])
     }
+
+    func testExtractPortHandlesArrowSuffixAndWhitespace() {
+        XCTAssertEqual(PortResolver.extractPort(from: "127.0.0.1:3000->127.0.0.1:52341"), 3000)
+        XCTAssertEqual(PortResolver.extractPort(from: "  *:8080  "), 8080)
+    }
+
+    func testExtractPortHandlesIPv6WildcardAndInvalidValues() {
+        XCTAssertEqual(PortResolver.extractPort(from: "[::]:5173"), 5173)
+        XCTAssertNil(PortResolver.extractPort(from: "[::1]"))
+        XCTAssertNil(PortResolver.extractPort(from: "localhost:http"))
+    }
     
     func testResolvesEmptyPidListReturnsEmptyDict() async {
         let resolver = PortResolver()
