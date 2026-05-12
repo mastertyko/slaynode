@@ -23,8 +23,12 @@ open_app() {
 
 usage() {
   echo "usage: $0 [run|--debug|--logs|--telemetry|--verify]" >&2
-  exit 2
+  exit "${1:-2}"
 }
+
+if [[ "$MODE" == "--help" || "$MODE" == "-h" || "$MODE" == "help" ]]; then
+  usage 0
+fi
 
 kill_existing
 build_app
@@ -47,7 +51,12 @@ case "$MODE" in
   --verify|verify)
     open_app
     sleep 2
-    pgrep -x "$PROCESS_NAME" >/dev/null
+    if pgrep -x "$PROCESS_NAME" >/dev/null; then
+      echo "✅ $PROCESS_NAME is running"
+    else
+      echo "❌ $PROCESS_NAME did not start as expected" >&2
+      exit 1
+    fi
     ;;
   *)
     usage
