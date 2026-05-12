@@ -12,6 +12,7 @@ CONFIGURATION="debug"
 GENERATE_ICONS=false
 INFO_PLIST_TEMPLATE="${ROOT_DIR}/XcodeSupport/Info.plist"
 PLIST_BUDDY="/usr/libexec/PlistBuddy"
+CONFIGURATION_SET=false
 
 usage() {
   cat <<EOF
@@ -37,11 +38,28 @@ while [[ $# -gt 0 ]]; do
       exit 2
       ;;
     *)
+      if [[ "${CONFIGURATION_SET}" == "true" ]]; then
+        echo "❌ Multiple build configurations provided: '${CONFIGURATION}' and '$1'" >&2
+        usage >&2
+        exit 2
+      fi
       CONFIGURATION="$1"
+      CONFIGURATION_SET=true
       ;;
   esac
   shift
 done
+
+CONFIGURATION="${CONFIGURATION,,}"
+case "${CONFIGURATION}" in
+  debug|release)
+    ;;
+  *)
+    echo "❌ Invalid configuration: '${CONFIGURATION}' (expected 'debug' or 'release')." >&2
+    usage >&2
+    exit 2
+    ;;
+esac
 
 if [[ -z "${DEVELOPER_DIR:-}" && -d "/Applications/Xcode.app/Contents/Developer" ]]; then
   export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
