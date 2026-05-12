@@ -21,9 +21,48 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${ROOT_DIR}"
 
+usage() {
+    cat <<USAGE
+usage: ./notarize.sh [version]
+
+Examples:
+  ./notarize.sh
+  ./notarize.sh 1.0.3
+USAGE
+}
+
+require_cmd() {
+    command -v "$1" >/dev/null 2>&1 || {
+        echo "❌ Missing command: $1" >&2
+        exit 1
+    }
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+fi
+
+if [[ $# -gt 1 ]]; then
+    echo "❌ Too many arguments." >&2
+    usage >&2
+    exit 2
+fi
+
+for cmd in /usr/libexec/PlistBuddy codesign xcrun ditto hdiutil spctl stat; do
+    require_cmd "$cmd"
+done
+
 INFO_PLIST="${ROOT_DIR}/XcodeSupport/Info.plist"
 VERSION_DEFAULT="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${INFO_PLIST}")"
 VERSION="${1:-${VERSION_DEFAULT}}"
+
+if ! [[ "${VERSION}" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
+    echo "❌ Invalid version: ${VERSION}" >&2
+    usage >&2
+    exit 2
+fi
+
 APP_NAME="SlayNode"
 APP_PATH="${APP_NAME}.app"
 DMG_PATH="${APP_NAME}-v${VERSION}.dmg"
@@ -33,7 +72,15 @@ DMG_TEMP="$(mktemp -d "${TMPDIR:-/tmp}/slaynode-notarize-dmg.XXXXXX")"
 # Load credentials from file if exists
 CREDENTIALS_FILE=".notarize-credentials"
 if [[ -f "$CREDENTIALS_FILE" ]]; then
-    echo "📋 Loading credentials from $CREDENTIALS_FILE"
+    permissions="$(stat -f '%Lp' "$CREDENTIALS_FILE" 2>/dev/null || true)"
+    if [[ -n "${permissions}" ]]; then
+        permissions_value=$((8#${permissions}))
+        if (( permissions_value & 077 )); then
+            echo "❌ ${CREDENTIALS_FILE} is too permissive (${permissions}). Use chmod 600." >&2
+            exit 1
+        fi
+    fi
+    echo "📋 Loading credentials from ${CREDENTIALS_FILE}"
     source "$CREDENTIALS_FILE"
 fi
 
