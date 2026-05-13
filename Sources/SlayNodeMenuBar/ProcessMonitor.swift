@@ -39,7 +39,7 @@ final class ProcessMonitor: ProcessMonitoring {
         interval: TimeInterval = Constants.Preferences.defaultRefreshInterval,
         shell: any ShellExecuting = SystemShellExecutor()
     ) {
-        self.interval = interval
+        self.interval = Self.normalizedRefreshInterval(interval)
         self.discovery = ProcessDiscovery(shell: shell)
     }
 
@@ -54,8 +54,9 @@ final class ProcessMonitor: ProcessMonitoring {
     }
 
     func updateInterval(_ newInterval: TimeInterval) {
-        guard abs(interval - newInterval) > 0.01 else { return }
-        interval = newInterval
+        let normalized = Self.normalizedRefreshInterval(newInterval)
+        guard abs(interval - normalized) > 0.01 else { return }
+        interval = normalized
         restartTimer()
     }
 
@@ -72,6 +73,11 @@ final class ProcessMonitor: ProcessMonitoring {
         timerTask = nil
         collectionTask?.cancel()
         collectionTask = nil
+    }
+
+    static func normalizedRefreshInterval(_ value: TimeInterval) -> TimeInterval {
+        let range = Constants.Preferences.refreshIntervalRange
+        return min(max(value, range.lowerBound), range.upperBound)
     }
 
     private func startTimer() {

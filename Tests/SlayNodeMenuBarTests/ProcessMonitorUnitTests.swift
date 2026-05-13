@@ -3,6 +3,32 @@ import XCTest
 @testable import SlayNodeMenuBar
 
 final class ProcessMonitorUnitTests: XCTestCase {
+    @MainActor
+    func testNormalizedRefreshIntervalClampsToMinimum() {
+        XCTAssertEqual(
+            ProcessMonitor.normalizedRefreshInterval(-4),
+            Constants.Preferences.refreshIntervalRange.lowerBound,
+            accuracy: 0.001
+        )
+    }
+
+    @MainActor
+    func testNormalizedRefreshIntervalClampsToMaximum() {
+        XCTAssertEqual(
+            ProcessMonitor.normalizedRefreshInterval(120),
+            Constants.Preferences.refreshIntervalRange.upperBound,
+            accuracy: 0.001
+        )
+    }
+
+    @MainActor
+    func testNormalizedRefreshIntervalKeepsInRangeValue() {
+        XCTAssertEqual(
+            ProcessMonitor.normalizedRefreshInterval(9.5),
+            9.5,
+            accuracy: 0.001
+        )
+    }
     
     @MainActor
     func testMonitorInitializesWithDefaultInterval() async {
