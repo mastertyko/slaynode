@@ -4,6 +4,13 @@ import SwiftData
 enum WorkspaceHistoryHeuristics {
     private static let disallowedNames: Set<String> = [
         ".bin",
+        ".cache",
+        ".next",
+        ".nuxt",
+        ".pnpm-store",
+        ".svelte-kit",
+        ".turbo",
+        ".yarn",
         "build",
         "cache",
         "coverage",
