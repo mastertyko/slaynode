@@ -1,22 +1,92 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "=== Testing actual ps command output ==="
-ps -axo pid=,command= | grep -E '^[ ]*[0-9]+ (node |npm |yarn |pnpm |npx )' | head -5
+usage() {
+  cat <<'USAGE'
+usage: ./debug-port-detection.sh [--live-only|--samples-only]
 
-echo ""
-echo "=== Testing port extraction patterns ==="
-# Test a few sample commands
-echo "Command: npm run dev -- --port 3001"
-echo "npm run dev -- --port 3001" | grep -o ':[0-9]\{3,5\}' | head -3
+Options:
+  --live-only     Show only current process snapshot.
+  --samples-only  Run only sample-command port extraction.
+  -h, --help      Show this help text.
+USAGE
+}
 
-echo ""
-echo "Command: node server.js --port 8080"
-echo "node server.js --port 8080" | grep -o ':[0-9]\{3,5\}' | head -3
+extract_ports() {
+  local command="$1"
 
-echo ""
-echo "Command: vite --port 5173"
-echo "vite --port 5173" | grep -o ':[0-9]\{3,5\}' | head -3
+  local extracted
+  extracted=$(
+    printf '%s\n' "$command" | perl -ne '
+      while (/(?:^|\s)[A-Z_]*PORT=([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/(?:--(?:port|inspect-port|http-port|https-port)\s*=?\s*)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/(?:--(?:inspect|inspect-brk)\s*=?\s*(?:[^:\s]+:))([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/(?:--(?:listen|listen-address|addr|address|bind|socket)\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/(?:https?:\/\/[^:\s]+:)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/(?:localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0):([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/\[[^\]]+\]:([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/\*:([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+    ' | awk '$1 >= 1 && $1 <= 65535'
+  )
 
-echo ""
-echo "=== Real Node.js processes ==="
-ps -axo pid=,command= | grep -E '(node |npm |yarn |pnpm |npx )' | head -10
+  if [[ -z "$extracted" ]]; then
+    echo "  (inga port-träffar)"
+    return
+  fi
+
+  printf '%s\n' "$extracted" | awk '!seen[$0]++' | sort -n | sed 's/^/  :/'
+}
+
+show_live_processes() {
+  echo "=== Live process snapshot (Node/dev wrappers) ==="
+  ps -axo pid=,command= | grep -E '^[[:space:]]*[0-9]+ .*(node|npm|pnpm|yarn|npx|bun|deno)([[:space:]]|$)' | head -20 || true
+}
+
+show_samples() {
+  local samples=(
+    "npm run dev -- --port 3001"
+    "node server.js --port 8080"
+    "vite --port 5173 --host 0.0.0.0"
+    "PORT=4173 npm run preview"
+    "node --inspect=127.0.0.1:9229 app.js"
+    "next dev --hostname [::1] --port=3000"
+    "deno serve --listen 0.0.0.0:8787"
+  )
+
+  echo "=== Sample command extraction ==="
+  for command in "${samples[@]}"; do
+    echo ""
+    echo "Command: $command"
+    extract_ports "$command"
+  done
+}
+
+MODE="all"
+case "${1:-}" in
+  "" )
+    ;;
+  --live-only)
+    MODE="live"
+    ;;
+  --samples-only)
+    MODE="samples"
+    ;;
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "❌ Unknown option: ${1}" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
+
+if [[ "$MODE" == "all" || "$MODE" == "live" ]]; then
+  show_live_processes
+fi
+
+if [[ "$MODE" == "all" || "$MODE" == "samples" ]]; then
+  echo ""
+  show_samples
+fi
