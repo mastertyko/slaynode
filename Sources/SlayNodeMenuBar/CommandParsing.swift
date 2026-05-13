@@ -250,7 +250,16 @@ enum CommandParser {
         let value = String(token[token.index(after: separator)...])
 
         guard isPortEnvironmentKey(key) else { return nil }
-        return extractPortCandidate(from: value)
+
+        if let port = extractPortCandidate(from: value) {
+            return port
+        }
+
+        // Some shell snippets end values with punctuation (e.g. "PORT=3000,")
+        // and should still resolve to the intended port value.
+        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedValue.contains(":") else { return nil }
+        return parsePortPrefix(trimmedValue)
     }
 
     private static func isPortEnvironmentKey(_ key: String) -> Bool {
