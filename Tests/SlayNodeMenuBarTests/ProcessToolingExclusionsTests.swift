@@ -30,6 +30,31 @@ final class ProcessToolingExclusionsTests: XCTestCase {
         )
     }
 
+    func testExcludesLegacyOpenAgentCommandFragments() {
+        XCTAssertTrue(
+            ProcessToolingExclusions.isExcluded(
+                executable: "/opt/homebrew/bin/node",
+                command: "/opt/homebrew/lib/node_modules/oh-my-openagent/dist/index.js run"
+            )
+        )
+
+        XCTAssertTrue(
+            ProcessToolingExclusions.isExcluded(
+                executable: "/opt/homebrew/bin/node",
+                command: "/opt/homebrew/lib/node_modules/oh-my-opencode/dist/index.js run"
+            )
+        )
+    }
+
+    func testExcludesCodexNativeHookExecutableName() {
+        XCTAssertTrue(
+            ProcessToolingExclusions.isExcluded(
+                executable: "/tmp/codex-native-hook",
+                command: "/tmp/codex-native-hook --event post-command"
+            )
+        )
+    }
+
     func testDoesNotExcludeTypicalDevelopmentServiceCommand() {
         XCTAssertFalse(
             ProcessToolingExclusions.isExcluded(

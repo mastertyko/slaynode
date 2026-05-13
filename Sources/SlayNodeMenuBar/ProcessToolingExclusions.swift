@@ -29,7 +29,12 @@ enum ProcessToolingExclusions {
         "/node_modules/oh-my-codex/",
         "/oh-my-codex/dist/",
         "/oh-my-codex/src/",
+        "/node_modules/oh-my-openagent/",
+        "/lib/node_modules/oh-my-openagent/",
+        "/node_modules/oh-my-opencode/",
+        "/lib/node_modules/oh-my-opencode/",
         "codex-native-hook.js",
+        "codex-native-hook",
         "codex-native-pre-post",
         "/.codex/plugins/cache/",
         "gitstatusd",
@@ -40,6 +45,7 @@ enum ProcessToolingExclusions {
 
     private static let executableNames = [
         "codex-native-pre-post",
+        "codex-native-hook",
         "esbuild",
         "gitstatusd",
         "sourcekit-lsp",
