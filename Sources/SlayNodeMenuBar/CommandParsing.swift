@@ -247,19 +247,21 @@ enum CommandParser {
         let key = String(token[..<separator])
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
-        let value = String(token[token.index(after: separator)...])
+        let rawValue = String(token[token.index(after: separator)...])
 
         guard isPortEnvironmentKey(key) else { return nil }
 
-        if let port = extractPortCandidate(from: value) {
+        let trimmedValue = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedValue = unwrappedQuotedValue(trimmedValue)
+
+        if let port = extractPortCandidate(from: normalizedValue) {
             return port
         }
 
         // Some shell snippets end values with punctuation (e.g. "PORT=3000,")
         // and should still resolve to the intended port value.
-        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedValue.contains(":") else { return nil }
-        return parsePortPrefix(trimmedValue)
+        guard !normalizedValue.contains(":") else { return nil }
+        return parsePortPrefix(normalizedValue)
     }
 
     private static func isPortEnvironmentKey(_ key: String) -> Bool {
@@ -305,6 +307,13 @@ enum CommandParser {
             return nil
         }
         return port
+    }
+
+    private static func unwrappedQuotedValue(_ value: String) -> String {
+        guard value.count >= 2 else { return value }
+        guard let first = value.first, let last = value.last, first == last else { return value }
+        guard first == "\"" || first == "'" else { return value }
+        return String(value.dropFirst().dropLast())
     }
 
     private static func looksLikeHostPort(_ token: String) -> Bool {
