@@ -18,7 +18,9 @@ extract_ports() {
   local extracted
   extracted=$(
     printf '%s\n' "$command" | perl -ne '
-      while (/(?:^|\s)[A-Z_]*PORT=([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/(?:^|\s)[A-Z_]*PORT=(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)(?:\D|$)/g) { print "$1\n" }
+      while (/(?:^|\s)[A-Z_]*PORT=\$\{[^}:]+:-(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)\}(?:\D|$)/g) { print "$1\n" }
+      while (/(?:^|\s)[A-Z_]*PORT=\$\{[^}-]+-(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)\}(?:\D|$)/g) { print "$1\n" }
       while (/(?:--(?:port|inspect-port|http-port|https-port)\s*=?\s*)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:--(?:inspect|inspect-brk)\s*=?\s*(?:[^:\s]+:))([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:--(?:listen|listen-address|addr|address|bind|socket)\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
@@ -48,6 +50,8 @@ show_samples() {
     "node server.js --port 8080"
     "vite --port 5173 --host 0.0.0.0"
     "PORT=4173 npm run preview"
+    "PORT=\"3002\" npm run dev"
+    "WEB_PORT=\${WEB_PORT:-4174} pnpm dev"
     "node --inspect=127.0.0.1:9229 app.js"
     "next dev --hostname [::1] --port=3000"
     "deno serve --listen 0.0.0.0:8787"
