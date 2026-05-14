@@ -258,6 +258,10 @@ enum CommandParser {
             return port
         }
 
+        if let port = extractShellDefaultPort(from: normalizedValue) {
+            return port
+        }
+
         // Some shell snippets end values with punctuation (e.g. "PORT=3000,")
         // and should still resolve to the intended port value.
         guard !normalizedValue.contains(":") else { return nil }
@@ -314,6 +318,26 @@ enum CommandParser {
         guard let first = value.first, let last = value.last, first == last else { return value }
         guard first == "\"" || first == "'" else { return value }
         return String(value.dropFirst().dropLast())
+    }
+
+    private static func extractShellDefaultPort(from value: String) -> Int? {
+        guard value.hasPrefix("${"), value.hasSuffix("}") else { return nil }
+
+        let start = value.index(value.startIndex, offsetBy: 2)
+        let end = value.index(before: value.endIndex)
+        let expression = String(value[start..<end])
+
+        if let range = expression.range(of: ":-") {
+            let candidate = String(expression[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+            return extractPortCandidate(from: unwrappedQuotedValue(candidate)) ?? parsePortPrefix(unwrappedQuotedValue(candidate))
+        }
+
+        if let range = expression.range(of: "-") {
+            let candidate = String(expression[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+            return extractPortCandidate(from: unwrappedQuotedValue(candidate)) ?? parsePortPrefix(unwrappedQuotedValue(candidate))
+        }
+
+        return nil
     }
 
     private static func looksLikeHostPort(_ token: String) -> Bool {

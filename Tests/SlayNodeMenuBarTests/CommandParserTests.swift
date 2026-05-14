@@ -111,6 +111,20 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 4173, 9229])
     }
 
+    func testInferPortsFromEnvironmentAssignmentsWithShellDefaults() {
+        let tokens = [
+            "PORT=${PORT:-3000}",
+            "WEB_PORT=${WEB_PORT-4173}",
+            "APP_PORT=${APP_PORT:-\"8080\"}",
+            "npm",
+            "run",
+            "dev"
+        ]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000, 4173, 8080])
+    }
+
     func testInferPortsFromSocketAddressFlags() {
         let tokens = [
             "deno",
