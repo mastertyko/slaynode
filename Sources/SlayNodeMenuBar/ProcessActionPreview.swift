@@ -126,6 +126,9 @@ private struct ProcessActionPreviewTree: Sendable {
 
     init(rows: [ProcessActionPreviewer.ProcessRow]) {
         self.childrenByParent = Dictionary(grouping: rows) { $0.parentPID }
+            .mapValues { groupedRows in
+                groupedRows.sorted { $0.pid < $1.pid }
+            }
         self.rowByPID = rows.reduce(into: [:]) { result, row in
             result[row.pid] = row
         }
@@ -134,21 +137,36 @@ private struct ProcessActionPreviewTree: Sendable {
     func descendants(of parentPID: Int32) -> [ProcessActionPreviewer.ProcessRow] {
         var result: [ProcessActionPreviewer.ProcessRow] = []
         var visited: Set<Int32> = [parentPID]
-        var queue = childrenByParent[parentPID, default: []].sorted { $0.pid < $1.pid }
+        var queue = childrenByParent[parentPID, default: []]
+        var queueIndex = 0
 
-        while !queue.isEmpty {
-            let row = queue.removeFirst()
+        while queueIndex < queue.count {
+            let row = queue[queueIndex]
+            queueIndex += 1
             guard !visited.contains(row.pid) else { continue }
             visited.insert(row.pid)
             result.append(row)
-            queue.append(contentsOf: childrenByParent[row.pid, default: []].sorted { $0.pid < $1.pid })
+            queue.append(contentsOf: childrenByParent[row.pid, default: []])
         }
 
         return result
     }
 
     func isDescendant(_ pid: Int32, of parentPID: Int32) -> Bool {
-        descendants(of: parentPID).contains { $0.pid == pid }
+        guard pid != parentPID else { return false }
+
+        var currentPID = pid
+        var visited: Set<Int32> = []
+
+        while let row = rowByPID[currentPID], !visited.contains(currentPID) {
+            visited.insert(currentPID)
+            if row.parentPID == parentPID {
+                return true
+            }
+            currentPID = row.parentPID
+        }
+
+        return false
     }
 
     func depth(of pid: Int32, targetPID: Int32) -> Int {
