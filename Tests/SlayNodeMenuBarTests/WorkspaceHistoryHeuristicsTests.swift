@@ -75,6 +75,42 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
         XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
     }
 
+    func testEligibleRecentWorkspaceRejectsDisallowedGeneratedPathComponents() throws {
+        let tempRoot = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+        let generatedPath = tempRoot
+            .appendingPathComponent("frontend")
+            .appendingPathComponent("dist")
+            .appendingPathComponent("web")
+        try FileManager.default.createDirectory(at: generatedPath, withIntermediateDirectories: true)
+
+        let workspace = WorkspaceIdentity(
+            id: generatedPath.path.lowercased(),
+            name: "frontend",
+            rootPath: generatedPath.path
+        )
+
+        XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
+    }
+
+    func testEligibleRecentWorkspaceRejectsVersionControlMetadataPaths() throws {
+        let tempRoot = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+        let gitPath = tempRoot
+            .appendingPathComponent(".git")
+            .appendingPathComponent("worktrees")
+            .appendingPathComponent("session")
+        try FileManager.default.createDirectory(at: gitPath, withIntermediateDirectories: true)
+
+        let workspace = WorkspaceIdentity(
+            id: gitPath.path.lowercased(),
+            name: "session",
+            rootPath: gitPath.path
+        )
+
+        XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
+    }
+
     private func makeTempDirectory() throws -> URL {
         let directory = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent(UUID().uuidString)

@@ -3,6 +3,9 @@ import SwiftData
 
 enum WorkspaceHistoryHeuristics {
     private static let disallowedNames: Set<String> = [
+        ".git",
+        ".hg",
+        ".svn",
         ".bin",
         ".cache",
         ".next",
@@ -54,7 +57,7 @@ enum WorkspaceHistoryHeuristics {
 
     private static func hasDisallowedPathComponent(_ path: String) -> Bool {
         let components = URL(fileURLWithPath: path).standardized.pathComponents.map { $0.lowercased() }
-        return components.contains("node_modules")
+        return components.contains { disallowedNames.contains($0) }
     }
 }
 
