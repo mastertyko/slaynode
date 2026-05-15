@@ -116,13 +116,15 @@ final class CommandParserTests: XCTestCase {
             "PORT=${PORT:-3000}",
             "WEB_PORT=${WEB_PORT-4173}",
             "APP_PORT=${APP_PORT:-\"8080\"}",
+            "ALT_PORT=${ALT_PORT:=9229}",
+            "FALLBACK_PORT=${FALLBACK_PORT=9333}",
             "npm",
             "run",
             "dev"
         ]
         let ports = CommandParser.inferPorts(from: tokens)
 
-        XCTAssertEqual(ports, [3000, 4173, 8080])
+        XCTAssertEqual(ports, [3000, 4173, 8080, 9229, 9333])
     }
 
     func testInferPortsFromSocketAddressFlags() {

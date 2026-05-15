@@ -327,14 +327,11 @@ enum CommandParser {
         let end = value.index(before: value.endIndex)
         let expression = String(value[start..<end])
 
-        if let range = expression.range(of: ":-") {
+        for separator in [":-", ":=", "-", "="] {
+            guard let range = expression.range(of: separator) else { continue }
             let candidate = String(expression[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
-            return extractPortCandidate(from: unwrappedQuotedValue(candidate)) ?? parsePortPrefix(unwrappedQuotedValue(candidate))
-        }
-
-        if let range = expression.range(of: "-") {
-            let candidate = String(expression[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
-            return extractPortCandidate(from: unwrappedQuotedValue(candidate)) ?? parsePortPrefix(unwrappedQuotedValue(candidate))
+            let unwrappedCandidate = unwrappedQuotedValue(candidate)
+            return extractPortCandidate(from: unwrappedCandidate) ?? parsePortPrefix(unwrappedCandidate)
         }
 
         return nil
