@@ -3,7 +3,9 @@ import Foundation
 
 /// Resolves listening TCP ports for processes using lsof
 struct PortResolver: Sendable {
-    private let timeoutNanoseconds: UInt64 = Constants.Time.nanosecondsPerSecond * 2
+    private var timeoutNanoseconds: UInt64 {
+        UInt64(Constants.Timeout.lsofTimeout * Double(Constants.Time.nanosecondsPerSecond))
+    }
     
     /// Resolves listening ports for given process IDs using lsof
     /// - Parameter pids: Array of process IDs to check
@@ -38,9 +40,28 @@ struct PortResolver: Sendable {
                 let outputPipe = Pipe()
                 process.standardOutput = outputPipe
                 process.standardError = FileHandle.nullDevice
+
+                final class TimeoutState {
+                    private var value = false
+                    private let lock = NSLock()
+
+                    func markTimedOut() {
+                        lock.lock()
+                        value = true
+                        lock.unlock()
+                    }
+
+                    var didTimeout: Bool {
+                        lock.lock()
+                        defer { lock.unlock() }
+                        return value
+                    }
+                }
+                let timeoutState = TimeoutState()
                 
                 // Timeout using DispatchWorkItem (2 seconds)
                 let timeoutWork = DispatchWorkItem { [weak process] in
+                    timeoutState.markTimedOut()
                     process?.terminate()
                 }
                 let timeoutSeconds = Double(timeoutNanoseconds) / Double(Constants.Time.nanosecondsPerSecond)
@@ -52,7 +73,7 @@ struct PortResolver: Sendable {
                     process.waitUntilExit()
                     timeoutWork.cancel()
                     
-                    if process.terminationReason == .uncaughtSignal {
+                    if timeoutState.didTimeout {
                         continuation.resume(throwing: NSError(domain: "PortResolver", code: -1, userInfo: [NSLocalizedDescriptionKey: "Timeout"]))
                         return
                     }
