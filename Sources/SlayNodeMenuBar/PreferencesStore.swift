@@ -8,13 +8,27 @@ final class PreferencesStore: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        let storedValue = defaults.double(forKey: Constants.Preferences.refreshIntervalKey)
-        let initialValue = storedValue == 0 ? Constants.Preferences.defaultRefreshInterval : storedValue
-        let clampedValue = max(intervalRange.lowerBound, min(intervalRange.upperBound, initialValue))
+        let storedObject = defaults.object(forKey: Constants.Preferences.refreshIntervalKey)
+        let initialValue: TimeInterval
+        let shouldPersistSanitizedValue: Bool
+
+        if let number = storedObject as? NSNumber {
+            initialValue = number.doubleValue
+            shouldPersistSanitizedValue = true
+        } else if storedObject != nil {
+            initialValue = Constants.Preferences.defaultRefreshInterval
+            shouldPersistSanitizedValue = true
+        } else {
+            initialValue = Constants.Preferences.defaultRefreshInterval
+            shouldPersistSanitizedValue = false
+        }
+
+        let finiteInitialValue = initialValue.isFinite ? initialValue : Constants.Preferences.defaultRefreshInterval
+        let clampedValue = max(intervalRange.lowerBound, min(intervalRange.upperBound, finiteInitialValue))
 
         refreshInterval = clampedValue
 
-        if storedValue != 0, abs(clampedValue - storedValue) > 0.01 {
+        if shouldPersistSanitizedValue && (abs(clampedValue - initialValue) > 0.01 || !initialValue.isFinite) {
             defaults.set(clampedValue, forKey: Constants.Preferences.refreshIntervalKey)
         }
     }

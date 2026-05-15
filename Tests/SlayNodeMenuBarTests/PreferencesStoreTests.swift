@@ -70,5 +70,39 @@ final class PreferencesStoreTests: XCTestCase {
             accuracy: 0.01
         )
     }
+
+    func testInitializationClampsAndPersistsZeroValue() {
+        testDefaults.set(0.0, forKey: Constants.Preferences.refreshIntervalKey)
+
+        let store = PreferencesStore(defaults: testDefaults)
+
+        XCTAssertEqual(
+            store.refreshInterval,
+            Constants.Preferences.refreshIntervalRange.lowerBound,
+            accuracy: 0.01
+        )
+        XCTAssertEqual(
+            testDefaults.double(forKey: Constants.Preferences.refreshIntervalKey),
+            Constants.Preferences.refreshIntervalRange.lowerBound,
+            accuracy: 0.01
+        )
+    }
+
+    func testInitializationRepairsNonFiniteStoredValue() {
+        testDefaults.set(Double.nan, forKey: Constants.Preferences.refreshIntervalKey)
+
+        let store = PreferencesStore(defaults: testDefaults)
+
+        XCTAssertEqual(
+            store.refreshInterval,
+            Constants.Preferences.defaultRefreshInterval,
+            accuracy: 0.01
+        )
+        XCTAssertEqual(
+            testDefaults.double(forKey: Constants.Preferences.refreshIntervalKey),
+            Constants.Preferences.defaultRefreshInterval,
+            accuracy: 0.01
+        )
+    }
 }
 #endif
