@@ -76,6 +76,10 @@ final class ProcessMonitor: ProcessMonitoring {
     }
 
     static func normalizedRefreshInterval(_ value: TimeInterval) -> TimeInterval {
+        guard value.isFinite else {
+            return Constants.Preferences.defaultRefreshInterval
+        }
+
         let range = Constants.Preferences.refreshIntervalRange
         return min(max(value, range.lowerBound), range.upperBound)
     }

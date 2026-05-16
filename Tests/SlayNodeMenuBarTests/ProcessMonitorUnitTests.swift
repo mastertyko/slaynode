@@ -29,6 +29,29 @@ final class ProcessMonitorUnitTests: XCTestCase {
             accuracy: 0.001
         )
     }
+
+    @MainActor
+    func testNormalizedRefreshIntervalFallsBackForNaN() {
+        XCTAssertEqual(
+            ProcessMonitor.normalizedRefreshInterval(.nan),
+            Constants.Preferences.defaultRefreshInterval,
+            accuracy: 0.001
+        )
+    }
+
+    @MainActor
+    func testNormalizedRefreshIntervalFallsBackForInfinity() {
+        XCTAssertEqual(
+            ProcessMonitor.normalizedRefreshInterval(.infinity),
+            Constants.Preferences.defaultRefreshInterval,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            ProcessMonitor.normalizedRefreshInterval(-.infinity),
+            Constants.Preferences.defaultRefreshInterval,
+            accuracy: 0.001
+        )
+    }
     
     @MainActor
     func testMonitorInitializesWithDefaultInterval() async {
