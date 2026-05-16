@@ -5,6 +5,7 @@ set -euo pipefail
 # Creates a .app bundle in the project root
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${ROOT_DIR}"
 APP_NAME="SlayNode"
 APP_DIR="${ROOT_DIR}/${APP_NAME}.app"
 EXECUTABLE_NAME="SlayNodeMenuBar"
@@ -50,7 +51,7 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-CONFIGURATION="${CONFIGURATION,,}"
+CONFIGURATION="$(printf '%s' "${CONFIGURATION}" | tr '[:upper:]' '[:lower:]')"
 case "${CONFIGURATION}" in
   debug|release)
     ;;
