@@ -77,6 +77,13 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [9_229])
     }
 
+    func testInferPortsFromInlineInspectHostWithoutPortFallsBackToDefault() {
+        let tokens = ["node", "--inspect=0.0.0.0", "--inspect-brk=localhost", "server.js"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [9_229])
+    }
+
     func testInferPortsFromInspectPortFlag() {
         let tokens = ["node", "--inspect-port", "9230", "--inspect-port=9231", "server.js"]
         let ports = CommandParser.inferPorts(from: tokens)

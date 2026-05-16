@@ -93,6 +93,11 @@ enum CommandParser {
                 continue
             }
 
+            if isInlineDefaultInspectFlagWithoutPort(token) {
+                collected.insert(9_229)
+                continue
+            }
+
             if isDefaultInspectFlag(token) {
                 if index + 1 < tokens.count,
                    let port = extractPortCandidate(from: tokens[index + 1]) {
@@ -214,6 +219,37 @@ enum CommandParser {
     private static func isDefaultInspectFlag(_ token: String) -> Bool {
         let normalized = token.lowercased()
         return normalized == "--inspect" || normalized == "--inspect-brk"
+    }
+
+    private static func isInlineDefaultInspectFlagWithoutPort(_ token: String) -> Bool {
+        let normalized = token.lowercased()
+        let prefixes = ["--inspect=", "--inspect-brk="]
+        guard let prefix = prefixes.first(where: normalized.hasPrefix) else { return false }
+
+        let value = String(token.dropFirst(prefix.count))
+        guard extractPortCandidate(from: value) == nil else { return false }
+        return !looksLikeExplicitPortValue(value)
+    }
+
+    private static func looksLikeExplicitPortValue(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+
+        if trimmed.allSatisfy(\.isNumber) {
+            return true
+        }
+
+        if trimmed.hasPrefix("["),
+           let bracketEnd = trimmed.lastIndex(of: "]"),
+           bracketEnd < trimmed.index(before: trimmed.endIndex),
+           trimmed[trimmed.index(after: bracketEnd)] == ":" {
+            let suffix = String(trimmed[trimmed.index(after: trimmed.index(after: bracketEnd))...])
+            return suffix.prefix { $0.isNumber }.isEmpty == false
+        }
+
+        guard let colonIndex = trimmed.lastIndex(of: ":") else { return false }
+        let suffix = String(trimmed[trimmed.index(after: colonIndex)...])
+        return suffix.prefix { $0.isNumber }.isEmpty == false
     }
 
     private static func extractInlinePort(from token: String) -> Int? {
