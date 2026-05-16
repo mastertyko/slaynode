@@ -108,7 +108,7 @@ validate_env() {
 # Step 1: Build release
 build_release() {
     echo "🔨 Building release..."
-    ./build.sh release
+    SLAYNODE_VERSION="${VERSION}" ./build.sh release
     
     if [[ ! -d "$APP_PATH" ]]; then
         echo "❌ App bundle not found at $APP_PATH"
