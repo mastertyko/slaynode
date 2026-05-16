@@ -121,9 +121,11 @@ struct ProcessGroupKiller {
         var result: [Int32] = []
         var visited: Set<Int32> = [parentPid]
         var queue = childrenByParent[parentPid, default: []].sorted()
+        var queueIndex = 0
 
-        while !queue.isEmpty {
-            let pid = queue.removeFirst()
+        while queueIndex < queue.count {
+            let pid = queue[queueIndex]
+            queueIndex += 1
             guard !visited.contains(pid) else { continue }
             visited.insert(pid)
             result.append(pid)
