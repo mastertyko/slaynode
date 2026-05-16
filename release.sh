@@ -61,7 +61,7 @@ echo "🚀 Creating SlayNode release v${VERSION}..."
 
 # Build the app
 echo "🔨 Building release version..."
-./build.sh release
+SLAYNODE_VERSION="${VERSION}" ./build.sh release
 
 if [[ -f "${ZIP_NAME}" ]]; then
     rm "${ZIP_NAME}"
