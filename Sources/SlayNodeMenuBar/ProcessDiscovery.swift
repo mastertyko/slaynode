@@ -141,7 +141,11 @@ struct ProcessDiscovery: Sendable {
     }
 
     private static func parseNonNegativeComponent(_ value: Substring) -> TimeInterval? {
-        guard let component = TimeInterval(value), component >= 0 else {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              trimmed.allSatisfy(\.isNumber),
+              let component = TimeInterval(trimmed),
+              component >= 0 else {
             return nil
         }
         return component

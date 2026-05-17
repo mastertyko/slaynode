@@ -61,6 +61,18 @@ final class ProcessDiscoveryTests: XCTestCase {
         }
     }
 
+    func testParseProcessLineRejectsNonIntegerElapsedClockFields() {
+        let invalidRows = [
+            "12345     1 1.5 node /Users/test/app/server.js --port=3000",
+            "12345     1 00:1.5 node /Users/test/app/server.js --port=3000",
+            "12345     1 1-02:03:4.5 node /Users/test/app/server.js --port=3000"
+        ]
+
+        for row in invalidRows {
+            XCTAssertNil(ProcessDiscovery.parseProcessLine(row), row)
+        }
+    }
+
     func testParseWorkingDirectoriesKeepsFirstPathForPid() {
         let output = """
         p100
