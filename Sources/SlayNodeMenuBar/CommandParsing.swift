@@ -204,6 +204,7 @@ enum CommandParser {
             "-p",
             "--inspect",
             "--inspect-brk",
+            "--inspect-wait",
             "--inspect-port",
             "--http-port",
             "--https-port",
@@ -218,12 +219,12 @@ enum CommandParser {
 
     private static func isDefaultInspectFlag(_ token: String) -> Bool {
         let normalized = token.lowercased()
-        return normalized == "--inspect" || normalized == "--inspect-brk"
+        return normalized == "--inspect" || normalized == "--inspect-brk" || normalized == "--inspect-wait"
     }
 
     private static func isInlineDefaultInspectFlagWithoutPort(_ token: String) -> Bool {
         let normalized = token.lowercased()
-        let prefixes = ["--inspect=", "--inspect-brk="]
+        let prefixes = ["--inspect=", "--inspect-brk=", "--inspect-wait="]
         guard let prefix = prefixes.first(where: normalized.hasPrefix) else { return false }
 
         let value = String(token.dropFirst(prefix.count))
@@ -249,7 +250,7 @@ enum CommandParser {
     private static func extractInlinePort(from token: String) -> Int? {
         let patterns = [
             #"^--?(?:port|p)=(.+)$"#,
-            #"^--?(?:inspect|inspect-brk|inspect-port)=(.+)$"#,
+            #"^--?(?:inspect|inspect-brk|inspect-wait|inspect-port)=(.+)$"#,
             #"^--?(?:listen|listen-address|addr|address|bind|socket)=(.+)$"#,
             #"^-p(\d+)$"#
         ]

@@ -71,17 +71,24 @@ final class CommandParserTests: XCTestCase {
     }
 
     func testInferPortsFromDefaultInspectFlags() {
-        let tokens = ["node", "--inspect", "server.js", "--inspect-brk"]
+        let tokens = ["node", "--inspect", "server.js", "--inspect-brk", "--inspect-wait"]
         let ports = CommandParser.inferPorts(from: tokens)
 
         XCTAssertEqual(ports, [9_229])
     }
 
     func testInferPortsFromInlineInspectHostWithoutPortFallsBackToDefault() {
-        let tokens = ["node", "--inspect=0.0.0.0", "--inspect-brk=localhost", "server.js"]
+        let tokens = ["node", "--inspect=0.0.0.0", "--inspect-brk=localhost", "--inspect-wait=::1", "server.js"]
         let ports = CommandParser.inferPorts(from: tokens)
 
         XCTAssertEqual(ports, [9_229])
+    }
+
+    func testInferPortsFromInspectWaitFlagWithExplicitPort() {
+        let tokens = ["node", "--inspect-wait=127.0.0.1:9330", "server.js"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [9_330])
     }
 
     func testInferPortsFromInlineInspectIPv6HostWithoutPortFallsBackToDefault() {
