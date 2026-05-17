@@ -26,7 +26,10 @@ struct ProcessGroupKiller {
     /// - Parameters:
     ///   - pid: The process ID to terminate
     ///   - gracePeriod: Time to wait before SIGKILL (default 1.5s)
-    func terminateGroup(pid: Int32, gracePeriod: TimeInterval = 1.5) async throws {
+    func terminateGroup(
+        pid: Int32,
+        gracePeriod: TimeInterval = Constants.Timeout.gracePeriod
+    ) async throws {
         guard pid > 0 else { throw ProcessGroupTerminationError.invalidPid }
         
         // Verify process exists
@@ -46,7 +49,7 @@ struct ProcessGroupKiller {
             
             // Kill descendants deepest-first before the parent.
             for childPid in children {
-                try? await terminateSingleProcess(pid: childPid, gracePeriod: gracePeriod / 2)
+                try? await terminateSingleProcess(pid: childPid, gracePeriod: Constants.Timeout.childGracePeriod)
             }
             
             // Then kill parent
@@ -72,7 +75,7 @@ struct ProcessGroupKiller {
             if kill(-pgid, 0) == -1 && errno == ESRCH {
                 return
             }
-            try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+            try await Task.sleep(nanoseconds: Constants.Timeout.terminationPollingInterval)
         }
         
         // Force kill if still alive
@@ -105,7 +108,7 @@ struct ProcessGroupKiller {
             if kill(pid, 0) == -1 && errno == ESRCH {
                 return
             }
-            try await Task.sleep(nanoseconds: 100_000_000)
+            try await Task.sleep(nanoseconds: Constants.Timeout.terminationPollingInterval)
         }
         
         // Force kill
@@ -120,19 +123,18 @@ struct ProcessGroupKiller {
     static func descendantPIDs(parentPid: Int32, childrenByParent: [Int32: [Int32]]) -> [Int32] {
         var result: [Int32] = []
         var visited: Set<Int32> = [parentPid]
-        var queue = childrenByParent[parentPid, default: []].sorted()
-        var queueIndex = 0
 
-        while queueIndex < queue.count {
-            let pid = queue[queueIndex]
-            queueIndex += 1
-            guard !visited.contains(pid) else { continue }
-            visited.insert(pid)
-            result.append(pid)
-            queue.append(contentsOf: childrenByParent[pid, default: []].sorted())
+        func visit(_ parent: Int32) {
+            for childPid in childrenByParent[parent, default: []].sorted() {
+                guard !visited.contains(childPid) else { continue }
+                visited.insert(childPid)
+                visit(childPid)
+                result.append(childPid)
+            }
         }
 
-        return result.reversed()
+        visit(parentPid)
+        return result
     }
 
     private func findDescendantProcesses(parentPid: Int32) async -> [Int32] {

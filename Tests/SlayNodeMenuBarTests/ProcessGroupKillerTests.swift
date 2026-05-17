@@ -84,5 +84,18 @@ final class ProcessGroupKillerTests: XCTestCase {
 
         XCTAssertEqual(descendants, [102, 101])
     }
+
+    func testDescendantPIDsSortsSiblingsDeterministically() {
+        let descendants = ProcessGroupKiller.descendantPIDs(
+            parentPid: 100,
+            childrenByParent: [
+                100: [105, 101],
+                101: [204, 203],
+                105: [302, 301]
+            ]
+        )
+
+        XCTAssertEqual(descendants, [203, 204, 101, 301, 302, 105])
+    }
 }
 #endif
