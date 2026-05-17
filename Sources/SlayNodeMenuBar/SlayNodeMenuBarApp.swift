@@ -24,12 +24,7 @@ struct SlayNodeMenuBarApp: App {
     @StateObject private var updateController = UpdateController()
 
     init() {
-        let container = try! ModelContainer(
-            for: WorkspaceHistoryRecord.self,
-            ServiceHistoryRecord.self,
-            ServiceActionRecord.self,
-            WindowStateRecord.self
-        )
+        let container = Self.makeModelContainer()
 
         let settings = AppSettings()
         let historyStore = ServiceHistoryStore(container: container)
@@ -48,6 +43,32 @@ struct SlayNodeMenuBarApp: App {
                 settings: settings
             )
         )
+    }
+
+    private static func makeModelContainer() -> ModelContainer {
+        do {
+            return try ModelContainer(
+                for: WorkspaceHistoryRecord.self,
+                ServiceHistoryRecord.self,
+                ServiceActionRecord.self,
+                WindowStateRecord.self
+            )
+        } catch {
+            Log.general.error("Failed to open persistent history store: \(error.localizedDescription)")
+            Log.general.warning("Falling back to in-memory history store for this app launch.")
+            do {
+                let inMemoryConfiguration = ModelConfiguration(isStoredInMemoryOnly: true)
+                return try ModelContainer(
+                    for: WorkspaceHistoryRecord.self,
+                    ServiceHistoryRecord.self,
+                    ServiceActionRecord.self,
+                    WindowStateRecord.self,
+                    configurations: inMemoryConfiguration
+                )
+            } catch {
+                fatalError("Unable to initialize SwiftData container: \(error.localizedDescription)")
+            }
+        }
     }
 
     var body: some Scene {
