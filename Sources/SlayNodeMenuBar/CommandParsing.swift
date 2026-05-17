@@ -239,17 +239,11 @@ enum CommandParser {
             return true
         }
 
-        if trimmed.hasPrefix("["),
-           let bracketEnd = trimmed.lastIndex(of: "]"),
-           bracketEnd < trimmed.index(before: trimmed.endIndex),
-           trimmed[trimmed.index(after: bracketEnd)] == ":" {
-            let suffix = String(trimmed[trimmed.index(after: trimmed.index(after: bracketEnd))...])
-            return suffix.prefix { $0.isNumber }.isEmpty == false
+        if portFromHostPortLiteral(trimmed) != nil {
+            return true
         }
 
-        guard let colonIndex = trimmed.lastIndex(of: ":") else { return false }
-        let suffix = String(trimmed[trimmed.index(after: colonIndex)...])
-        return suffix.prefix { $0.isNumber }.isEmpty == false
+        return hasExplicitNumericPortSuffix(trimmed)
     }
 
     private static func extractInlinePort(from token: String) -> Int? {
@@ -323,20 +317,7 @@ enum CommandParser {
     private static func extractTrailingPort(from value: String) -> Int? {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        if trimmed.hasPrefix("[") {
-            guard let bracketEnd = trimmed.lastIndex(of: "]") else { return nil }
-            let colonIndex = trimmed.index(after: bracketEnd)
-            guard colonIndex < trimmed.endIndex, trimmed[colonIndex] == ":" else { return nil }
-            let portStart = trimmed.index(after: colonIndex)
-            return parsePortPrefix(String(trimmed[portStart...]))
-        }
-
-        guard let colonIndex = trimmed.lastIndex(of: ":") else {
-            return nil
-        }
-
-        let portStart = trimmed.index(after: colonIndex)
-        return parsePortPrefix(String(trimmed[portStart...]))
+        return portFromHostPortLiteral(trimmed)
     }
 
     private static func parsePortPrefix(_ value: String) -> Int? {
@@ -347,6 +328,56 @@ enum CommandParser {
             return nil
         }
         return port
+    }
+
+    private static func portFromHostPortLiteral(_ value: String) -> Int? {
+        if value.hasPrefix("[") {
+            guard let bracketEnd = value.lastIndex(of: "]"),
+                  bracketEnd < value.index(before: value.endIndex) else {
+                return nil
+            }
+            let colonIndex = value.index(after: bracketEnd)
+            guard value[colonIndex] == ":" else { return nil }
+            let portStart = value.index(after: colonIndex)
+            return parsePortPrefix(String(value[portStart...]))
+        }
+
+        let colonCount = value.reduce(into: 0) { count, character in
+            if character == ":" {
+                count += 1
+            }
+        }
+
+        // Bare IPv6 literals like "::1" should not be mistaken as host:port.
+        guard colonCount == 1, let colonIndex = value.lastIndex(of: ":") else {
+            return nil
+        }
+
+        let portStart = value.index(after: colonIndex)
+        return parsePortPrefix(String(value[portStart...]))
+    }
+
+    private static func hasExplicitNumericPortSuffix(_ value: String) -> Bool {
+        if value.hasPrefix("["),
+           let bracketEnd = value.lastIndex(of: "]"),
+           bracketEnd < value.index(before: value.endIndex) {
+            let colonIndex = value.index(after: bracketEnd)
+            guard value[colonIndex] == ":" else { return false }
+            let suffix = value[value.index(after: colonIndex)...]
+            return suffix.first?.isNumber == true
+        }
+
+        let colonCount = value.reduce(into: 0) { count, character in
+            if character == ":" {
+                count += 1
+            }
+        }
+        guard colonCount == 1, let colonIndex = value.lastIndex(of: ":") else {
+            return false
+        }
+
+        let suffix = value[value.index(after: colonIndex)...]
+        return suffix.first?.isNumber == true
     }
 
     private static func unwrappedQuotedValue(_ value: String) -> String {
