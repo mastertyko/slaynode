@@ -46,7 +46,14 @@ extract_ports() {
 
 show_live_processes() {
   echo "=== Live process snapshot (Node/dev wrappers) ==="
-  ps -axo pid=,command= | grep -E '^[[:space:]]*[0-9]+ .*(node|npm|pnpm|yarn|npx|bun|deno)([[:space:]]|$)' | head -20 || true
+  ps -axo pid=,command= \
+    | awk '
+        $0 ~ /^[[:space:]]*[0-9]+ / &&
+        $0 ~ /(node|npm|pnpm|yarn|npx|bun|deno)([[:space:]]|$)/ {
+          print
+        }
+      ' \
+    | head -20 || true
 }
 
 show_samples() {
