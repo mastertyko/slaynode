@@ -27,7 +27,9 @@ extract_ports() {
       while (/(?:--(?:port|http-port|https-port)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
       while (/(?:--inspect-port\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:--inspect-port\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
+      while (/(?:--(?:inspect|inspect-brk|inspect-wait)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
       while (/(?:--(?:inspect|inspect-brk|inspect-wait)\s*=?\s*(?:[^:\s]+:))([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/(?:--(?:inspect|inspect-brk|inspect-wait)\s*=?\s*)(?:\[[^\]]+\]|localhost|0\.0\.0\.0|127(?:\.\d{1,3}){3}|::1)(?=[\s,;]|$)/g) { print "9229\n" }
       while (/(?:--(?:listen|listen-address|addr|address|bind|socket)\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:https?:\/\/[^:\s]+:)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0):([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
@@ -66,9 +68,12 @@ show_samples() {
     "WEB_PORT=\${WEB_PORT:-4174} pnpm dev"
     "API_PORT=\${API_PORT:=4200} pnpm dev"
     "INSPECT_PORT=\${INSPECT_PORT=9333} node --inspect app.js"
+    "node --inspect=9229 app.js"
     "node --inspect=127.0.0.1:9229 app.js"
+    "node --inspect-brk=localhost app.js"
     "node --inspect-port=127.0.0.1:9230 app.js"
     "node --inspect-wait=127.0.0.1:9330 app.js"
+    "node --inspect-wait=::1 app.js"
     "next dev --hostname [::1] --port=3000"
     "deno serve --listen 0.0.0.0:8787"
   )
