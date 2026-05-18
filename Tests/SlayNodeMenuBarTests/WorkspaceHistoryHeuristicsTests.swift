@@ -47,7 +47,7 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
         let tempRoot = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: tempRoot) }
 
-        for name in ["coverage", "out", "storybook-static", ".next", ".turbo", ".pnpm-store"] {
+        for name in ["coverage", "out", "storybook-static", ".next", ".turbo", ".pnpm-store", ".omx", ".codex", ".claude"] {
             let workspace = WorkspaceIdentity(
                 id: tempRoot.appendingPathComponent(name).path.lowercased(),
                 name: name,
@@ -106,6 +106,24 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
             id: gitPath.path.lowercased(),
             name: "session",
             rootPath: gitPath.path
+        )
+
+        XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
+    }
+
+    func testEligibleRecentWorkspaceRejectsOMXStatePaths() throws {
+        let tempRoot = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+        let omxStatePath = tempRoot
+            .appendingPathComponent("frontend")
+            .appendingPathComponent(".omx")
+            .appendingPathComponent("state")
+        try FileManager.default.createDirectory(at: omxStatePath, withIntermediateDirectories: true)
+
+        let workspace = WorkspaceIdentity(
+            id: omxStatePath.path.lowercased(),
+            name: "frontend",
+            rootPath: omxStatePath.path
         )
 
         XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))

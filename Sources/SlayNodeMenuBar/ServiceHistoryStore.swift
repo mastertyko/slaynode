@@ -3,11 +3,14 @@ import SwiftData
 
 enum WorkspaceHistoryHeuristics {
     private static let disallowedNames: Set<String> = [
+        ".codex",
         ".git",
         ".hg",
+        ".omx",
         ".svn",
         ".bin",
         ".cache",
+        ".claude",
         ".next",
         ".nuxt",
         ".pnpm-store",
