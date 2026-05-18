@@ -46,6 +46,22 @@ final class ProcessToolingExclusionsTests: XCTestCase {
         )
     }
 
+    func testExcludesOMXRuntimeCommandFragments() {
+        XCTAssertTrue(
+            ProcessToolingExclusions.isExcluded(
+                executable: "/opt/homebrew/bin/node",
+                command: "/Users/test/.omx/team/daily/worktrees/worker-1/node_modules/.bin/tsx run.ts"
+            )
+        )
+
+        XCTAssertTrue(
+            ProcessToolingExclusions.isExcluded(
+                executable: "/opt/homebrew/bin/node",
+                command: "/Users/test/.omx/state/cache/process-snapshot.js"
+            )
+        )
+    }
+
     func testExcludesCodexNativeHookExecutableName() {
         XCTAssertTrue(
             ProcessToolingExclusions.isExcluded(

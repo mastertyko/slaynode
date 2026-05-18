@@ -29,6 +29,8 @@ enum ProcessToolingExclusions {
         "/node_modules/oh-my-codex/",
         "/oh-my-codex/dist/",
         "/oh-my-codex/src/",
+        "/.omx/team/",
+        "/.omx/state/",
         "/node_modules/oh-my-openagent/",
         "/lib/node_modules/oh-my-openagent/",
         "/node_modules/oh-my-opencode/",
