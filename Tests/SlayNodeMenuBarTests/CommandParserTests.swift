@@ -184,6 +184,13 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 5173])
     }
 
+    func testInferPortsFromPrivateIPv4HostTokens() {
+        let tokens = ["node", "server.js", "10.20.30.40:4173/graphql", "192.168.0.12:3000,"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000, 4173])
+    }
+
     func testInferPortsDoesNotTreatBareIPv6AddressAsPort() {
         let ports = CommandParser.inferPorts(from: ["node", "server.js", "[::1]"])
 
@@ -198,6 +205,13 @@ final class CommandParserTests: XCTestCase {
 
     func testInferPortsIgnoresOutOfRangeValues() {
         let tokens = ["node", "server.js", "--port=0", "--inspect=127.0.0.1:65536"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertTrue(ports.isEmpty)
+    }
+
+    func testInferPortsIgnoresInvalidIPv4HostTokens() {
+        let tokens = ["node", "server.js", "999.20.30.40:4173", "1.2.3:3000"]
         let ports = CommandParser.inferPorts(from: tokens)
 
         XCTAssertTrue(ports.isEmpty)

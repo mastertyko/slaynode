@@ -413,7 +413,28 @@ enum CommandParser {
             lowered.contains("127.") ||
             lowered.contains("0.0.0.0:") ||
             lowered.contains("[::") ||
-            token.contains("://")
+            token.contains("://") ||
+            looksLikeIPv4HostPort(token)
+    }
+
+    private static func looksLikeIPv4HostPort(_ token: String) -> Bool {
+        guard let colonIndex = token.lastIndex(of: ":") else { return false }
+        let rawHost = token[..<colonIndex].trimmingCharacters(in: .whitespacesAndNewlines)
+        let host = rawHost.split(separator: "/").last.map(String.init) ?? String(rawHost)
+        let octets = host.split(separator: ".")
+
+        guard octets.count == 4 else { return false }
+
+        for octet in octets {
+            guard !octet.isEmpty,
+                  octet.allSatisfy(\.isNumber),
+                  let value = Int(octet),
+                  (0...255).contains(value) else {
+                return false
+            }
+        }
+
+        return true
     }
 
     private static func isValidPort(_ value: Int) -> Bool {
