@@ -22,6 +22,15 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(tokens, ["node", "server.js", "path\\"])
     }
 
+    func testFirstScriptTokenDetectsTypeScriptEntrypointsOutsideSrcFolders() {
+        let tokens = ["node", "/Users/demo/app/scripts/dev-server.ts", "--watch"]
+
+        XCTAssertEqual(
+            CommandParser.firstScriptToken(from: tokens),
+            "/Users/demo/app/scripts/dev-server.ts"
+        )
+    }
+
     func testDescriptorDetectsNextJS() {
         let tokens = ["node_modules/.bin/next", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)

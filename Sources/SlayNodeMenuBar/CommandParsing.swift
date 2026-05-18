@@ -160,7 +160,10 @@ enum CommandParser {
         return tokens.first(where: { token in
             guard !token.hasPrefix("-") else { return false }
             if token.contains("node_modules/.bin") { return true }
-            if token.hasSuffix(".js") || token.hasSuffix(".mjs") || token.hasSuffix(".cjs") { return true }
+            if token.hasSuffix(".js") || token.hasSuffix(".mjs") || token.hasSuffix(".cjs") ||
+                token.hasSuffix(".ts") || token.hasSuffix(".tsx") || token.hasSuffix(".mts") || token.hasSuffix(".cts") {
+                return true
+            }
             if token.contains("next") || token.contains("vite") || token.contains("nuxt") { return true }
             return token.contains("/src/") || token.contains("/server/")
         })
