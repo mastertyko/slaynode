@@ -8,9 +8,45 @@ PROCESS_NAME="SlayNodeMenuBar"
 BUNDLE_ID="se.slaynode.menubar"
 APP_BUNDLE="$ROOT_DIR/${APP_NAME}.app"
 APP_BINARY="$APP_BUNDLE/Contents/MacOS/${PROCESS_NAME}"
+KILL_STRATEGY="bundle"
+
+kill_existing_bundle_instances() {
+  local pids=()
+  while IFS= read -r pid; do
+    [[ -z "$pid" ]] && continue
+    local command
+    command="$(ps -p "$pid" -o command= 2>/dev/null || true)"
+    if [[ "$command" == "$APP_BINARY"* ]]; then
+      pids+=("$pid")
+    fi
+  done < <(pgrep -x "$PROCESS_NAME" || true)
+
+  if [[ ${#pids[@]} -eq 0 ]]; then
+    return
+  fi
+
+  kill "${pids[@]}" >/dev/null 2>&1 || true
+}
+
+kill_existing_all_instances() {
+  pkill -x "$PROCESS_NAME" >/dev/null 2>&1 || true
+}
 
 kill_existing() {
-  pkill -x "$PROCESS_NAME" >/dev/null 2>&1 || true
+  case "$KILL_STRATEGY" in
+    bundle)
+      kill_existing_bundle_instances
+      ;;
+    all)
+      kill_existing_all_instances
+      ;;
+    none)
+      ;;
+    *)
+      echo "❌ Internal error: unknown kill strategy '$KILL_STRATEGY'" >&2
+      exit 2
+      ;;
+  esac
 }
 
 build_app() {
@@ -22,12 +58,34 @@ open_app() {
 }
 
 usage() {
-  echo "usage: $0 [run|--debug|--logs|--telemetry|--verify]" >&2
+  echo "usage: $0 [run|--debug|--logs|--telemetry|--verify] [--no-kill|--kill-all]" >&2
   exit "${1:-2}"
 }
 
-if [[ "$MODE" == "--help" || "$MODE" == "-h" || "$MODE" == "help" ]]; then
-  usage 0
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --help|-h|help)
+      usage 0
+      ;;
+    --no-kill)
+      KILL_STRATEGY="none"
+      ;;
+    --kill-all)
+      KILL_STRATEGY="all"
+      ;;
+    run|--debug|debug|--logs|logs|--telemetry|telemetry|--verify|verify)
+      POSITIONAL+=("$1")
+      ;;
+    *)
+      usage
+      ;;
+  esac
+  shift
+done
+
+if [[ ${#POSITIONAL[@]} -gt 0 ]]; then
+  MODE="${POSITIONAL[0]}"
 fi
 
 kill_existing
