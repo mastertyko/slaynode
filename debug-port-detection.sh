@@ -3,11 +3,12 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-usage: ./debug-port-detection.sh [--live-only|--samples-only]
+usage: ./debug-port-detection.sh [--live-only|--samples-only|--command <text>]
 
 Options:
   --live-only     Show only current process snapshot.
   --samples-only  Run only sample-command port extraction.
+  --command TEXT  Run extraction for one explicit command string.
   -h, --help      Show this help text.
 USAGE
 }
@@ -87,25 +88,53 @@ show_samples() {
 }
 
 MODE="all"
-case "${1:-}" in
-  "" )
-    ;;
-  --live-only)
-    MODE="live"
-    ;;
-  --samples-only)
-    MODE="samples"
-    ;;
-  -h|--help)
-    usage
-    exit 0
-    ;;
-  *)
-    echo "❌ Unknown option: ${1}" >&2
-    usage >&2
+CUSTOM_COMMAND=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --live-only)
+      MODE="live"
+      ;;
+    --samples-only)
+      MODE="samples"
+      ;;
+    --command)
+      shift
+      if [[ $# -eq 0 ]]; then
+        echo "❌ Missing value for --command" >&2
+        usage >&2
+        exit 2
+      fi
+      MODE="command"
+      CUSTOM_COMMAND="$1"
+      ;;
+    --command=*)
+      MODE="command"
+      CUSTOM_COMMAND="${1#--command=}"
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "❌ Unknown option: ${1}" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+  shift
+done
+
+if [[ "$MODE" == "command" ]]; then
+  if [[ -z "$CUSTOM_COMMAND" ]]; then
+    echo "❌ --command requires a non-empty value" >&2
     exit 2
-    ;;
-esac
+  fi
+  echo "=== Single command extraction ==="
+  echo "Command: $CUSTOM_COMMAND"
+  extract_ports "$CUSTOM_COMMAND"
+  exit 0
+fi
 
 if [[ "$MODE" == "all" || "$MODE" == "live" ]]; then
   show_live_processes
