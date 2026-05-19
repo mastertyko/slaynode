@@ -15,6 +15,37 @@ INFO_PLIST_TEMPLATE="${ROOT_DIR}/XcodeSupport/Info.plist"
 PLIST_BUDDY="/usr/libexec/PlistBuddy"
 CONFIGURATION_SET=false
 
+require_cmd() {
+  local command_name="$1"
+
+  if [[ "$command_name" == */* ]]; then
+    if [[ ! -x "$command_name" ]]; then
+      echo "❌ Missing executable: ${command_name}" >&2
+      exit 1
+    fi
+    return
+  fi
+
+  command -v "$command_name" >/dev/null 2>&1 || {
+    echo "❌ Missing command: ${command_name}" >&2
+    exit 1
+  }
+}
+
+run_preflight() {
+  local required_commands=(
+    swift
+    codesign
+    iconutil
+    install_name_tool
+    "${PLIST_BUDDY}"
+  )
+
+  for required in "${required_commands[@]}"; do
+    require_cmd "$required"
+  done
+}
+
 usage() {
   cat <<EOF
 usage: $0 [debug|release] [--generate-icons]
@@ -65,6 +96,8 @@ esac
 if [[ -z "${DEVELOPER_DIR:-}" && -d "/Applications/Xcode.app/Contents/Developer" ]]; then
   export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
 fi
+
+run_preflight
 
 verify_brand_assets() {
   local missing=()
