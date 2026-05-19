@@ -4,7 +4,13 @@ set -euo pipefail
 # Test script to simulate different types of development servers
 # This helps verify that SlayNode can detect various server types
 
+DURATION_SECONDS="${1:-3600}"
 PIDS=()
+
+if ! [[ "$DURATION_SECONDS" =~ ^[0-9]+$ ]] || [[ "$DURATION_SECONDS" -lt 1 ]]; then
+  echo "❌ Usage: $0 [duration-seconds>=1]" >&2
+  exit 2
+fi
 
 cleanup() {
   if [[ ${#PIDS[@]} -eq 0 ]]; then
@@ -22,23 +28,33 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
+start_simulated_process() {
+  local label="$1"
+  local command_line="$2"
+
+  /bin/bash -c "exec -a '$command_line' sleep '$DURATION_SECONDS'" &
+  local pid=$!
+  PIDS+=("${pid}")
+
+  echo "${label} test process PID: ${pid}"
+  echo "   Simulated command: ${command_line}"
+}
+
 echo "🚀 Starting test development servers..."
 echo "You can run these in separate terminal windows to test SlayNode detection"
+echo "Simulation duration per process: ${DURATION_SECONDS}s"
 echo ""
 
 echo "1. Next.js dev server (simulated):"
-echo "   sleep 3600 &"
-echo "   echo 'Simulating: npx next dev' with PID \$!"
+echo "   /bin/bash -c \"exec -a 'node .../next dev --port 3000' sleep ${DURATION_SECONDS}\" &"
 echo ""
 
 echo "2. Vite dev server (simulated):"
-echo "   sleep 3600 &"
-echo "   echo 'Simulating: npm run dev' with PID \$!"
+echo "   /bin/bash -c \"exec -a 'node .../vite --host 0.0.0.0 --port 5173' sleep ${DURATION_SECONDS}\" &"
 echo ""
 
 echo "3. Express server (simulated):"
-echo "   sleep 3600 &"
-echo "   echo 'Simulating: node server.js' with PID \$!"
+echo "   /bin/bash -c \"exec -a 'node .../server.js --inspect=127.0.0.1:9229' sleep ${DURATION_SECONDS}\" &"
 echo ""
 
 echo "4. Create actual test processes:"
@@ -46,22 +62,19 @@ echo ""
 
 # Create some test processes that simulate different server types
 echo "Starting simulated Next.js process..."
-sleep 3600 &
-NEXT_PID=$!
-PIDS+=("${NEXT_PID}")
-echo "Next.js test process PID: $NEXT_PID"
+start_simulated_process \
+  "Next.js" \
+  "node /Users/demo/app/node_modules/.bin/next dev --port 3000"
 
-echo "Starting simulated Vite process..."  
-sleep 3600 &
-VITE_PID=$!
-PIDS+=("${VITE_PID}")
-echo "Vite test process PID: $VITE_PID"
+echo "Starting simulated Vite process..."
+start_simulated_process \
+  "Vite" \
+  "node /Users/demo/app/node_modules/.bin/vite --host 0.0.0.0 --port 5173"
 
 echo "Starting simulated Express process..."
-sleep 3600 &
-EXPR_PID=$!
-PIDS+=("${EXPR_PID}")
-echo "Express test process PID: $EXPR_PID"
+start_simulated_process \
+  "Express" \
+  "node /Users/demo/api/server.js --inspect=127.0.0.1:9229"
 
 echo ""
 echo "Test processes started. Open SlayNode to see if they're detected."
