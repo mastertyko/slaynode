@@ -43,6 +43,8 @@ The project uses Swift Package Manager for dependency management.
 swift test
 ```
 
+To preserve other running SlayNode instances from different clones, `script/build_and_run.sh` now only stops processes launched from the current bundle path by default. Use `--kill-all` to restore global `pkill` behavior, or `--no-kill` to skip shutdown entirely.
+
 ### Build Debug Bundle
 ```bash
 ./build.sh debug
@@ -81,6 +83,15 @@ You can also trigger the release workflow manually with `workflow_dispatch` if y
 ### Running Tests
 ```bash
 swift test
+```
+
+### Local Diagnostics Helpers
+```bash
+# Run only one command through port extraction regexes
+./debug-port-detection.sh --command "node --inspect-wait=127.0.0.1:9330 app.js"
+
+# Use realistic simulated command lines for manual detection checks (default: 3600s)
+./test-servers.sh 120
 ```
 
 ## Architecture Overview
