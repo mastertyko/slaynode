@@ -116,8 +116,7 @@ enum CommandParser {
             }
 
             if token.contains("://"),
-               let components = URLComponents(string: token),
-               let port = components.port {
+               let port = extractURLPort(from: token) {
                 collected.insert(port)
                 continue
             }
@@ -322,6 +321,18 @@ enum CommandParser {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
 
         return portFromHostPortLiteral(trimmed)
+    }
+
+    private static func extractURLPort(from token: String) -> Int? {
+        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sanitized = trimmed.trimmingCharacters(in: CharacterSet(charactersIn: ",;.)]"))
+        guard let components = URLComponents(string: sanitized),
+              let port = components.port,
+              isValidPort(port) else {
+            return nil
+        }
+
+        return port
     }
 
     private static func parsePortPrefix(_ value: String) -> Int? {

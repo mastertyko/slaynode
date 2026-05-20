@@ -200,6 +200,13 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 4173])
     }
 
+    func testInferPortsFromURLTokenWithTrailingPunctuation() {
+        let tokens = ["node", "server.js", "https://localhost:5443/graphql),"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [5443])
+    }
+
     func testInferPortsDoesNotTreatBareIPv6AddressAsPort() {
         let ports = CommandParser.inferPorts(from: ["node", "server.js", "[::1]"])
 
