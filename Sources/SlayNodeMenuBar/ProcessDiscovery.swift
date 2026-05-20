@@ -164,7 +164,7 @@ struct ProcessDiscovery: Sendable {
                 currentPid = Int32(line.dropFirst())
             case "n":
                 guard let currentPid, result[currentPid] == nil else { continue }
-                let path = String(line.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines)
+                let path = sanitizedWorkingDirectoryPath(from: String(line.dropFirst()))
                 if !path.isEmpty {
                     result[currentPid] = path
                 }
@@ -174,6 +174,16 @@ struct ProcessDiscovery: Sendable {
         }
 
         return result
+    }
+
+    private static func sanitizedWorkingDirectoryPath(from rawPath: String) -> String {
+        let trimmed = rawPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        let deletedSuffix = " (deleted)"
+        if trimmed.hasSuffix(deletedSuffix) {
+            return String(trimmed.dropLast(deletedSuffix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        return trimmed
     }
 
     private func enrichProcesses(_ processes: [NodeProcess]) async -> [NodeProcess] {

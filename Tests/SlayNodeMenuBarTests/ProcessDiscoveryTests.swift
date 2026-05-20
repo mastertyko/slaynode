@@ -92,6 +92,22 @@ final class ProcessDiscoveryTests: XCTestCase {
         XCTAssertEqual(directories[101], "/Users/test/api")
     }
 
+    func testParseWorkingDirectoriesStripsDeletedSuffix() {
+        let output = """
+        p200
+        fcwd
+        n/Users/test/frontend (deleted)
+        p201
+        fcwd
+        n/Users/test/api
+        """
+
+        let directories = ProcessDiscovery.parseWorkingDirectories(from: output)
+
+        XCTAssertEqual(directories[200], "/Users/test/frontend")
+        XCTAssertEqual(directories[201], "/Users/test/api")
+    }
+
     #if DEBUG
     func testDiscoveryAndProcessProviderUsePromotedProcessShape() async throws {
         let psOutput = """
