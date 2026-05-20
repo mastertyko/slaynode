@@ -427,6 +427,7 @@ enum CommandParser {
             lowered.contains("127.") ||
             lowered.contains("0.0.0.0:") ||
             lowered.contains("[::") ||
+            lowered.contains("*:") ||
             token.contains("://") ||
             looksLikeIPv4HostPort(token)
     }
