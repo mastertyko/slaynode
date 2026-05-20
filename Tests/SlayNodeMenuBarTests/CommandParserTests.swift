@@ -253,6 +253,18 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(inlinePath, "/tmp/slaynode-web")
     }
 
+    func testInferWorkingDirectoryTrimsTrailingPunctuationFromInlineFlags() {
+        let path = CommandParser.inferWorkingDirectory(from: ["next", "--workspace=/tmp/slaynode-web,"])
+
+        XCTAssertEqual(path, "/tmp/slaynode-web")
+    }
+
+    func testInferWorkingDirectoryTrimsTrailingPunctuationFromValueFlags() {
+        let path = CommandParser.inferWorkingDirectory(from: ["npm", "--prefix", "/tmp/slaynode-api;", "run", "dev"])
+
+        XCTAssertEqual(path, "/tmp/slaynode-api")
+    }
+
     func testInferWorkingDirectoryFromPrefixFlag() {
         let path = CommandParser.inferWorkingDirectory(from: ["npm", "--prefix", "~/Projects/app", "run", "dev"])
 
