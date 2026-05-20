@@ -39,6 +39,7 @@ enum ProcessToolingExclusions {
         "codex-native-hook",
         "codex-native-pre-post",
         "/.codex/plugins/cache/",
+        "/.codex/worktrees/",
         "gitstatusd",
         "sourcekit-lsp",
         "esbuild --service",

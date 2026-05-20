@@ -62,6 +62,15 @@ final class ProcessToolingExclusionsTests: XCTestCase {
         )
     }
 
+    func testExcludesCodexWorktreeRuntimeCommandFragments() {
+        XCTAssertTrue(
+            ProcessToolingExclusions.isExcluded(
+                executable: "/opt/homebrew/bin/node",
+                command: "/Users/test/.codex/worktrees/abcd/repo/node_modules/.bin/tsx src/dev.ts"
+            )
+        )
+    }
+
     func testExcludesCodexNativeHookExecutableName() {
         XCTAssertTrue(
             ProcessToolingExclusions.isExcluded(
