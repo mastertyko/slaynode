@@ -439,7 +439,8 @@ enum CommandParser {
             lowered.contains("[::") ||
             lowered.contains("*:") ||
             token.contains("://") ||
-            looksLikeIPv4HostPort(token)
+            looksLikeIPv4HostPort(token) ||
+            looksLikeHostnamePort(token)
     }
 
     private static func looksLikeIPv4HostPort(_ token: String) -> Bool {
@@ -460,6 +461,19 @@ enum CommandParser {
         }
 
         return true
+    }
+
+    private static func looksLikeHostnamePort(_ token: String) -> Bool {
+        guard let colonIndex = token.lastIndex(of: ":") else { return false }
+        let hostSlice = token[..<colonIndex].trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !hostSlice.isEmpty else { return false }
+
+        let host = hostSlice.split(separator: "/").last.map(String.init) ?? String(hostSlice)
+        guard host.contains("."), host.contains(where: \.isLetter) else { return false }
+        guard !host.contains(where: \.isWhitespace) else { return false }
+
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: ".-"))
+        return host.unicodeScalars.allSatisfy { allowed.contains($0) }
     }
 
     private static func isValidPort(_ value: Int) -> Bool {

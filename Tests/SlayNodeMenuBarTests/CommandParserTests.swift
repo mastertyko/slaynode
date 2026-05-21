@@ -221,6 +221,13 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 4173])
     }
 
+    func testInferPortsFromHostnameHostTokens() {
+        let tokens = ["node", "server.js", "api.local:4173/graphql", "dev.internal:3000,"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000, 4173])
+    }
+
     func testInferPortsFromURLTokenWithTrailingPunctuation() {
         let tokens = ["node", "server.js", "https://localhost:5443/graphql),"]
         let ports = CommandParser.inferPorts(from: tokens)
@@ -249,6 +256,13 @@ final class CommandParserTests: XCTestCase {
 
     func testInferPortsIgnoresInvalidIPv4HostTokens() {
         let tokens = ["node", "server.js", "999.20.30.40:4173", "1.2.3:3000"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertTrue(ports.isEmpty)
+    }
+
+    func testInferPortsIgnoresAmbiguousTokenWithoutHostnameSignal() {
+        let tokens = ["node", "server.js", "build:3000"]
         let ports = CommandParser.inferPorts(from: tokens)
 
         XCTAssertTrue(ports.isEmpty)
