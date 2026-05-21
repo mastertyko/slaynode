@@ -79,6 +79,20 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [4173, 9230])
     }
 
+    func testInferPortsFromInlinePortFlagsWithTrailingPunctuation() {
+        let tokens = ["node", "server.js", "--port=3000,", "--inspect-port=9230;"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000, 9230])
+    }
+
+    func testInferPortsFromSeparateFlagArgumentsWithTrailingPunctuation() {
+        let tokens = ["vite", "--port", "4173,", "--inspect", "127.0.0.1:9230;"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [4173, 9230])
+    }
+
     func testInferPortsFromDefaultInspectFlags() {
         let tokens = ["node", "--inspect", "server.js", "--inspect-brk", "--inspect-wait"]
         let ports = CommandParser.inferPorts(from: tokens)
@@ -164,6 +178,19 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 4173, 8080, 9229, 9333])
     }
 
+    func testInferPortsFromEnvironmentAssignmentsWithShellDefaultsContainingURLs() {
+        let tokens = [
+            "PORT=${PORT:-http://localhost:3000}",
+            "DEBUG_PORT=${DEBUG_PORT:-https://127.0.0.1:9229/graphql},",
+            "npm",
+            "run",
+            "dev"
+        ]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000, 9229])
+    }
+
     func testInferPortsFromSocketAddressFlags() {
         let tokens = [
             "deno",
@@ -207,6 +234,13 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 4173])
     }
 
+    func testInferPortsFromHostnameHostTokens() {
+        let tokens = ["node", "server.js", "api.local:4173/graphql", "dev.internal:3000,"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000, 4173])
+    }
+
     func testInferPortsFromURLTokenWithTrailingPunctuation() {
         let tokens = ["node", "server.js", "https://localhost:5443/graphql),"]
         let ports = CommandParser.inferPorts(from: tokens)
@@ -235,6 +269,13 @@ final class CommandParserTests: XCTestCase {
 
     func testInferPortsIgnoresInvalidIPv4HostTokens() {
         let tokens = ["node", "server.js", "999.20.30.40:4173", "1.2.3:3000"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertTrue(ports.isEmpty)
+    }
+
+    func testInferPortsIgnoresAmbiguousTokenWithoutHostnameSignal() {
+        let tokens = ["node", "server.js", "build:3000"]
         let ports = CommandParser.inferPorts(from: tokens)
 
         XCTAssertTrue(ports.isEmpty)
@@ -359,6 +400,15 @@ extension CommandParserTests {
         XCTAssertEqual(descriptor.details, "Mode: PREVIEW")
         XCTAssertEqual(descriptor.category, .bundler)
         XCTAssertEqual(descriptor.portHints, [5173])
+    }
+
+    func testViteModeDetectionIsCaseInsensitiveAndPunctuationTolerant() {
+        let tokens = ["vite", "DEV,", "--port", "5173"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.displayName, "Vite")
+        XCTAssertEqual(descriptor.details, "Mode: DEV")
     }
 
     func testWebpackServeCommandIsDetected() {
