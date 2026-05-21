@@ -402,6 +402,15 @@ extension CommandParserTests {
         XCTAssertEqual(descriptor.portHints, [5173])
     }
 
+    func testViteModeDetectionIsCaseInsensitiveAndPunctuationTolerant() {
+        let tokens = ["vite", "DEV,", "--port", "5173"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.displayName, "Vite")
+        XCTAssertEqual(descriptor.details, "Mode: DEV")
+    }
+
     func testWebpackServeCommandIsDetected() {
         let tokens = ["webpack", "serve", "--mode", "development"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)

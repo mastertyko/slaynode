@@ -353,13 +353,15 @@ enum ProcessClassifier {
             case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular:
                 return { tokens in
                     let modes = ["dev", "start", "serve", "preview", "build"]
-                    guard let mode = tokens.first(where: { modes.contains($0) }) else { return nil }
+                    let normalized = ProcessClassifier.normalizedLifecycleTokens(from: tokens)
+                    guard let mode = normalized.first(where: { modes.contains($0) }) else { return nil }
                     return "Mode: \(mode.uppercased())"
                 }
             case .expo:
                 return { tokens in
-                    if tokens.contains("start") { return "Mode: START" }
-                    if tokens.contains("start:web") { return "Mode: WEB" }
+                    let normalized = ProcessClassifier.normalizedLifecycleTokens(from: tokens)
+                    if normalized.contains("start:web") { return "Mode: WEB" }
+                    if normalized.contains("start") { return "Mode: START" }
                     return nil
                 }
             default:
@@ -458,5 +460,11 @@ enum ProcessClassifier {
         let component = (token.lowercased() as NSString).lastPathComponent
         let stem = (component as NSString).deletingPathExtension
         return names.contains(component) || names.contains(stem)
+    }
+
+    private static func normalizedLifecycleTokens(from tokens: [String]) -> [String] {
+        tokens.map {
+            $0.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: ",;"))
+        }
     }
 }
