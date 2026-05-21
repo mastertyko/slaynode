@@ -191,6 +191,44 @@ enum CommandParser {
         "-C"
     ])
 
+    private static let portFlags = Set([
+        "--port",
+        "-p",
+        "--inspect",
+        "--inspect-brk",
+        "--inspect-wait",
+        "--inspect-port",
+        "--http-port",
+        "--https-port",
+        "--listen",
+        "--listen-address",
+        "--addr",
+        "--address",
+        "--bind",
+        "--socket"
+    ])
+
+    private static let defaultInspectFlags = Set([
+        "--inspect",
+        "--inspect-brk",
+        "--inspect-wait"
+    ])
+
+    private static let inlineDefaultInspectPrefixes = [
+        "--inspect=",
+        "--inspect-brk=",
+        "--inspect-wait="
+    ]
+
+    private static let inlinePortRegexes: [NSRegularExpression] = [
+        #"^--?(?:port|p)=(.+)$"#,
+        #"^--?(?:inspect|inspect-brk|inspect-wait|inspect-port)=(.+)$"#,
+        #"^--?(?:listen|listen-address|addr|address|bind|socket)=(.+)$"#,
+        #"^-p(\d+)$"#
+    ].compactMap { pattern in
+        try? NSRegularExpression(pattern: pattern, options: .caseInsensitive)
+    }
+
     private static func inlineWorkingDirectoryPath(from token: String) -> String? {
         for flag in workingDirectoryValueFlags {
             let prefix = "\(flag)="
@@ -202,34 +240,16 @@ enum CommandParser {
     }
 
     private static func isPortFlag(_ token: String) -> Bool {
-        let normalized = token.lowercased()
-        return [
-            "--port",
-            "-p",
-            "--inspect",
-            "--inspect-brk",
-            "--inspect-wait",
-            "--inspect-port",
-            "--http-port",
-            "--https-port",
-            "--listen",
-            "--listen-address",
-            "--addr",
-            "--address",
-            "--bind",
-            "--socket"
-        ].contains(normalized)
+        portFlags.contains(token.lowercased())
     }
 
     private static func isDefaultInspectFlag(_ token: String) -> Bool {
-        let normalized = token.lowercased()
-        return normalized == "--inspect" || normalized == "--inspect-brk" || normalized == "--inspect-wait"
+        defaultInspectFlags.contains(token.lowercased())
     }
 
     private static func isInlineDefaultInspectFlagWithoutPort(_ token: String) -> Bool {
         let normalized = token.lowercased()
-        let prefixes = ["--inspect=", "--inspect-brk=", "--inspect-wait="]
-        guard let prefix = prefixes.first(where: normalized.hasPrefix) else { return false }
+        guard let prefix = inlineDefaultInspectPrefixes.first(where: normalized.hasPrefix) else { return false }
 
         let value = String(token.dropFirst(prefix.count))
         guard extractPortCandidate(from: value) == nil else { return false }
@@ -252,16 +272,8 @@ enum CommandParser {
     }
 
     private static func extractInlinePort(from token: String) -> Int? {
-        let patterns = [
-            #"^--?(?:port|p)=(.+)$"#,
-            #"^--?(?:inspect|inspect-brk|inspect-wait|inspect-port)=(.+)$"#,
-            #"^--?(?:listen|listen-address|addr|address|bind|socket)=(.+)$"#,
-            #"^-p(\d+)$"#
-        ]
-
-        for pattern in patterns {
-            guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-                  let match = regex.firstMatch(in: token, range: NSRange(location: 0, length: token.utf16.count)),
+        for regex in inlinePortRegexes {
+            guard let match = regex.firstMatch(in: token, range: NSRange(location: 0, length: token.utf16.count)),
                   match.numberOfRanges > 1,
                   let range = Range(match.range(at: 1), in: token) else {
                 continue
