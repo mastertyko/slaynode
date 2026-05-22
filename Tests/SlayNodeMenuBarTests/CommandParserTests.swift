@@ -199,13 +199,15 @@ final class CommandParserTests: XCTestCase {
             "APP_PORT=${APP_PORT:-\"8080\"}",
             "ALT_PORT=${ALT_PORT:=9229}",
             "FALLBACK_PORT=${FALLBACK_PORT=9333}",
+            "URL_PORT=${URL_PORT:-http://localhost:5050}",
+            "GRAPH_PORT=${GRAPH_PORT:=https://127.0.0.1:6060/graphql}",
             "npm",
             "run",
             "dev"
         ]
         let ports = CommandParser.inferPorts(from: tokens)
 
-        XCTAssertEqual(ports, [3000, 4173, 8080, 9229, 9333])
+        XCTAssertEqual(ports, [3000, 4173, 5050, 6060, 8080, 9229, 9333])
     }
 
     func testInferPortsFromEnvironmentAssignmentsWithURLShellDefaults() {
