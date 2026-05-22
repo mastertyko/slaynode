@@ -297,6 +297,10 @@ enum CommandParser {
             return port
         }
 
+        if let port = extractURLPort(from: normalizedValue) {
+            return port
+        }
+
         // Some shell snippets end values with punctuation (e.g. "PORT=3000,")
         // and should still resolve to the intended port value.
         guard !normalizedValue.contains(":") else { return nil }
