@@ -331,7 +331,7 @@ enum CommandParser {
 
     private static func extractURLPort(from token: String) -> Int? {
         let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
-        let sanitized = trimmed.trimmingCharacters(in: CharacterSet(charactersIn: ",;.)]"))
+        let sanitized = trimmed.trimmingCharacters(in: CharacterSet(charactersIn: ",;.)]}\"'"))
         guard let components = URLComponents(string: sanitized),
               let port = components.port,
               isValidPort(port) else {
