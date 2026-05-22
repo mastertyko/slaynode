@@ -47,7 +47,20 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
         let tempRoot = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: tempRoot) }
 
-        for name in ["coverage", "out", "storybook-static", ".next", ".turbo", ".pnpm-store", ".omx", ".codex", ".claude"] {
+        for name in [
+            "coverage",
+            "out",
+            "storybook-static",
+            ".next",
+            ".turbo",
+            ".pnpm-store",
+            ".omx",
+            ".codex",
+            ".claude",
+            ".build",
+            ".swiftpm",
+            "DerivedData"
+        ] {
             let workspace = WorkspaceIdentity(
                 id: tempRoot.appendingPathComponent(name).path.lowercased(),
                 name: name,
