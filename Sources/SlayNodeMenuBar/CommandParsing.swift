@@ -88,6 +88,11 @@ enum CommandParser {
                 continue
             }
 
+            if let systemPropertyPort = extractSystemPropertyPort(from: token) {
+                collected.insert(systemPropertyPort)
+                continue
+            }
+
             if let inlinePort = extractInlinePort(from: token) {
                 collected.insert(inlinePort)
                 continue
@@ -305,6 +310,27 @@ enum CommandParser {
         // and should still resolve to the intended port value.
         guard !normalizedValue.contains(":") else { return nil }
         return parsePortPrefix(normalizedValue)
+    }
+
+    private static func extractSystemPropertyPort(from token: String) -> Int? {
+        guard token.hasPrefix("-D"),
+              let separator = token.firstIndex(of: "=") else { return nil }
+
+        let keyStart = token.index(token.startIndex, offsetBy: 2)
+        guard keyStart < separator else { return nil }
+
+        let key = token[keyStart..<separator]
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let rawValue = String(token[token.index(after: separator)...])
+        guard isPortEnvironmentKey(key.replacingOccurrences(of: ".", with: "_")) else { return nil }
+
+        let trimmedValue = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedValue = unwrappedQuotedValue(trimmedValue)
+
+        return extractPortCandidate(from: normalizedValue)
+            ?? extractURLPort(from: normalizedValue)
+            ?? parsePortPrefix(normalizedValue)
     }
 
     private static func isPortEnvironmentKey(_ key: String) -> Bool {
