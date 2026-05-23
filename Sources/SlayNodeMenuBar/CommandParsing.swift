@@ -325,6 +325,10 @@ enum CommandParser {
 
         let rawValue = String(property[property.index(after: separator)...])
         let normalizedValue = unwrappedQuotedValue(rawValue.trimmingCharacters(in: .whitespacesAndNewlines))
+        if normalizedValue.contains("://"),
+           let port = extractURLPort(from: normalizedValue) {
+            return port
+        }
         return extractPortCandidate(from: normalizedValue) ?? parsePortPrefix(normalizedValue)
     }
 

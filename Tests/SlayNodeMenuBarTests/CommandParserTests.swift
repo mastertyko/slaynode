@@ -204,6 +204,19 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [8080, 9001])
     }
 
+    func testInferPortsFromURLValuedJVMPortProperties() {
+        let tokens = [
+            "java",
+            "-Dserver.port=http://localhost:8080",
+            "-Dmanagement.server.port=https://127.0.0.1:9443/health",
+            "-jar",
+            "app.jar"
+        ]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [8080, 9443])
+    }
+
     func testInferPortsFromSocketAddressFlags() {
         let tokens = [
             "deno",
