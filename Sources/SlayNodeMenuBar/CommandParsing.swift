@@ -88,6 +88,11 @@ enum CommandParser {
                 continue
             }
 
+            if let jvmPropertyPort = extractJVMPropertyPort(from: token) {
+                collected.insert(jvmPropertyPort)
+                continue
+            }
+
             if let inlinePort = extractInlinePort(from: token) {
                 collected.insert(inlinePort)
                 continue
@@ -306,6 +311,21 @@ enum CommandParser {
         // and should still resolve to the intended port value.
         guard !normalizedValue.contains(":") else { return nil }
         return parsePortPrefix(normalizedValue)
+    }
+
+    private static func extractJVMPropertyPort(from token: String) -> Int? {
+        guard token.hasPrefix("-D") else { return nil }
+        let property = String(token.dropFirst(2))
+        guard let separator = property.firstIndex(of: "=") else { return nil }
+
+        let key = property[..<separator]
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        guard key == "port" || key.hasSuffix(".port") else { return nil }
+
+        let rawValue = String(property[property.index(after: separator)...])
+        let normalizedValue = unwrappedQuotedValue(rawValue.trimmingCharacters(in: .whitespacesAndNewlines))
+        return extractPortCandidate(from: normalizedValue) ?? parsePortPrefix(normalizedValue)
     }
 
     private static func isPortEnvironmentKey(_ key: String) -> Bool {
