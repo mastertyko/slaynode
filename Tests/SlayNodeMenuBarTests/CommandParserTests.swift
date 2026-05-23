@@ -164,6 +164,19 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 4173, 8080, 9229, 9333])
     }
 
+    func testInferPortsFromEnvironmentAssignmentsWithURLValues() {
+        let tokens = [
+            "APP_PORT=http://localhost:4173",
+            "PUBLIC_PORT=https://127.0.0.1:5443/graphql,",
+            "npm",
+            "run",
+            "dev"
+        ]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [4173, 5443])
+    }
+
     func testInferPortsFromSocketAddressFlags() {
         let tokens = [
             "deno",
