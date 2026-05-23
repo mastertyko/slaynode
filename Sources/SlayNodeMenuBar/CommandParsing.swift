@@ -420,6 +420,10 @@ enum CommandParser {
             guard let range = expression.range(of: separator) else { continue }
             let candidate = String(expression[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
             let unwrappedCandidate = unwrappedQuotedValue(candidate)
+            if unwrappedCandidate.contains("://"),
+               let urlPort = extractURLPort(from: unwrappedCandidate) {
+                return urlPort
+            }
             return extractPortCandidate(from: unwrappedCandidate) ?? parsePortPrefix(unwrappedCandidate)
         }
 
