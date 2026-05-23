@@ -24,6 +24,11 @@ extract_ports() {
       while (/(?:^|\s)[A-Z_]*PORT=\$\{[^}:]+:=(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)\}(?:\D|$)/g) { print "$1\n" }
       while (/(?:^|\s)[A-Z_]*PORT=\$\{[^}-]+-(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)\}(?:\D|$)/g) { print "$1\n" }
       while (/(?:^|\s)[A-Z_]*PORT=\$\{[^}=]+=(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)\}(?:\D|$)/g) { print "$1\n" }
+      while (/(?:^|\s)[A-Z_]*PORT=(?:[\x27"]?)https?:\/\/[^:\s]+:([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/(?:^|\s)[A-Z_]*PORT=\$\{[^}:]+:-(?:[\x27"]?)https?:\/\/[^:\s]+:([0-9]{1,5})(?:[\x27"]?)\}(?:\D|$)/g) { print "$1\n" }
+      while (/(?:^|\s)[A-Z_]*PORT=\$\{[^}:]+:=(?:[\x27"]?)https?:\/\/[^:\s]+:([0-9]{1,5})(?:[\x27"]?)\}(?:\D|$)/g) { print "$1\n" }
+      while (/(?:^|\s)-D(?:[\w.-]*\.)?port=(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)(?:\D|$)/ig) { print "$1\n" }
+      while (/(?:^|\s)-D(?:[\w.-]*\.)?port=(?:[\x27"]?)https?:\/\/[^:\s]+:([0-9]{1,5})(?:[\x27"]?)(?:\D|$)/ig) { print "$1\n" }
       while (/(?:--(?:port|http-port|https-port)\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:--(?:port|http-port|https-port)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
       while (/(?:--inspect-port\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
@@ -68,7 +73,11 @@ show_samples() {
     "PORT=\"3002\" npm run dev"
     "WEB_PORT=\${WEB_PORT:-4174} pnpm dev"
     "API_PORT=\${API_PORT:=4200} pnpm dev"
+    "APP_PORT=http://localhost:4173 npm run dev"
+    "PUBLIC_PORT=\${PUBLIC_PORT:-https://127.0.0.1:5443/graphql} pnpm dev"
     "INSPECT_PORT=\${INSPECT_PORT=9333} node --inspect app.js"
+    "java -Dserver.port=8080 -Dmanagement.server.port=9001 -jar app.jar"
+    "java -Dserver.port=http://localhost:8080 -jar app.jar"
     "node --inspect=9229 app.js"
     "node --inspect=127.0.0.1:9229 app.js"
     "node --inspect-brk=localhost app.js"
