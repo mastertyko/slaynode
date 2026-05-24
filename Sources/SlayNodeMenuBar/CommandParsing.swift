@@ -298,6 +298,10 @@ enum CommandParser {
             return port
         }
 
+        if let port = extractURLPort(from: normalizedValue) {
+            return port
+        }
+
         if let port = extractShellDefaultPort(from: normalizedValue) {
             return port
         }

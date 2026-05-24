@@ -169,6 +169,20 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 4173, 9229])
     }
 
+    func testInferPortsFromEnvironmentAssignmentsWithURLValues() {
+        let tokens = [
+            "PORT=http://localhost:3000",
+            "WEB_PORT=\"https://127.0.0.1:4173/app\"",
+            "API_PORT='http://0.0.0.0:8080,'",
+            "npm",
+            "run",
+            "dev"
+        ]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000, 4173, 8080])
+    }
+
     func testInferPortsFromEnvironmentAssignmentsWithShellDefaults() {
         let tokens = [
             "PORT=${PORT:-3000}",
