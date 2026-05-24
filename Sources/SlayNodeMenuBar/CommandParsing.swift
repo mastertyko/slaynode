@@ -312,11 +312,15 @@ enum CommandParser {
     }
 
     private static func extractPortCandidate(from value: String) -> Int? {
-        if let directPort = Int(value), isValidPort(directPort) {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let unwrapped = unwrappedQuotedValue(trimmed)
+        let sanitized = unwrapped.trimmingCharacters(in: CharacterSet(charactersIn: ",;)"))
+
+        if let directPort = Int(sanitized), isValidPort(directPort) {
             return directPort
         }
 
-        return extractTrailingPort(from: value)
+        return extractTrailingPort(from: sanitized)
     }
 
     private static func extractTrailingPort(from value: String) -> Int? {
