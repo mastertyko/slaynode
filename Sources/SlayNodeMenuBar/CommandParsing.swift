@@ -88,6 +88,11 @@ enum CommandParser {
                 continue
             }
 
+            if let jvmPort = extractJVMPortProperty(from: token) {
+                collected.insert(jvmPort)
+                continue
+            }
+
             if let inlinePort = extractInlinePort(from: token) {
                 collected.insert(inlinePort)
                 continue
@@ -313,6 +318,30 @@ enum CommandParser {
             character == "_" || character == "-"
         }
         return parts.last == "port"
+    }
+
+    private static func extractJVMPortProperty(from token: String) -> Int? {
+        guard token.hasPrefix("-D"),
+              let separator = token.firstIndex(of: "="),
+              separator > token.index(token.startIndex, offsetBy: 2) else {
+            return nil
+        }
+
+        let keyStart = token.index(token.startIndex, offsetBy: 2)
+        let key = String(token[keyStart..<separator]).lowercased()
+        guard isJVMPortPropertyKey(key) else { return nil }
+
+        let valueStart = token.index(after: separator)
+        let rawValue = String(token[valueStart...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        return extractPortCandidate(from: rawValue)
+    }
+
+    private static func isJVMPortPropertyKey(_ key: String) -> Bool {
+        guard !key.isEmpty else { return false }
+        let separators = CharacterSet(charactersIn: ".-_")
+        let keyParts = key.components(separatedBy: separators).filter { !$0.isEmpty }
+        guard let last = keyParts.last else { return false }
+        return last == "port"
     }
 
     private static func extractPortCandidate(from value: String) -> Int? {
