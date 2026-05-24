@@ -334,6 +334,9 @@ enum CommandParser {
         let valueStart = token.index(after: separator)
         let rawValue = String(token[valueStart...]).trimmingCharacters(in: .whitespacesAndNewlines)
         return extractPortCandidate(from: rawValue)
+            ?? extractURLPort(from: rawValue)
+            ?? extractShellDefaultPort(from: rawValue)
+            ?? parsePortPrefix(rawValue)
     }
 
     private static func isJVMPortPropertyKey(_ key: String) -> Bool {
