@@ -233,6 +233,21 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 4173])
     }
 
+    func testInferPortsFromJVMPortProperties() {
+        let tokens = [
+            "java",
+            "-Dserver.port=8080",
+            "-Dquarkus.http.port=http://localhost:9000",
+            "-Ddebug.port=${DEBUG_PORT:-9230}",
+            "-Dreport=3000",
+            "-jar",
+            "app.jar"
+        ]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [8080, 9000, 9230])
+    }
+
     func testInferPortsFromURLTokenWithTrailingPunctuation() {
         let tokens = ["node", "server.js", "https://localhost:5443/graphql),"]
         let ports = CommandParser.inferPorts(from: tokens)
