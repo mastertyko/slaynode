@@ -148,6 +148,19 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 4173, 9229])
     }
 
+    func testInferPortsFromEnvironmentAssignmentsWithURLValues() {
+        let tokens = [
+            "PORT=http://localhost:3000",
+            "VITE_PORT=https://127.0.0.1:4173/graphql",
+            "npm",
+            "run",
+            "dev"
+        ]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000, 4173])
+    }
+
     func testInferPortsFromEnvironmentAssignmentsWithShellDefaults() {
         let tokens = [
             "PORT=${PORT:-3000}",
