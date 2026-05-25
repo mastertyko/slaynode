@@ -419,7 +419,15 @@ enum CommandParser {
             guard let range = expression.range(of: separator) else { continue }
             let candidate = String(expression[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
             let unwrappedCandidate = unwrappedQuotedValue(candidate)
-            return extractPortCandidate(from: unwrappedCandidate) ?? parsePortPrefix(unwrappedCandidate)
+            if let port = extractPortCandidate(from: unwrappedCandidate) {
+                return port
+            }
+
+            if let port = extractURLPort(from: unwrappedCandidate) {
+                return port
+            }
+
+            return parsePortPrefix(unwrappedCandidate)
         }
 
         return nil
