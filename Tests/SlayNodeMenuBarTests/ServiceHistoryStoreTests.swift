@@ -124,6 +124,18 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertEqual(record.openCount, 2)
     }
 
+    func testRecordActionUpdatesWorkspaceWithoutIncrementingOpenCount() throws {
+        let store = try makeStore()
+        let workspace = WorkspaceIdentity(id: "fixture", name: "fixture", rootPath: NSTemporaryDirectory())
+        let service = makeService(name: "api", kind: .api, workspace: workspace, status: .running)
+
+        store.record(snapshot: ServiceSnapshot(services: [service], dependencies: [], generatedAt: Date(timeIntervalSince1970: 1)))
+        store.record(action: .restart, on: service, outcome: "Restarted")
+
+        let record = try XCTUnwrap(store.modelContext.fetch(FetchDescriptor<WorkspaceHistoryRecord>()).first)
+        XCTAssertEqual(record.openCount, 1)
+    }
+
     func testRecordSnapshotSkipsIneligibleWorkspaceHistory() throws {
         let store = try makeStore()
         let workspace = WorkspaceIdentity(

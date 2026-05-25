@@ -84,7 +84,7 @@ final class ServiceHistoryStore {
 
         for workspace in Set(snapshot.services.compactMap(\.workspace))
             where WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace) {
-            upsert(workspace: workspace, seenAt: snapshot.generatedAt)
+            upsert(workspace: workspace, seenAt: snapshot.generatedAt, incrementOpenCount: true)
         }
 
         saveIfNeeded()
@@ -130,7 +130,7 @@ final class ServiceHistoryStore {
 
         if let workspace = service.workspace,
            WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace) {
-            upsert(workspace: workspace, seenAt: now)
+            upsert(workspace: workspace, seenAt: now, incrementOpenCount: false)
         }
 
         saveIfNeeded()
@@ -258,17 +258,20 @@ final class ServiceHistoryStore {
         record.lastSeenAt = seenAt
     }
 
-    private func upsert(workspace: WorkspaceIdentity, seenAt: Date) {
+    private func upsert(workspace: WorkspaceIdentity, seenAt: Date, incrementOpenCount: Bool) {
         let record: WorkspaceHistoryRecord
         if let existingRecord = fetchWorkspaceRecord(id: workspace.id) {
             record = existingRecord
-            record.openCount += 1
+            if incrementOpenCount {
+                record.openCount += 1
+            }
         } else {
             record = WorkspaceHistoryRecord(
                 id: workspace.id,
                 name: workspace.name,
                 rootPath: workspace.rootPath,
-                lastSeenAt: seenAt
+                lastSeenAt: seenAt,
+                openCount: incrementOpenCount ? 1 : 0
             )
             modelContext.insert(record)
         }
