@@ -47,7 +47,7 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
         let tempRoot = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: tempRoot) }
 
-        for name in ["coverage", "out", "storybook-static", ".next", ".turbo", ".pnpm-store", ".omx", ".codex", ".claude"] {
+        for name in ["coverage", "out", "storybook-static", ".next", ".turbo", ".pnpm-store", ".omx", ".codex", ".claude", ".build", ".swiftpm", "DerivedData"] {
             let workspace = WorkspaceIdentity(
                 id: tempRoot.appendingPathComponent(name).path.lowercased(),
                 name: name,
@@ -91,6 +91,27 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
         )
 
         XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
+    }
+
+    func testEligibleRecentWorkspaceRejectsBuildStatePathComponents() throws {
+        let tempRoot = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+
+        for component in [".build", ".swiftpm", "DerivedData"] {
+            let path = tempRoot
+                .appendingPathComponent("frontend")
+                .appendingPathComponent(component)
+                .appendingPathComponent("state")
+            try FileManager.default.createDirectory(at: path, withIntermediateDirectories: true)
+
+            let workspace = WorkspaceIdentity(
+                id: path.path.lowercased(),
+                name: "frontend",
+                rootPath: path.path
+            )
+
+            XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
+        }
     }
 
     func testEligibleRecentWorkspaceRejectsVersionControlMetadataPaths() throws {

@@ -3,10 +3,12 @@ import SwiftData
 
 enum WorkspaceHistoryHeuristics {
     private static let disallowedNames: Set<String> = [
+        ".build",
         ".codex",
         ".git",
         ".hg",
         ".omx",
+        ".swiftpm",
         ".svn",
         ".bin",
         ".cache",
@@ -21,6 +23,7 @@ enum WorkspaceHistoryHeuristics {
         "cache",
         "coverage",
         "dist",
+        "deriveddata",
         "node_modules",
         "out",
         "storybook-static",
