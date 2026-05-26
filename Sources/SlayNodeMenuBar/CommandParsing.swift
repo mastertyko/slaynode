@@ -175,9 +175,10 @@ enum CommandParser {
     }
 
     private static func sanitizePath(_ path: String) -> String {
-        let expanded = (path as NSString).expandingTildeInPath
-        let unwrapped = unwrappedQuotedValue(expanded.trimmingCharacters(in: .whitespacesAndNewlines))
-        return unwrapped.trimmingCharacters(in: CharacterSet(charactersIn: ",;)"))
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        let unwrapped = unwrappedQuotedValue(trimmed)
+        let expanded = (unwrapped as NSString).expandingTildeInPath
+        return expanded.trimmingCharacters(in: CharacterSet(charactersIn: ",;)"))
     }
 
     private static let workingDirectoryValueFlags = Set([

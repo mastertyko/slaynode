@@ -269,12 +269,19 @@ final class CommandParserTests: XCTestCase {
         XCTAssertTrue(path?.hasSuffix("Projects/demo") ?? false)
     }
 
+    func testInferWorkingDirectoryFromFlagWithQuotedTildePath() {
+        let path = CommandParser.inferWorkingDirectory(from: ["--cwd", "\"~/Projects/quoted\""])
+        XCTAssertTrue(path?.hasSuffix("Projects/quoted") ?? false)
+    }
+
     func testInferWorkingDirectoryFromProjectRootFlags() {
         let rootPath = CommandParser.inferWorkingDirectory(from: ["vite", "--root", "~/Projects/frontend"])
         let inlinePath = CommandParser.inferWorkingDirectory(from: ["next", "--workspace=/tmp/slaynode-web"])
+        let inlineQuotedPath = CommandParser.inferWorkingDirectory(from: ["next", "--workspace=\"~/Projects/inline\""])
 
         XCTAssertTrue(rootPath?.hasSuffix("Projects/frontend") ?? false)
         XCTAssertEqual(inlinePath, "/tmp/slaynode-web")
+        XCTAssertTrue(inlineQuotedPath?.hasSuffix("Projects/inline") ?? false)
     }
 
     func testInferWorkingDirectoryTrimsTrailingPunctuationFromInlineFlags() {
