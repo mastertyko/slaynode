@@ -30,6 +30,21 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
         XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
     }
 
+    func testEligibleRecentWorkspaceRejectsFilePath() throws {
+        let tempRoot = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+        let filePath = tempRoot.appendingPathComponent("workspace.txt")
+        try "not a directory".write(to: filePath, atomically: true, encoding: .utf8)
+
+        let workspace = WorkspaceIdentity(
+            id: filePath.path.lowercased(),
+            name: "workspace",
+            rootPath: filePath.path
+        )
+
+        XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
+    }
+
     func testEligibleRecentWorkspaceRejectsDisallowedFolderName() throws {
         let tempRoot = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: tempRoot) }
