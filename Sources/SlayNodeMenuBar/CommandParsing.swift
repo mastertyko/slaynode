@@ -301,7 +301,7 @@ enum CommandParser {
         // Some shell snippets end values with punctuation (e.g. "PORT=3000,")
         // and should still resolve to the intended port value.
         guard !normalizedValue.contains(":") else { return nil }
-        return parsePortPrefix(normalizedValue)
+        return parsePortValueWithTrailingPunctuation(normalizedValue)
     }
 
     private static func isPortEnvironmentKey(_ key: String) -> Bool {
@@ -329,7 +329,7 @@ enum CommandParser {
 
         // Separate flag values often include trailing punctuation (e.g. "--port 3000,").
         guard !normalized.contains(":") else { return nil }
-        return parsePortPrefix(normalized)
+        return parsePortValueWithTrailingPunctuation(normalized)
     }
 
     private static func extractTrailingPort(from value: String) -> Int? {
@@ -357,6 +357,25 @@ enum CommandParser {
               isValidPort(port) else {
             return nil
         }
+        return port
+    }
+
+    private static func parsePortValueWithTrailingPunctuation(_ value: String) -> Int? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let digits = trimmed.prefix { $0.isNumber }
+        guard !digits.isEmpty,
+              let port = Int(digits),
+              isValidPort(port) else {
+            return nil
+        }
+
+        let suffix = trimmed.dropFirst(digits.count)
+        guard suffix.allSatisfy({
+            $0.isWhitespace || ",;.)]".contains($0)
+        }) else {
+            return nil
+        }
+
         return port
     }
 

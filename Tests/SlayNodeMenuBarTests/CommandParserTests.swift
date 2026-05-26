@@ -103,6 +103,17 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 4173, 9229])
     }
 
+    func testInferPortsFromSeparateFlagArgumentsIgnoresNonNumericSuffixes() {
+        let tokens = [
+            "node",
+            "--port", "3000ms",
+            "--inspect-port", "9229x"
+        ]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertTrue(ports.isEmpty)
+    }
+
     func testInferPortsFromDefaultInspectFlags() {
         let tokens = ["node", "--inspect", "server.js", "--inspect-brk", "--inspect-wait"]
         let ports = CommandParser.inferPorts(from: tokens)
@@ -156,6 +167,13 @@ final class CommandParserTests: XCTestCase {
         let ports = CommandParser.inferPorts(from: tokens)
 
         XCTAssertEqual(ports, [3000, 4173])
+    }
+
+    func testInferPortsFromEnvironmentAssignmentsIgnoresNonNumericSuffixes() {
+        let tokens = ["PORT=3000ms", "WEB_PORT=4173x", "npm", "run", "dev"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertTrue(ports.isEmpty)
     }
 
     func testInferPortsFromEnvironmentAssignmentsWithQuotedValues() {
