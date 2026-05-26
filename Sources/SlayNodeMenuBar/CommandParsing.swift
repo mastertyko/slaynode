@@ -312,11 +312,23 @@ enum CommandParser {
     }
 
     private static func extractPortCandidate(from value: String) -> Int? {
-        if let directPort = Int(value), isValidPort(directPort) {
+        let normalized = normalizedPortCandidate(value)
+
+        if let directPort = Int(normalized), isValidPort(directPort) {
             return directPort
         }
 
-        return extractTrailingPort(from: value)
+        if let shellDefaultPort = extractShellDefaultPort(from: normalized) {
+            return shellDefaultPort
+        }
+
+        if let trailingPort = extractTrailingPort(from: normalized) {
+            return trailingPort
+        }
+
+        // Separate flag values often include trailing punctuation (e.g. "--port 3000,").
+        guard !normalized.contains(":") else { return nil }
+        return parsePortPrefix(normalized)
     }
 
     private static func extractTrailingPort(from value: String) -> Int? {
@@ -402,6 +414,12 @@ enum CommandParser {
         guard let first = value.first, let last = value.last, first == last else { return value }
         guard first == "\"" || first == "'" else { return value }
         return String(value.dropFirst().dropLast())
+    }
+
+    private static func normalizedPortCandidate(_ value: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let unwrapped = unwrappedQuotedValue(trimmed)
+        return unwrapped.trimmingCharacters(in: CharacterSet(charactersIn: ",;)]"))
     }
 
     private static func extractShellDefaultPort(from value: String) -> Int? {
