@@ -456,19 +456,6 @@ struct ProcessDiscovery: Sendable {
             return true
         }
 
-        if command.contains("/typescript/lib/tsserver.js") ||
-            command.contains("/typescript/lib/typingsinstaller.js") ||
-            command.contains("typescript-language-server") ||
-            command.contains("browser_use.skill_cli.daemon") ||
-            command.contains("gitstatusd") ||
-            command.contains("sourcekit-lsp") ||
-            command.contains("esbuild --service") ||
-            command.contains("esbuild --ping") ||
-            executable == "esbuild" ||
-            executable.contains("tsserver") {
-            return true
-        }
-
         if executable.contains("slaynodemenuba") || command.contains("slaynodemenuba") {
             return true
         }
