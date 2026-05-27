@@ -10,6 +10,7 @@ enum ServiceSanitizer {
         "auth-token",
         "authorization",
         "client-secret",
+        "cookie",
         "connection-string",
         "database-uri",
         "database-url",
