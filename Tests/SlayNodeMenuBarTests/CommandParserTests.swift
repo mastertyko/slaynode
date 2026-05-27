@@ -114,6 +114,13 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [9_230])
     }
 
+    func testInferPortsFromInlineInspectIPv4MappedIPv6HostPortValue() {
+        let tokens = ["node", "--inspect=[::ffff:127.0.0.1]:9230", "server.js"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [9_230])
+    }
+
     func testInferPortsFromInspectPortFlag() {
         let tokens = ["node", "--inspect-port", "9230", "--inspect-port=9231", "server.js"]
         let ports = CommandParser.inferPorts(from: tokens)
@@ -212,6 +219,13 @@ final class CommandParserTests: XCTestCase {
         let ports = CommandParser.inferPorts(from: tokens)
 
         XCTAssertEqual(ports, [5443])
+    }
+
+    func testInferPortsFromURLTokenWithIPv4MappedIPv6Host() {
+        let tokens = ["node", "server.js", "http://[::ffff:127.0.0.1]:5173/graphql"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [5173])
     }
 
     func testInferPortsDoesNotTreatBareIPv6AddressAsPort() {
