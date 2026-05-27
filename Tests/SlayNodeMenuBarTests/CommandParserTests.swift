@@ -369,6 +369,28 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [5173])
     }
 
+    func testPackageManagerWrapperParsesPnpmFilterRunCommand() {
+        let tokens = ["pnpm", "--filter", "web", "dev", "--", "--port", "3000"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.packageManager, "pnpm")
+        XCTAssertEqual(descriptor.script, "dev")
+        XCTAssertEqual(ports, [3000])
+    }
+
+    func testPackageManagerWrapperParsesPnpmFilterAliasRunCommand() {
+        let tokens = ["pnpm", "-F", "web", "dev", "--", "--port", "3001"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.packageManager, "pnpm")
+        XCTAssertEqual(descriptor.script, "dev")
+        XCTAssertEqual(ports, [3001])
+    }
+
     func testYarnWorkspaceScriptNameIsParsed() {
         let tokens = ["yarn", "workspace", "web", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
