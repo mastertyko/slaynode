@@ -302,6 +302,13 @@ final class CommandParserTests: XCTestCase {
 
         XCTAssertTrue(path?.hasSuffix("Projects/api") ?? false)
     }
+
+    func testInferWorkingDirectoryFromEscapedSpaceFlagValue() {
+        let tokens = CommandParser.tokenize("npm --cwd /Users/test/My\\ App run dev")
+        let path = CommandParser.inferWorkingDirectory(from: tokens)
+
+        XCTAssertEqual(path, "/Users/test/My App")
+    }
 }
 extension CommandParserTests {
     func testPackageManagerWrapperAddsMetadata() {
@@ -347,6 +354,19 @@ extension CommandParserTests {
 
         XCTAssertEqual(descriptor.packageManager, "pnpm")
         XCTAssertEqual(descriptor.script, "dev")
+    }
+
+    func testPackageManagerWrapperParsesNpmPrefixExecViteCommand() {
+        let tokens = ["npm", "--prefix", "app", "exec", "vite", "--", "--host", "127.0.0.1", "--port", "5173"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.packageManager, "npm")
+        XCTAssertEqual(descriptor.displayName, "Vite")
+        XCTAssertEqual(descriptor.script, "vite")
+        XCTAssertEqual(descriptor.category, .bundler)
+        XCTAssertEqual(ports, [5173])
     }
 
     func testYarnWorkspaceScriptNameIsParsed() {
