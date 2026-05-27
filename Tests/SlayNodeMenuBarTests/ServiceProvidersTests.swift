@@ -65,6 +65,23 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(redacted, "MONGODB_URL=*** --connection-string ***")
     }
 
+    func testSanitizerRedactsAuthorizationHeaders() {
+        let command = "node server.js --header 'Authorization: Bearer secret-token' --header 'X-Safe: value'"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("secret-token"))
+        XCTAssertTrue(redacted.contains("Authorization: ***"))
+        XCTAssertTrue(redacted.contains("X-Safe: value"))
+    }
+
+    func testSanitizerRedactsNpmAuthTokenArguments() {
+        let command = "npm config set //registry.npmjs.org/:_authToken npm-secret"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("npm-secret"))
+        XCTAssertEqual(redacted, "npm config set //registry.npmjs.org/:_authToken ***")
+    }
+
     func testSanitizerRedactsInlineSecretFlags() {
         let command = "node server.js --password=secret --client-secret=client-secret"
         let redacted = ServiceSanitizer.redactSecrets(in: command)

@@ -85,6 +85,10 @@ You can also trigger the release workflow manually with `workflow_dispatch` if y
 swift test
 ```
 
+### Improvement Backlog
+
+See [IMPROVEMENT_BACKLOG.md](IMPROVEMENT_BACKLOG.md) for the current maintenance and hardening backlog found during repo audits.
+
 ### Local Diagnostics Helpers
 ```bash
 # Run only one command through port extraction regexes

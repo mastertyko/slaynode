@@ -79,6 +79,7 @@ swift test
 - [INSTALL.md](INSTALL.md) for installation, source-build, and troubleshooting
 - [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for architecture, release automation, and contributor context
 - [docs/ICON_SYSTEM.md](docs/ICON_SYSTEM.md) for the brand asset pipeline
+- [docs/IMPROVEMENT_BACKLOG.md](docs/IMPROVEMENT_BACKLOG.md) for the current maintenance and hardening backlog
 
 ## License
 

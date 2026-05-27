@@ -135,18 +135,20 @@ enum CommandParser {
         for (index, token) in tokenPairs {
             if workingDirectoryValueFlags.contains(token) {
                 let nextIndex = index + 1
-                if nextIndex < tokens.count {
-                    return sanitizePath(tokens[nextIndex])
+                if nextIndex < tokens.count,
+                   let sanitizedPath = sanitizePath(tokens[nextIndex]) {
+                    return sanitizedPath
                 }
             }
 
-            if let path = inlineWorkingDirectoryPath(from: token) {
-                return sanitizePath(path)
+            if let path = inlineWorkingDirectoryPath(from: token),
+               let sanitizedPath = sanitizePath(path) {
+                return sanitizedPath
             }
         }
 
         if let script = firstScriptToken(from: tokens) {
-            let expanded = sanitizePath(script)
+            guard let expanded = sanitizePath(script) else { return nil }
             if FileManager.default.fileExists(atPath: expanded) {
                 return (expanded as NSString).deletingLastPathComponent
             }
@@ -174,10 +176,13 @@ enum CommandParser {
         }
     }
 
-    private static func sanitizePath(_ path: String) -> String {
-        let expanded = (path as NSString).expandingTildeInPath
-        let unwrapped = unwrappedQuotedValue(expanded.trimmingCharacters(in: .whitespacesAndNewlines))
-        return unwrapped.trimmingCharacters(in: CharacterSet(charactersIn: ",;)"))
+    private static func sanitizePath(_ path: String) -> String? {
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        let unwrapped = unwrappedQuotedValue(trimmed)
+        let punctuationTrimmed = unwrapped.trimmingCharacters(in: CharacterSet(charactersIn: ",;)"))
+        let expanded = (punctuationTrimmed as NSString).expandingTildeInPath
+        let normalized = expanded.trimmingCharacters(in: .whitespacesAndNewlines)
+        return normalized.isEmpty ? nil : normalized
     }
 
     private static let workingDirectoryValueFlags = Set([

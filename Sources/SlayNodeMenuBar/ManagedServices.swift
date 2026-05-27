@@ -6,6 +6,7 @@ enum ServiceSanitizer {
         "access-token",
         "api-key",
         "apikey",
+        "authtoken",
         "auth-token",
         "authorization",
         "client-secret",
@@ -45,6 +46,12 @@ enum ServiceSanitizer {
 
             if let inlineAssignment = redactInlineAssignment(token) {
                 redacted.append(inlineAssignment)
+                index += 1
+                continue
+            }
+
+            if let header = redactSensitiveHeader(token) {
+                redacted.append(header)
                 index += 1
                 continue
             }
@@ -90,6 +97,16 @@ enum ServiceSanitizer {
         guard sensitiveFlagName(from: flag) != nil else { return nil }
 
         return "\(flag)=***"
+    }
+
+    private static func redactSensitiveHeader(_ token: String) -> String? {
+        guard let separator = token.firstIndex(of: ":") else { return nil }
+
+        let headerName = String(token[..<separator])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard sensitiveFlagName(from: headerName) != nil else { return nil }
+
+        return "\(headerName): ***"
     }
 
     private static func redactURLSecrets(in token: String) -> String {

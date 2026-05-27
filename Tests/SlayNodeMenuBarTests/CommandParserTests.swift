@@ -265,6 +265,18 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(path, "/tmp/slaynode-api")
     }
 
+    func testInferWorkingDirectoryIgnoresBlankFlagValues() {
+        let path = CommandParser.inferWorkingDirectory(from: ["npm", "--cwd", "", "run", "dev"])
+
+        XCTAssertNil(path)
+    }
+
+    func testInferWorkingDirectoryExpandsQuotedTildeFlagValues() {
+        let path = CommandParser.inferWorkingDirectory(from: ["npm", "--prefix", "\"~/Projects/app,\"", "run", "dev"])
+
+        XCTAssertTrue(path?.hasSuffix("Projects/app") ?? false)
+    }
+
     func testInferWorkingDirectoryFromPrefixFlag() {
         let path = CommandParser.inferWorkingDirectory(from: ["npm", "--prefix", "~/Projects/app", "run", "dev"])
 
