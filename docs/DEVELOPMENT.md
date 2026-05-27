@@ -85,6 +85,14 @@ You can also trigger the release workflow manually with `workflow_dispatch` if y
 swift test
 ```
 
+### Full Local Verification Gate
+```bash
+./script/static-safety-check.sh && \
+bash -n build.sh release.sh notarize.sh test-servers.sh debug-port-detection.sh script/build_and_run.sh && \
+plutil -lint XcodeSupport/Info.plist SlayNode.entitlements && \
+swift test
+```
+
 ### Improvement Backlog
 
 See [IMPROVEMENT_BACKLOG.md](IMPROVEMENT_BACKLOG.md) for the current maintenance and hardening backlog found during repo audits.
