@@ -51,9 +51,12 @@ enum ServiceSanitizer {
                 continue
             }
 
-            if let header = redactSensitiveHeader(token) {
-                redacted.append(header)
-                index += 1
+            if let header = redactSensitiveHeader(
+                token,
+                nextToken: index + 1 < tokens.count ? tokens[index + 1] : nil
+            ) {
+                redacted.append(header.value)
+                index += header.consumesNextToken ? 2 : 1
                 continue
             }
 
@@ -100,14 +103,17 @@ enum ServiceSanitizer {
         return "\(flag)=***"
     }
 
-    private static func redactSensitiveHeader(_ token: String) -> String? {
+    private static func redactSensitiveHeader(_ token: String, nextToken: String?) -> (value: String, consumesNextToken: Bool)? {
         guard let separator = token.firstIndex(of: ":") else { return nil }
 
         let headerName = String(token[..<separator])
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard sensitiveFlagName(from: headerName) != nil else { return nil }
+        let headerValue = token[token.index(after: separator)...]
+        let hasInlineValue = !headerValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let consumesNextToken = !hasInlineValue && nextToken != nil
 
-        return "\(headerName): ***"
+        return ("\(headerName): ***", consumesNextToken)
     }
 
     private static func redactURLSecrets(in token: String) -> String {

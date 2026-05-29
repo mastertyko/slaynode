@@ -87,6 +87,17 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertTrue(redacted.contains("X-Safe: value"))
     }
 
+    func testSanitizerRedactsHeaderValuesWhenHeaderAndValueAreSeparateTokens() {
+        let command = "curl -H Cookie: sid=abc123 -H Proxy-Authorization: bearer-token -H X-Safe: value"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("sid=abc123"))
+        XCTAssertFalse(redacted.contains("bearer-token"))
+        XCTAssertTrue(redacted.contains("Cookie: ***"))
+        XCTAssertTrue(redacted.contains("Proxy-Authorization: ***"))
+        XCTAssertTrue(redacted.contains("X-Safe: value"))
+    }
+
     func testSanitizerRedactsNpmAuthTokenArguments() {
         let command = "npm config set //registry.npmjs.org/:_authToken npm-secret"
         let redacted = ServiceSanitizer.redactSecrets(in: command)
