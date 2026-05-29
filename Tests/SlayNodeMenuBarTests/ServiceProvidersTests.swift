@@ -113,6 +113,38 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(redacted, "node server.js --password=*** --client-secret=***")
     }
 
+    func testSanitizerRemovesKnownSecretFixturesFromOutput() {
+        let fixtures: [(command: String, leaked: [String])] = [
+            (
+                "node api.js --token abc123 --password hunter2",
+                ["abc123", "hunter2"]
+            ),
+            (
+                "curl https://user:pw@example.test/path?api_key=sk-live-123&safe=1",
+                ["user:pw", "sk-live-123"]
+            ),
+            (
+                "npm config set //registry.npmjs.org/:_authToken npm-secret-value",
+                ["npm-secret-value"]
+            ),
+            (
+                "node server.js --header 'Authorization: Bearer top-secret-token'",
+                ["top-secret-token"]
+            )
+        ]
+
+        for fixture in fixtures {
+            let redacted = ServiceSanitizer.redactSecrets(in: fixture.command)
+            for leakedValue in fixture.leaked {
+                XCTAssertFalse(
+                    redacted.contains(leakedValue),
+                    "Expected sanitizer to remove secret fixture value '\(leakedValue)' from: \(redacted)"
+                )
+            }
+            XCTAssertTrue(redacted.contains("***"), "Expected sanitized output marker in: \(redacted)")
+        }
+    }
+
     func testMakeProcessServiceRedactsSensitiveArguments() {
         let process = NodeProcess(
             pid: 4242,
