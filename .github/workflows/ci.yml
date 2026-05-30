@@ -50,6 +50,9 @@ jobs:
       - name: Run Tests
         run: swift test --parallel
 
+      - name: Verify debug port detection samples
+        run: ./debug-port-detection.sh --samples-only
+
       - name: Build App Bundle
         run: |
           chmod +x build.sh
