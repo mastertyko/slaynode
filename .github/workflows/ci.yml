@@ -53,6 +53,9 @@ jobs:
       - name: Run shared verification gate
         run: ./script/full_verification.sh
 
+      - name: Verify debug port detection samples
+        run: ./debug-port-detection.sh --samples-only
+
       - name: Build App Bundle
         run: |
           SLAYNODE_BUILD_NUMBER="${{ steps.metadata.outputs.build_number }}" ./build.sh release
