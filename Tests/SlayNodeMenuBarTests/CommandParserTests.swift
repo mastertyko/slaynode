@@ -391,6 +391,43 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [3001])
     }
 
+    func testPackageManagerWrapperParsesBunRunBunViteCommand() {
+        let tokens = ["bun", "--bun", "vite", "dev", "--port", "5174"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.packageManager, "bun")
+        XCTAssertEqual(descriptor.displayName, "Vite")
+        XCTAssertEqual(descriptor.script, "vite")
+        XCTAssertEqual(descriptor.category, .bundler)
+        XCTAssertEqual(ports, [5174])
+    }
+
+    func testPackageManagerWrapperParsesBunWatchCommand() {
+        let tokens = ["bun", "--watch", "src/server.ts", "--port", "4173"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.packageManager, "bun")
+        XCTAssertEqual(descriptor.script, "src/server.ts")
+        XCTAssertEqual(descriptor.runtime, "Bun")
+        XCTAssertEqual(ports, [4173])
+    }
+
+    func testPackageManagerWrapperParsesBunHotCommand() {
+        let tokens = ["bun", "--hot", "src/server.ts", "--inspect=127.0.0.1:9230"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.packageManager, "bun")
+        XCTAssertEqual(descriptor.script, "src/server.ts")
+        XCTAssertEqual(descriptor.runtime, "Bun")
+        XCTAssertEqual(ports, [9230])
+    }
+
     func testYarnWorkspaceScriptNameIsParsed() {
         let tokens = ["yarn", "workspace", "web", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
