@@ -500,6 +500,30 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [9230])
     }
 
+    func testDenoTaskCommandWithInlinePortIsDetected() {
+        let tokens = ["deno", "task", "dev", "--port", "8000"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Deno")
+        XCTAssertEqual(descriptor.runtime, "Deno")
+        XCTAssertEqual(descriptor.category, .runtime)
+        XCTAssertEqual(ports, [8000])
+    }
+
+    func testDenoTaskCommandWithPassthroughPortIsDetected() {
+        let tokens = ["deno", "task", "dev", "--", "--port=8080", "--host", "127.0.0.1"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Deno")
+        XCTAssertEqual(descriptor.runtime, "Deno")
+        XCTAssertEqual(descriptor.category, .runtime)
+        XCTAssertEqual(ports, [8080])
+    }
+
     func testYarnWorkspaceScriptNameIsParsed() {
         let tokens = ["yarn", "workspace", "web", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
