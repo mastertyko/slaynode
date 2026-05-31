@@ -536,5 +536,27 @@ extension CommandParserTests {
         XCTAssertEqual(descriptor.category, .backend)
         XCTAssertEqual(descriptor.portHints, [3333])
     }
+
+    func testNitroCommandIsDetectedAsBackend() {
+        let tokens = ["node", "node_modules/.bin/nitro", "dev"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.displayName, "Nitro")
+        XCTAssertEqual(descriptor.category, .backend)
+        XCTAssertEqual(descriptor.portHints, [3000])
+        XCTAssertEqual(descriptor.details, "Mode: DEV")
+    }
+
+    func testTanStackStartCommandIsDetectedAsWebFramework() {
+        let tokens = ["node", "node_modules/.bin/tanstack-start", "dev"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.displayName, "TanStack Start")
+        XCTAssertEqual(descriptor.category, .webFramework)
+        XCTAssertEqual(descriptor.portHints, [3000])
+        XCTAssertEqual(descriptor.details, "Mode: DEV")
+    }
 }
 #endif

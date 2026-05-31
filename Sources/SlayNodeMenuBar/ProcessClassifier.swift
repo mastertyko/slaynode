@@ -267,6 +267,8 @@ enum ProcessClassifier {
         case koa
         case hono
         case adonis
+        case nitro
+        case tanstackStart
         case storybook
         case parcel
         case webpackDevServer
@@ -295,6 +297,8 @@ enum ProcessClassifier {
             case .koa: return "Koa"
             case .hono: return "Hono"
             case .adonis: return "AdonisJS"
+            case .nitro: return "Nitro"
+            case .tanstackStart: return "TanStack Start"
             case .storybook: return "Storybook"
             case .parcel: return "Parcel"
             case .webpackDevServer: return "Webpack Dev Server"
@@ -329,8 +333,10 @@ enum ProcessClassifier {
                 return .componentWorkbench
             case .expo, .reactNative:
                 return .mobile
-            case .nest, .express, .fastify, .koa, .hono, .adonis:
+            case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro:
                 return .backend
+            case .tanstackStart:
+                return .webFramework
             case .turbo, .nx:
                 return .monorepo
             case .tsx, .nodemon:
@@ -350,7 +356,7 @@ enum ProcessClassifier {
 
         var detailsBuilder: (([String]) -> String?)? {
             switch self {
-            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular:
+            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular, .tanstackStart, .nitro:
                 return { tokens in
                     let modes = ["dev", "start", "serve", "preview", "build"]
                     guard let mode = tokens.first(where: { modes.contains($0) }) else { return nil }
@@ -381,6 +387,8 @@ enum ProcessClassifier {
             case .koa: return [3000]
             case .hono: return [3000]
             case .adonis: return [3333]
+            case .nitro: return [3000]
+            case .tanstackStart: return [3000]
             case .storybook: return [6006]
             case .parcel: return [1234]
             case .webpackDevServer: return [8080, 3000]
@@ -411,6 +419,14 @@ enum ProcessClassifier {
         (.koa, { tokens in tokens.contains { $0.contains("koa") } }),
         (.hono, { tokens in tokens.contains { $0.contains("hono") } }),
         (.adonis, { tokens in tokens.contains { $0.contains("@adonisjs") || $0.contains("adonis") } }),
+        (.nitro, { tokens in
+            tokens.contains { tokenMatchesCommand($0, names: ["nitro", "h3"]) } ||
+                tokens.contains { $0.contains("nitro") || $0.contains("@nitrojs") }
+        }),
+        (.tanstackStart, { tokens in
+            tokens.contains { tokenMatchesCommand($0, names: ["tanstack-start", "vinxi"]) } ||
+                tokens.contains { $0.contains("@tanstack/start") || $0.contains("tanstack-start") }
+        }),
         (.storybook, { tokens in tokens.contains { $0.contains("storybook") } }),
         (.parcel, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["parcel"]) } }),
         (.webpackDevServer, { tokens in
@@ -443,6 +459,9 @@ enum ProcessClassifier {
         if lowered.contains("angular") || lowered == "ng" { return [4200] }
         if lowered.contains("fastify") || lowered.contains("express") || lowered.contains("koa") || lowered.contains("hono") {
             return [3000, 4000]
+        }
+        if lowered.contains("nitro") || lowered.contains("tanstack-start") {
+            return [3000]
         }
         if lowered.contains("adonis") { return [3333] }
         if lowered.contains("react-scripts") { return [3000] }
