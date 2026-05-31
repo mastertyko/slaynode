@@ -401,6 +401,19 @@ final class ShellExecutorTests: XCTestCase {
         XCTAssertEqual(status, 0)
         XCTAssertEqual(output.trimmingCharacters(in: .whitespacesAndNewlines), "done")
     }
+
+    func testSystemShellExecutorTerminatesLongRunningCommandOnTimeout() async throws {
+        let executor = SystemShellExecutor()
+        let script = "sleep 2; echo done"
+
+        let startedAt = Date()
+        let (status, output) = try await executor.run("/bin/sh", arguments: ["-c", script], timeout: 0.2)
+        let elapsed = Date().timeIntervalSince(startedAt)
+
+        XCTAssertNotEqual(status, 0)
+        XCTAssertFalse(output.contains("done"))
+        XCTAssertLessThan(elapsed, 1.5)
+    }
     
     #if DEBUG
     func testMockShellExecutorReturnsConfiguredResponse() async throws {
