@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -49,6 +52,12 @@ jobs:
 
       - name: Run Tests
         run: swift test --parallel
+
+      - name: Check whitespace regressions
+        run: git diff --check -- . ':(exclude)Package.resolved'
+
+      - name: Validate debug port sample fixtures
+        run: ./debug-port-detection.sh --samples-only
 
       - name: Build App Bundle
         run: |
