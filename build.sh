@@ -152,6 +152,36 @@ APP_BUILD="${SLAYNODE_BUILD_NUMBER:-${APP_BUILD_DEFAULT}}"
 SPARKLE_FEED_URL="${SLAYNODE_SPARKLE_FEED_URL:-}"
 SPARKLE_PUBLIC_ED_KEY="${SLAYNODE_SPARKLE_PUBLIC_ED_KEY:-}"
 
+validate_bundle_metadata() {
+  local version="$1"
+  local build="$2"
+
+  if [[ ! "${version}" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]; then
+    echo "❌ Invalid SLAYNODE_VERSION value: '${version}' (expected numeric SemVer-like form, e.g. 1.0.0)." >&2
+    exit 2
+  fi
+
+  if [[ ! "${build}" =~ ^[0-9]+$ ]]; then
+    echo "❌ Invalid SLAYNODE_BUILD_NUMBER value: '${build}' (expected an integer)." >&2
+    exit 2
+  fi
+}
+
+validate_sparkle_pairing() {
+  local has_feed=false
+  local has_key=false
+  [[ -n "${SPARKLE_FEED_URL}" ]] && has_feed=true
+  [[ -n "${SPARKLE_PUBLIC_ED_KEY}" ]] && has_key=true
+
+  if [[ "${has_feed}" != "${has_key}" ]]; then
+    echo "❌ SLAYNODE_SPARKLE_FEED_URL and SLAYNODE_SPARKLE_PUBLIC_ED_KEY must both be set or both be empty." >&2
+    exit 2
+  fi
+}
+
+validate_bundle_metadata "${APP_VERSION}" "${APP_BUILD}"
+validate_sparkle_pairing
+
 SPARKLE_INFO=""
 if [[ -n "${SPARKLE_FEED_URL}" && -n "${SPARKLE_PUBLIC_ED_KEY}" ]]; then
   SPARKLE_FEED_URL_XML="$(xml_escape "${SPARKLE_FEED_URL}")"
