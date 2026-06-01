@@ -2,6 +2,7 @@
 set -euo pipefail
 
 TEST_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/slaynode-release-notes-test.XXXXXX")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 trap 'rm -rf "${TEST_ROOT}"' EXIT
 
 fail() {
@@ -29,7 +30,7 @@ make_repo() {
   local name="$1"
   local repo="${TEST_ROOT}/${name}"
   mkdir -p "${repo}/script"
-  cp "/Users/tyko/.codex/worktrees/5f6f/slaynode/script/extract_release_notes.sh" "${repo}/script/extract_release_notes.sh"
+  cp "${SCRIPT_DIR}/extract_release_notes.sh" "${repo}/script/extract_release_notes.sh"
   chmod +x "${repo}/script/extract_release_notes.sh"
   git -C "${repo}" init -q
   git -C "${repo}" config user.name "SlayNode Test"
