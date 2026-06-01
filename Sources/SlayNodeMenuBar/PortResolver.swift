@@ -155,9 +155,24 @@ struct PortResolver: Sendable {
     }
 
     private static func validPort(from value: String) -> Int? {
-        guard let port = Int(value), (1...65_535).contains(port) else {
+        let trimmed = value.trimmingCharacters(in: CharacterSet(charactersIn: " \t\r\n,;)"))
+
+        if let port = Int(trimmed), (1...65_535).contains(port) {
+            return port
+        }
+
+        guard !trimmed.isEmpty else { return nil }
+
+        let normalized = trimmed.lowercased()
+        guard let entry = normalized.withCString({ getservbyname($0, "tcp") }) else {
             return nil
         }
-        return port
+
+        let networkPort = UInt16(truncatingIfNeeded: entry.pointee.s_port)
+        let resolved = Int(UInt16(bigEndian: networkPort))
+        guard (1...65_535).contains(resolved) else {
+            return nil
+        }
+        return resolved
     }
 }

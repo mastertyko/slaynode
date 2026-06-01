@@ -38,8 +38,10 @@ final class PortResolverTests: XCTestCase {
 
     func testExtractPortHandlesIPv6WildcardAndInvalidValues() {
         XCTAssertEqual(PortResolver.extractPort(from: "[::]:5173"), 5173)
+        XCTAssertNotNil(PortResolver.extractPort(from: "*:http-alt"))
+        XCTAssertEqual(PortResolver.extractPort(from: "localhost:https"), 443)
         XCTAssertNil(PortResolver.extractPort(from: "[::1]"))
-        XCTAssertNil(PortResolver.extractPort(from: "localhost:http"))
+        XCTAssertNil(PortResolver.extractPort(from: "localhost:not-a-real-service"))
     }
     
     func testResolvesEmptyPidListReturnsEmptyDict() async {
