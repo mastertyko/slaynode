@@ -52,6 +52,21 @@ else
   echo "OK: no obvious secret fixtures detected in Sources/script/docs"
 fi
 
+print_section "Hardcoded local paths"
+local_path_matches="$(rg -n \
+  --glob '*.sh' \
+  --glob '*.md' \
+  --glob '*.yml' \
+  --glob '*.yaml' \
+  '/Users/[^/]+/(?:\\.codex|\\.config|Documents|Desktop|Downloads|Library)/' \
+  script docs .github/workflows || true)"
+
+if [ -n "$local_path_matches" ]; then
+  report_failure "Hardcoded user-local absolute path(s) found" "$local_path_matches"
+else
+  echo "OK: no hardcoded user-local absolute paths in scripts/docs/workflows"
+fi
+
 if [ "$status" -ne 0 ]; then
   exit "$status"
 fi
