@@ -56,6 +56,9 @@ jobs:
       - name: Check whitespace regressions
         run: git diff --check -- . ':(exclude)Package.resolved'
 
+      - name: Verify release note extraction script
+        run: bash script/test_extract_release_notes.sh
+
       - name: Validate debug port sample fixtures
         run: ./debug-port-detection.sh --samples-only
 
