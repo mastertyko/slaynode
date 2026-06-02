@@ -190,6 +190,38 @@ final class ProcessDiscoveryTests: XCTestCase {
         XCTAssertEqual(processes.first?.ports, [5_173])
         XCTAssertEqual(processes.first?.workingDirectory, "/Users/test/frontend")
     }
+
+    func testDiscoveryPrefersBestPromotedChildWhenWrapperHasMultipleRuntimes() async throws {
+        let psOutput = """
+        22010     1 00:20 /usr/local/bin/npm run dev
+        22011 22010 00:19 node /Users/test/frontend/node_modules/.bin/tsx src/server.ts
+        22012 22010 00:18 node /Users/test/frontend/node_modules/.bin/vite --host 127.0.0.1 --port 5173
+        """
+        let cwdOutput = """
+        p22010
+        fcwd
+        n/Users/test/frontend
+        p22011
+        fcwd
+        n/Users/test/frontend
+        p22012
+        fcwd
+        n/Users/test/frontend
+        """
+        let mock = MockShellExecutor()
+        mock.responses["\(Constants.Path.ps) -axo pid=,ppid=,etime=,command="] = (0, psOutput)
+        mock.responses["\(Constants.Path.lsof) -a -d cwd -Fn -p 22010,22011,22012"] = (0, cwdOutput)
+        mock.defaultResponse = (0, "")
+
+        let discovery = ProcessDiscovery(shell: mock)
+        let processes = await discovery.discoverProcesses()
+
+        XCTAssertEqual(processes.map(\.pid), [22_010])
+        XCTAssertEqual(processes.first?.descriptor.displayName, "Vite")
+        XCTAssertEqual(processes.first?.descriptor.packageManager, "npm")
+        XCTAssertEqual(processes.first?.ports, [5_173])
+        XCTAssertEqual(processes.first?.workingDirectory, "/Users/test/frontend")
+    }
     #endif
 }
 #endif
