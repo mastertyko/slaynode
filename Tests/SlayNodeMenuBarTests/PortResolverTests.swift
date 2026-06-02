@@ -31,6 +31,20 @@ final class PortResolverTests: XCTestCase {
         XCTAssertEqual(PortResolver.parseLsofOutput(output), [12345: [3000]])
     }
 
+    func testParseLsofOutputResolvesNamedTcpServices() {
+        let output = """
+        COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+        node    12345 user   22u  IPv4 0x0   0t0      TCP  *:ssh (LISTEN)
+        node    12345 user   23u  IPv6 0x0   0t0      TCP  [::]:https (LISTEN)
+        node    22345 user   24u  IPv4 0x0   0t0      TCP  localhost:http (LISTEN)
+        """
+
+        XCTAssertEqual(
+            PortResolver.parseLsofOutput(output),
+            [12345: [22, 443], 22345: [80]]
+        )
+    }
+
     func testExtractPortHandlesArrowSuffixAndWhitespace() {
         XCTAssertEqual(PortResolver.extractPort(from: "127.0.0.1:3000->127.0.0.1:52341"), 3000)
         XCTAssertEqual(PortResolver.extractPort(from: "  *:8080  "), 8080)
