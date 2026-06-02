@@ -87,6 +87,15 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertTrue(redacted.contains("X-Safe: value"))
     }
 
+    func testSanitizerRedactsProxyAuthorizationHeader() {
+        let command = "node server.js --header 'Proxy-Authorization: Basic abc123' --header 'X-Safe: value'"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("abc123"))
+        XCTAssertTrue(redacted.contains("Proxy-Authorization: ***"))
+        XCTAssertTrue(redacted.contains("X-Safe: value"))
+    }
+
     func testSanitizerRedactsNpmAuthTokenArguments() {
         let command = "npm config set //registry.npmjs.org/:_authToken npm-secret"
         let redacted = ServiceSanitizer.redactSecrets(in: command)
