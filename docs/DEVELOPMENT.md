@@ -60,6 +60,11 @@ To preserve other running SlayNode instances from different clones, `script/buil
 ./build.sh --generate-icons debug
 ```
 
+### Run Build Preflight Without Rebuilding
+```bash
+./build.sh --verify-only
+```
+
 ### Create DMG for Distribution
 ```bash
 ./release.sh 1.0
@@ -156,6 +161,7 @@ See [IMPROVEMENT_BACKLOG.md](IMPROVEMENT_BACKLOG.md) for the current maintenance
 ## Development Notes
 
 - Local builds use checked-in brand assets through [build.sh](../build.sh); pass `--generate-icons` when intentionally refreshing generated PNGs.
+- Use `./build.sh --verify-only` when you want a fast asset/metadata/plist preflight before a full build or release run.
 - The minimum deployment target is now `macOS 26.0`.
 - `build.sh` accepts `SLAYNODE_VERSION`, `SLAYNODE_BUILD_NUMBER`, and optional Sparkle metadata overrides so CI/release builds can stamp unique bundle metadata without editing tracked plist files.
 - When `DEVELOPER_DIR` is unset and `/Applications/Xcode.app/Contents/Developer` exists, `build.sh` uses that Xcode toolchain so SwiftData and Foundation macro plugins are available from scripted local builds.

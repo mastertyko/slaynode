@@ -11,6 +11,7 @@ APP_DIR="${ROOT_DIR}/${APP_NAME}.app"
 EXECUTABLE_NAME="SlayNodeMenuBar"
 CONFIGURATION="debug"
 GENERATE_ICONS=false
+VERIFY_ONLY=false
 INFO_PLIST_TEMPLATE="${ROOT_DIR}/XcodeSupport/Info.plist"
 PLIST_BUDDY="/usr/libexec/PlistBuddy"
 CONFIGURATION_SET=false
@@ -52,6 +53,7 @@ usage: $0 [debug|release] [--generate-icons]
 
 Options:
   --generate-icons  Refresh tracked PNG assets from generate-icons.swift before building.
+  --verify-only     Run preflight, metadata, plist, and asset checks without building.
 EOF
 }
 
@@ -59,6 +61,9 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --generate-icons)
       GENERATE_ICONS=true
+      ;;
+    --verify-only)
+      VERIFY_ONLY=true
       ;;
     -h|--help)
       usage
@@ -181,6 +186,26 @@ validate_sparkle_pairing() {
 
 validate_bundle_metadata "${APP_VERSION}" "${APP_BUILD}"
 validate_sparkle_pairing
+
+run_verify_only_checks() {
+  echo "🔎 Running SlayNode build preflight..."
+  verify_brand_assets
+  plutil -lint "${INFO_PLIST_TEMPLATE}" "${ROOT_DIR}/SlayNode.entitlements" >/dev/null
+  echo "✅ Preflight OK"
+  echo "   Configuration: ${CONFIGURATION}"
+  echo "   Version: ${APP_VERSION}"
+  echo "   Build: ${APP_BUILD}"
+  if [[ -n "${SPARKLE_FEED_URL}" ]]; then
+    echo "   Sparkle metadata: configured"
+  else
+    echo "   Sparkle metadata: not configured"
+  fi
+}
+
+if [[ "${VERIFY_ONLY}" == "true" ]]; then
+  run_verify_only_checks
+  exit 0
+fi
 
 SPARKLE_INFO=""
 if [[ -n "${SPARKLE_FEED_URL}" && -n "${SPARKLE_PUBLIC_ED_KEY}" ]]; then
