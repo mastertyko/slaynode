@@ -44,7 +44,7 @@ struct ProcessDiscovery: Sendable {
               let currentCommand = await fetchCommandLine(for: pid) else {
             return false
         }
-        return currentCommand.hashValue == expectedHash
+        return NodeProcess.stableCommandHash(for: currentCommand) == expectedHash
     }
 
     static func parseProcessLine(_ line: String, now: Date = Date()) -> NodeProcess? {
@@ -84,7 +84,7 @@ struct ProcessDiscovery: Sendable {
             startTime: now.addingTimeInterval(-elapsedSeconds),
             workingDirectory: inferredWorkingDirectory,
             descriptor: CommandParser.descriptor(from: context),
-            commandHash: command.hashValue
+            commandHash: NodeProcess.stableCommandHash(for: command)
         )
     }
 

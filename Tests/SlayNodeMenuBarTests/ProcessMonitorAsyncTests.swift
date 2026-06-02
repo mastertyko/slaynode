@@ -73,7 +73,7 @@ final class ProcessMonitorAsyncTests: XCTestCase {
                 details: nil,
                 portHints: []
             ),
-            commandHash: command.hashValue
+            commandHash: NodeProcess.stableCommandHash(for: command)
         )
         
         // Verify NodeProcess is Sendable (should compile without error)

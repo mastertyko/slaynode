@@ -13,9 +13,10 @@ final class ProcessDiscoveryTests: XCTestCase {
 
     func testParseProcessLineBuildsNodeProcess() throws {
         let now = Date(timeIntervalSince1970: 2_000)
+        let command = "node /Users/test/app/server.js --port=3000"
         let process = try XCTUnwrap(
             ProcessDiscovery.parseProcessLine(
-                "12345     1 00:15 node /Users/test/app/server.js --port=3000",
+                "12345     1 00:15 \(command)",
                 now: now
             )
         )
@@ -26,6 +27,20 @@ final class ProcessDiscoveryTests: XCTestCase {
         XCTAssertEqual(process.ports, [3000])
         XCTAssertEqual(process.uptime, 15)
         XCTAssertEqual(process.startTime, now.addingTimeInterval(-15))
+        XCTAssertEqual(process.commandHash, NodeProcess.stableCommandHash(for: command))
+    }
+
+    func testStableCommandHashIsDeterministic() {
+        let command = "node /Users/test/app/server.js --port=3000"
+
+        XCTAssertEqual(
+            NodeProcess.stableCommandHash(for: command),
+            NodeProcess.stableCommandHash(for: command)
+        )
+        XCTAssertNotEqual(
+            NodeProcess.stableCommandHash(for: command),
+            NodeProcess.stableCommandHash(for: "\(command) --host 127.0.0.1")
+        )
     }
 
     func testParseProcessLineKeepsFreshlyStartedProcess() throws {
