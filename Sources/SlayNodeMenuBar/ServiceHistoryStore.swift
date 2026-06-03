@@ -64,6 +64,27 @@ enum WorkspaceHistoryHeuristics {
     }
 }
 
+private enum PersistedTextSanitizer {
+    private static let collapsibleWhitespace = CharacterSet.whitespacesAndNewlines
+
+    static func identifier(_ value: String?) -> String? {
+        sanitize(value, separator: "")
+    }
+
+    static func text(_ value: String?) -> String? {
+        sanitize(value, separator: " ")
+    }
+
+    private static func sanitize(_ value: String?, separator: String) -> String? {
+        guard let value else { return nil }
+
+        let pieces = value.components(separatedBy: collapsibleWhitespace)
+            .filter { !$0.isEmpty }
+        let sanitized = pieces.joined(separator: separator)
+        return sanitized.isEmpty ? nil : sanitized
+    }
+}
+
 @MainActor
 final class ServiceHistoryStore {
     let container: ModelContainer
@@ -90,24 +111,25 @@ final class ServiceHistoryStore {
     func record(action: ServiceAction, on service: ManagedService, outcome: String) {
         let now = Date()
         let actionRecord = ServiceActionRecord(
-            serviceID: service.id,
-            serviceName: service.name,
+            serviceID: PersistedTextSanitizer.identifier(service.id) ?? service.id,
+            serviceName: PersistedTextSanitizer.text(service.name) ?? service.name,
             actionRawValue: action.rawValue,
-            outcome: outcome,
+            outcome: PersistedTextSanitizer.text(outcome) ?? outcome,
             timestamp: now
         )
         modelContext.insert(actionRecord)
 
-        let serviceRecord = fetchServiceRecord(id: service.id) ?? {
+        let sanitizedService = sanitized(service: service)
+        let serviceRecord = fetchServiceRecord(id: sanitizedService.id) ?? {
             let record = ServiceHistoryRecord(
-                id: service.id,
-                name: service.name,
-                kindRawValue: service.kind.rawValue,
-                sourceRawValue: service.source.title,
-                workspaceID: service.workspace?.id,
-                workspaceName: service.workspace?.name,
-                workspacePath: service.workspace?.rootPath,
-                statusRawValue: service.status.rawValue,
+                id: sanitizedService.id,
+                name: sanitizedService.name,
+                kindRawValue: sanitizedService.kind.rawValue,
+                sourceRawValue: sanitizedService.source.title,
+                workspaceID: sanitizedService.workspace?.id,
+                workspaceName: sanitizedService.workspace?.name,
+                workspacePath: sanitizedService.workspace?.rootPath,
+                statusRawValue: sanitizedService.status.rawValue,
                 lastSeenAt: now
             )
             modelContext.insert(record)
@@ -117,15 +139,15 @@ final class ServiceHistoryStore {
         serviceRecord.lastActionRawValue = action.rawValue
         serviceRecord.lastActionAt = now
         serviceRecord.lastSeenAt = now
-        serviceRecord.name = service.name
-        serviceRecord.kindRawValue = service.kind.rawValue
-        serviceRecord.sourceRawValue = service.source.title
-        serviceRecord.workspaceID = service.workspace?.id
-        serviceRecord.workspaceName = service.workspace?.name
-        serviceRecord.workspacePath = service.workspace?.rootPath
-        serviceRecord.statusRawValue = service.status.rawValue
+        serviceRecord.name = sanitizedService.name
+        serviceRecord.kindRawValue = sanitizedService.kind.rawValue
+        serviceRecord.sourceRawValue = sanitizedService.source.title
+        serviceRecord.workspaceID = sanitizedService.workspace?.id
+        serviceRecord.workspaceName = sanitizedService.workspace?.name
+        serviceRecord.workspacePath = sanitizedService.workspace?.rootPath
+        serviceRecord.statusRawValue = sanitizedService.status.rawValue
 
-        if let workspace = service.workspace,
+        if let workspace = sanitizedService.workspace,
            WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace) {
             upsert(workspace: workspace, seenAt: now)
         }
@@ -191,11 +213,11 @@ final class ServiceHistoryStore {
     }
 
     func loadWindowState(id: String) -> PersistedWindowState? {
-        guard let record = fetchWindowStateRecord(id: id) else { return nil }
+        guard let record = fetchWindowStateRecord(id: PersistedTextSanitizer.identifier(id) ?? id) else { return nil }
         return PersistedWindowState(
-            selectedWorkspaceID: record.selectedWorkspaceID,
-            selectedServiceID: record.selectedServiceID,
-            searchText: record.searchText,
+            selectedWorkspaceID: PersistedTextSanitizer.identifier(record.selectedWorkspaceID),
+            selectedServiceID: PersistedTextSanitizer.identifier(record.selectedServiceID),
+            searchText: PersistedTextSanitizer.text(record.searchText) ?? "",
             inspectorVisible: record.inspectorVisible
         )
     }
@@ -207,12 +229,16 @@ final class ServiceHistoryStore {
         searchText: String,
         inspectorVisible: Bool
     ) {
-        let record = fetchWindowStateRecord(id: id) ?? {
+        let sanitizedWindowID = PersistedTextSanitizer.identifier(id) ?? id
+        let sanitizedWorkspaceID = PersistedTextSanitizer.identifier(selectedWorkspaceID)
+        let sanitizedServiceID = PersistedTextSanitizer.identifier(selectedServiceID)
+        let sanitizedSearchText = PersistedTextSanitizer.text(searchText) ?? ""
+        let record = fetchWindowStateRecord(id: sanitizedWindowID) ?? {
             let newRecord = WindowStateRecord(
-                id: id,
-                selectedWorkspaceID: selectedWorkspaceID,
-                selectedServiceID: selectedServiceID,
-                searchText: searchText,
+                id: sanitizedWindowID,
+                selectedWorkspaceID: sanitizedWorkspaceID,
+                selectedServiceID: sanitizedServiceID,
+                searchText: sanitizedSearchText,
                 inspectorVisible: inspectorVisible,
                 updatedAt: .now
             )
@@ -220,59 +246,91 @@ final class ServiceHistoryStore {
             return newRecord
         }()
 
-        record.selectedWorkspaceID = selectedWorkspaceID
-        record.selectedServiceID = selectedServiceID
-        record.searchText = searchText
+        record.selectedWorkspaceID = sanitizedWorkspaceID
+        record.selectedServiceID = sanitizedServiceID
+        record.searchText = sanitizedSearchText
         record.inspectorVisible = inspectorVisible
         record.updatedAt = .now
         saveIfNeeded()
     }
 
     private func upsert(service: ManagedService, seenAt: Date) {
-        let record = fetchServiceRecord(id: service.id) ?? {
+        let sanitizedService = sanitized(service: service)
+        let record = fetchServiceRecord(id: sanitizedService.id) ?? {
             let newRecord = ServiceHistoryRecord(
-                id: service.id,
-                name: service.name,
-                kindRawValue: service.kind.rawValue,
-                sourceRawValue: service.source.title,
-                workspaceID: service.workspace?.id,
-                workspaceName: service.workspace?.name,
-                workspacePath: service.workspace?.rootPath,
-                statusRawValue: service.status.rawValue,
+                id: sanitizedService.id,
+                name: sanitizedService.name,
+                kindRawValue: sanitizedService.kind.rawValue,
+                sourceRawValue: sanitizedService.source.title,
+                workspaceID: sanitizedService.workspace?.id,
+                workspaceName: sanitizedService.workspace?.name,
+                workspacePath: sanitizedService.workspace?.rootPath,
+                statusRawValue: sanitizedService.status.rawValue,
                 lastSeenAt: seenAt
             )
             modelContext.insert(newRecord)
             return newRecord
         }()
 
-        record.name = service.name
-        record.kindRawValue = service.kind.rawValue
-        record.sourceRawValue = service.source.title
-        record.workspaceID = service.workspace?.id
-        record.workspaceName = service.workspace?.name
-        record.workspacePath = service.workspace?.rootPath
-        record.statusRawValue = service.status.rawValue
+        record.name = sanitizedService.name
+        record.kindRawValue = sanitizedService.kind.rawValue
+        record.sourceRawValue = sanitizedService.source.title
+        record.workspaceID = sanitizedService.workspace?.id
+        record.workspaceName = sanitizedService.workspace?.name
+        record.workspacePath = sanitizedService.workspace?.rootPath
+        record.statusRawValue = sanitizedService.status.rawValue
         record.lastSeenAt = seenAt
     }
 
     private func upsert(workspace: WorkspaceIdentity, seenAt: Date) {
+        let sanitizedWorkspace = sanitized(workspace: workspace)
         let record: WorkspaceHistoryRecord
-        if let existingRecord = fetchWorkspaceRecord(id: workspace.id) {
+        if let existingRecord = fetchWorkspaceRecord(id: sanitizedWorkspace.id) {
             record = existingRecord
             record.openCount += 1
         } else {
             record = WorkspaceHistoryRecord(
-                id: workspace.id,
-                name: workspace.name,
-                rootPath: workspace.rootPath,
+                id: sanitizedWorkspace.id,
+                name: sanitizedWorkspace.name,
+                rootPath: sanitizedWorkspace.rootPath,
                 lastSeenAt: seenAt
             )
             modelContext.insert(record)
         }
 
-        record.name = workspace.name
-        record.rootPath = workspace.rootPath
+        record.name = sanitizedWorkspace.name
+        record.rootPath = sanitizedWorkspace.rootPath
         record.lastSeenAt = seenAt
+    }
+
+    private func sanitized(service: ManagedService) -> ManagedService {
+        ManagedService(
+            id: PersistedTextSanitizer.identifier(service.id) ?? service.id,
+            name: PersistedTextSanitizer.text(service.name) ?? service.name,
+            kind: service.kind,
+            status: service.status,
+            health: service.health,
+            source: service.source,
+            workspace: service.workspace.map(sanitized(workspace:)),
+            ports: service.ports,
+            runtime: service.runtime,
+            summary: service.summary,
+            command: service.command,
+            configPath: service.configPath,
+            logPath: service.logPath,
+            tags: service.tags,
+            availableActions: service.availableActions,
+            startedAt: service.startedAt,
+            lastSeenAt: service.lastSeenAt
+        )
+    }
+
+    private func sanitized(workspace: WorkspaceIdentity) -> WorkspaceIdentity {
+        WorkspaceIdentity(
+            id: PersistedTextSanitizer.identifier(workspace.id) ?? workspace.id,
+            name: PersistedTextSanitizer.text(workspace.name) ?? workspace.name,
+            rootPath: PersistedTextSanitizer.text(workspace.rootPath) ?? workspace.rootPath
+        )
     }
 
     private func fetchWorkspaceRecord(id: String) -> WorkspaceHistoryRecord? {

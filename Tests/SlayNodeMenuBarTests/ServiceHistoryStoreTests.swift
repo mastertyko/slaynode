@@ -37,6 +37,30 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertFalse(state.inspectorVisible)
     }
 
+    func testWindowStateSanitizesStoredIdentifiersAndSearchText() throws {
+        let store = try makeStore()
+
+        store.saveWindowState(
+            id: "dashboard\t",
+            selectedWorkspaceID: "workspace:/demo\n",
+            selectedServiceID: "process:\t123",
+            searchText: " api\t\n3000 ",
+            inspectorVisible: true
+        )
+
+        let descriptor = FetchDescriptor<WindowStateRecord>()
+        let record = try XCTUnwrap(store.modelContext.fetch(descriptor).first)
+        XCTAssertEqual(record.id, "dashboard")
+        XCTAssertEqual(record.selectedWorkspaceID, "workspace:/demo")
+        XCTAssertEqual(record.selectedServiceID, "process:123")
+        XCTAssertEqual(record.searchText, "api 3000")
+
+        let state = try XCTUnwrap(store.loadWindowState(id: "dashboard"))
+        XCTAssertEqual(state.selectedWorkspaceID, "workspace:/demo")
+        XCTAssertEqual(state.selectedServiceID, "process:123")
+        XCTAssertEqual(state.searchText, "api 3000")
+    }
+
     func testRecentActionsSkipsUnknownLegacyRows() throws {
         let store = try makeStore()
         store.modelContext.insert(ServiceActionRecord(
@@ -110,6 +134,48 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertEqual(record.workspaceID, "new")
         XCTAssertEqual(record.workspaceName, "new")
         XCTAssertEqual(record.statusRawValue, ManagedServiceStatus.degraded.rawValue)
+    }
+
+    func testRecordSnapshotSanitizesPersistedServiceAndWorkspaceFields() throws {
+        let store = try makeStore()
+        let workspace = WorkspaceIdentity(
+            id: " workspace:/demo\t",
+            name: "Demo\tWorkspace\n",
+            rootPath: "/tmp/demo\tworkspace\n"
+        )
+        let service = makeService(
+            name: "demo\tapi\n",
+            kind: .api,
+            workspace: workspace,
+            status: .running
+        )
+
+        store.record(snapshot: ServiceSnapshot(
+            services: [service],
+            dependencies: [],
+            generatedAt: Date(timeIntervalSince1970: 1)
+        ))
+
+        let record = try XCTUnwrap(store.modelContext.fetch(FetchDescriptor<ServiceHistoryRecord>()).first)
+        XCTAssertEqual(record.id, "process:999")
+        XCTAssertEqual(record.name, "demo api")
+        XCTAssertEqual(record.workspaceID, "workspace:/demo")
+        XCTAssertEqual(record.workspaceName, "Demo Workspace")
+        XCTAssertEqual(record.workspacePath, "/tmp/demo workspace")
+    }
+
+    func testRecordActionSanitizesPersistedOutcomeAndServiceName() throws {
+        let store = try makeStore()
+
+        store.record(
+            action: .restart,
+            on: makeService(name: "worker\tone\n", kind: .worker, workspace: nil, status: .running),
+            outcome: "Restarted\tcleanly\n"
+        )
+
+        let actionRecord = try XCTUnwrap(store.modelContext.fetch(FetchDescriptor<ServiceActionRecord>()).first)
+        XCTAssertEqual(actionRecord.serviceName, "worker one")
+        XCTAssertEqual(actionRecord.outcome, "Restarted cleanly")
     }
 
     func testRecordSnapshotIncrementsWorkspaceOpenCount() throws {
