@@ -60,7 +60,7 @@ jobs:
           xcode-version: ${{ env.XCODE_VERSION }}
 
       - name: Prepare scripts
-        run: chmod +x build.sh script/extract_release_notes.sh
+        run: chmod +x build.sh script/extract_release_notes.sh script/validate_release_notes.sh
 
       - name: Extract release metadata
         id: metadata
@@ -172,7 +172,7 @@ jobs:
 
       - name: Generate Release Notes
         run: |
-          ./script/extract_release_notes.sh "${{ steps.metadata.outputs.version }}" > changelog-notes.md
+          ./script/validate_release_notes.sh "${{ steps.metadata.outputs.version }}" > changelog-notes.md
 
           {
             echo "## Highlights"
