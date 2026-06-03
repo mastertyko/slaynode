@@ -312,10 +312,12 @@ if [[ -d "${ICONSET_PATH}" ]]; then
   if [[ -f "${APP_DIR}/Contents/Resources/AppIcon.icns" ]]; then
     echo "✅ AppIcon.icns created successfully"
   else
-    echo "❌ Failed to create AppIcon.icns"
+    echo "❌ Failed to create AppIcon.icns" >&2
+    exit 1
   fi
 else
   echo "❌ AppIcon.iconset missing; cannot generate icns" >&2
+  exit 1
 fi
 
 # Code sign frameworks first, then the app
