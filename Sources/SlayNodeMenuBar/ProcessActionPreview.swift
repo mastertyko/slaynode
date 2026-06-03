@@ -427,7 +427,8 @@ struct ProcessActionPreviewer: Sendable {
         var warnings: [String] = []
 
         if action == .forceStop {
-            warnings.append("Force Stop sends SIGKILL and skips graceful shutdown if the process is still alive.")
+            let targetDescription = scope == .processGroup ? "the full process group" : "the selected process"
+            warnings.append("Force Stop sends SIGKILL to \(targetDescription) and skips graceful shutdown if the process is still alive.")
         }
 
         let groupMemberCount = processes.filter { $0.role == .groupMember }.count

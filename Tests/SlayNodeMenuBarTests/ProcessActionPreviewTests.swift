@@ -46,7 +46,28 @@ final class ProcessActionPreviewTests: XCTestCase {
         XCTAssertEqual(preview.processes[1].ports, [5173])
         XCTAssertFalse(preview.processes[1].command.contains("secret-value"))
         XCTAssertTrue(preview.processes[1].command.contains("***"))
-        XCTAssertTrue(preview.warnings.contains { $0.contains("SIGKILL") })
+        XCTAssertTrue(preview.warnings.contains { $0.contains("SIGKILL to the full process group") })
+    }
+
+    func testForceStopPreviewForSingleProcessCallsOutSelectedProcessScope() throws {
+        let service = makeProcessService(pid: 4105)
+        let rows = [
+            ProcessActionPreviewer.ProcessRow(pid: 4105, parentPID: 1, processGroupID: 0, command: "node solo.js")
+        ]
+
+        let preview = try XCTUnwrap(
+            ProcessActionPreviewer.makePreview(
+                action: .forceStop,
+                service: service,
+                targetPID: 4105,
+                fallbackCommand: "node solo.js",
+                rows: rows,
+                portsByPid: [:]
+            )
+        )
+
+        XCTAssertEqual(preview.scope, .singleProcess)
+        XCTAssertTrue(preview.warnings.contains { $0.contains("SIGKILL to the selected process") })
     }
 
     func testStopPreviewForGroupLeaderIncludesRecursiveDescendants() throws {
