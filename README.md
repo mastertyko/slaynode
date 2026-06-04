@@ -49,7 +49,13 @@ cd slaynode
 Run the test suite with:
 
 ```bash
-swift test
+swift test --disable-sandbox
+```
+
+Run the same full verification gate that CI and release automation use with:
+
+```bash
+./script/full_verification.sh
 ```
 
 ## Using SlayNode

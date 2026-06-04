@@ -87,16 +87,15 @@ You can also trigger the release workflow manually with `workflow_dispatch` if y
 
 ### Running Tests
 ```bash
-swift test
+swift test --disable-sandbox
 ```
 
 ### Full Local Verification Gate
 ```bash
-./script/static-safety-check.sh && \
-bash -n build.sh release.sh notarize.sh test-servers.sh debug-port-detection.sh script/build_and_run.sh && \
-plutil -lint XcodeSupport/Info.plist SlayNode.entitlements && \
-swift test
+./script/full_verification.sh
 ```
+
+That shared gate runs shell syntax checks, static safety checks, plist linting, `git diff --check`, release-note regression scripts, debug port sample validation, and `swift test --disable-sandbox`.
 
 ### Improvement Backlog
 
@@ -162,6 +161,7 @@ See [IMPROVEMENT_BACKLOG.md](IMPROVEMENT_BACKLOG.md) for the current maintenance
 
 - Local builds use checked-in brand assets through [build.sh](../build.sh); pass `--generate-icons` when intentionally refreshing generated PNGs.
 - Use `./build.sh --verify-only` when you want a fast asset/metadata/plist preflight before a full build or release run.
+- Use `./script/full_verification.sh` when you want the same broader gate as CI and release automation before pushing changes.
 - The minimum deployment target is now `macOS 26.0`.
 - `build.sh` accepts `SLAYNODE_VERSION`, `SLAYNODE_BUILD_NUMBER`, and optional Sparkle metadata overrides so CI/release builds can stamp unique bundle metadata without editing tracked plist files.
 - When `DEVELOPER_DIR` is unset and `/Applications/Xcode.app/Contents/Developer` exists, `build.sh` uses that Xcode toolchain so SwiftData and Foundation macro plugins are available from scripted local builds.
