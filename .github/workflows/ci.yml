@@ -47,27 +47,14 @@ jobs:
             ${{ runner.os }}-xcode-${{ env.XCODE_VERSION }}-swift-
             ${{ runner.os }}-swift-
 
-      - name: Build
-        run: swift build -c release
+      - name: Prepare verification scripts
+        run: chmod +x build.sh debug-port-detection.sh script/*.sh
 
-      - name: Run Tests
-        run: swift test --parallel
-
-      - name: Check whitespace regressions
-        run: git diff --check -- . ':(exclude)Package.resolved'
-
-      - name: Verify release note extraction script
-        run: bash script/test_extract_release_notes.sh
-
-      - name: Verify release note validation script
-        run: bash script/test_validate_release_notes.sh
-
-      - name: Validate debug port sample fixtures
-        run: ./debug-port-detection.sh --samples-only
+      - name: Run shared verification gate
+        run: ./script/full_verification.sh
 
       - name: Build App Bundle
         run: |
-          chmod +x build.sh
           SLAYNODE_BUILD_NUMBER="${{ steps.metadata.outputs.build_number }}" ./build.sh release
 
       - name: Upload App Artifact
