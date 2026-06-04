@@ -69,7 +69,29 @@ EOF
     fail "expected validate_release_notes.sh to fail for blank notes"
   fi
 
-  assert_contains "${output}" "Release notes are empty"
+  assert_contains "${output}" "Release notes are empty or only contain section headings"
+}
+
+test_fails_when_release_notes_only_contain_headings() {
+  local repo
+  repo="$(make_repo "case-heading-only")"
+
+  cat > "${repo}/CHANGELOG.md" <<'EOF'
+# Changelog
+
+## [Unreleased] - 2026-06-03
+
+### Added
+
+### Fixed
+EOF
+
+  local output
+  if output="$("${repo}/script/validate_release_notes.sh" 2>&1)"; then
+    fail "expected validate_release_notes.sh to fail for heading-only notes"
+  fi
+
+  assert_contains "${output}" "Release notes are empty or only contain section headings"
 }
 
 test_passes_through_requested_version_notes() {
@@ -94,6 +116,7 @@ EOF
 
 test_passes_through_non_empty_release_notes
 test_fails_when_extracted_release_notes_are_blank
+test_fails_when_release_notes_only_contain_headings
 test_passes_through_requested_version_notes
 
 echo "PASS: validate_release_notes"
