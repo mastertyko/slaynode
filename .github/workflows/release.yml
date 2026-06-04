@@ -59,8 +59,8 @@ jobs:
         with:
           xcode-version: ${{ env.XCODE_VERSION }}
 
-      - name: Prepare scripts
-        run: chmod +x build.sh script/extract_release_notes.sh script/validate_release_notes.sh
+      - name: Prepare verification scripts
+        run: chmod +x build.sh debug-port-detection.sh script/*.sh
 
       - name: Extract release metadata
         id: metadata
@@ -88,11 +88,8 @@ jobs:
             echo "minimum_system_version=${MIN_SYSTEM_VERSION}"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Build Release
-        run: swift build -c release
-
-      - name: Run Tests
-        run: swift test --parallel
+      - name: Run shared verification gate
+        run: ./script/full_verification.sh
 
       - name: Build App Bundle
         run: |
