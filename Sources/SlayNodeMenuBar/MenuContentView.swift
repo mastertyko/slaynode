@@ -501,7 +501,7 @@ private struct ProcessRowView: View {
         .animation(.easeInOut(duration: 0.3), value: process.isStopping)
         .contextMenu {
             Button("Copy Command") {
-                copyToPasteboard(process.command)
+                copyToPasteboard(serviceCommandCopyText(process.command))
             }
             if let directory = process.workingDirectory {
                 Button("Open in Finder") {

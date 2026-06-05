@@ -1175,7 +1175,7 @@ private struct WindowProcessHeroCard: View {
                 }
 
                 Button {
-                    copyToPasteboard(process.command)
+                    copyToPasteboard(serviceCommandCopyText(process.command))
                 } label: {
                     Label("Copy Command", systemImage: "document.on.document")
                 }

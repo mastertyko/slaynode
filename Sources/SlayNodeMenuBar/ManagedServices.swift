@@ -150,6 +150,10 @@ enum ServiceSanitizer {
     }
 }
 
+func serviceCommandCopyText(_ command: String) -> String {
+    ServiceSanitizer.redactSecrets(in: command)
+}
+
 enum ServiceKind: String, CaseIterable, Sendable {
     case app
     case api
