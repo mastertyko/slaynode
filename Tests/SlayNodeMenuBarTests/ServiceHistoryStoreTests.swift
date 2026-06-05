@@ -41,9 +41,9 @@ final class ServiceHistoryStoreTests: XCTestCase {
         let store = try makeStore()
 
         store.saveWindowState(
-            id: "dashboard\t",
-            selectedWorkspaceID: "workspace:/demo\n",
-            selectedServiceID: "process:\t123",
+            id: "dashboard",
+            selectedWorkspaceID: "workspace:/demo",
+            selectedServiceID: "process:123",
             searchText: " api\t\n3000 ",
             inspectorVisible: true
         )
@@ -59,6 +59,22 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertEqual(state.selectedWorkspaceID, "workspace:/demo")
         XCTAssertEqual(state.selectedServiceID, "process:123")
         XCTAssertEqual(state.searchText, "api 3000")
+    }
+
+    func testWindowStateRejectsIdentifiersWithControlCharacters() throws {
+        let store = try makeStore()
+
+        store.saveWindowState(
+            id: "dashboard\t",
+            selectedWorkspaceID: "workspace:/demo\n",
+            selectedServiceID: "process:\t123",
+            searchText: "api",
+            inspectorVisible: true
+        )
+
+        let records = try store.modelContext.fetch(FetchDescriptor<WindowStateRecord>())
+        XCTAssertTrue(records.isEmpty)
+        XCTAssertNil(store.loadWindowState(id: "dashboard\t"))
     }
 
     func testRecentActionsSkipsUnknownLegacyRows() throws {
@@ -139,7 +155,7 @@ final class ServiceHistoryStoreTests: XCTestCase {
     func testRecordSnapshotSanitizesPersistedServiceAndWorkspaceFields() throws {
         let store = try makeStore()
         let workspace = WorkspaceIdentity(
-            id: " workspace:/demo\t",
+            id: " workspace:/demo ",
             name: "Demo\tWorkspace\n",
             rootPath: "/tmp/demo\tworkspace\n"
         )
@@ -164,6 +180,44 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertEqual(record.workspacePath, "/tmp/demo workspace")
     }
 
+    func testRecordSnapshotSkipsInvalidServiceIdentifier() throws {
+        let store = try makeStore()
+        let workspace = WorkspaceIdentity(
+            id: "workspace:/demo",
+            name: "Demo Workspace",
+            rootPath: NSTemporaryDirectory()
+        )
+        let service = ManagedService(
+            id: "process:\t999",
+            name: "demo",
+            kind: .api,
+            status: .running,
+            health: .healthy,
+            source: .process(pid: 999, command: "npm run dev"),
+            workspace: workspace,
+            ports: [ServicePort(value: 999, isInferred: false)],
+            runtime: "Node.js",
+            summary: "summary",
+            command: "npm run dev",
+            configPath: nil,
+            logPath: nil,
+            tags: [],
+            availableActions: [.stop],
+            startedAt: nil,
+            lastSeenAt: Date()
+        )
+
+        store.record(snapshot: ServiceSnapshot(
+            services: [service],
+            dependencies: [],
+            generatedAt: Date(timeIntervalSince1970: 1)
+        ))
+
+        XCTAssertTrue(try store.modelContext.fetch(FetchDescriptor<ServiceHistoryRecord>()).isEmpty)
+        let workspaces = try store.modelContext.fetch(FetchDescriptor<WorkspaceHistoryRecord>())
+        XCTAssertEqual(workspaces.map(\.id), [workspace.id])
+    }
+
     func testRecordActionSanitizesPersistedOutcomeAndServiceName() throws {
         let store = try makeStore()
 
@@ -176,6 +230,34 @@ final class ServiceHistoryStoreTests: XCTestCase {
         let actionRecord = try XCTUnwrap(store.modelContext.fetch(FetchDescriptor<ServiceActionRecord>()).first)
         XCTAssertEqual(actionRecord.serviceName, "worker one")
         XCTAssertEqual(actionRecord.outcome, "Restarted cleanly")
+    }
+
+    func testRecordActionSkipsInvalidServiceIdentifier() throws {
+        let store = try makeStore()
+        let service = ManagedService(
+            id: "process:\n999",
+            name: "worker",
+            kind: .worker,
+            status: .running,
+            health: .healthy,
+            source: .process(pid: 999, command: "npm run dev"),
+            workspace: nil,
+            ports: [],
+            runtime: "Node.js",
+            summary: "summary",
+            command: "npm run dev",
+            configPath: nil,
+            logPath: nil,
+            tags: [],
+            availableActions: [.stop],
+            startedAt: nil,
+            lastSeenAt: Date()
+        )
+
+        store.record(action: .stop, on: service, outcome: "Stopped")
+
+        XCTAssertTrue(try store.modelContext.fetch(FetchDescriptor<ServiceActionRecord>()).isEmpty)
+        XCTAssertTrue(try store.modelContext.fetch(FetchDescriptor<ServiceHistoryRecord>()).isEmpty)
     }
 
     func testRecordSnapshotIncrementsWorkspaceOpenCount() throws {

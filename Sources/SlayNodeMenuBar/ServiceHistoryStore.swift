@@ -66,9 +66,14 @@ enum WorkspaceHistoryHeuristics {
 
 private enum PersistedTextSanitizer {
     private static let collapsibleWhitespace = CharacterSet.whitespacesAndNewlines
+    private static let disallowedIdentifierScalars = CharacterSet.newlines
+        .union(.controlCharacters)
+        .subtracting(CharacterSet(charactersIn: " "))
 
     static func identifier(_ value: String?) -> String? {
-        sanitize(value, separator: "")
+        guard let value else { return nil }
+        guard value.rangeOfCharacter(from: disallowedIdentifierScalars) == nil else { return nil }
+        return sanitize(value, separator: "")
     }
 
     static func text(_ value: String?) -> String? {
@@ -110,8 +115,13 @@ final class ServiceHistoryStore {
 
     func record(action: ServiceAction, on service: ManagedService, outcome: String) {
         let now = Date()
+        guard let sanitizedActionServiceID = PersistedTextSanitizer.identifier(service.id),
+              let sanitizedService = sanitized(service: service) else {
+            Log.general.warning("Skipping action history persistence for invalid service identifier.")
+            return
+        }
         let actionRecord = ServiceActionRecord(
-            serviceID: PersistedTextSanitizer.identifier(service.id) ?? service.id,
+            serviceID: sanitizedActionServiceID,
             serviceName: PersistedTextSanitizer.text(service.name) ?? service.name,
             actionRawValue: action.rawValue,
             outcome: PersistedTextSanitizer.text(outcome) ?? outcome,
@@ -119,7 +129,6 @@ final class ServiceHistoryStore {
         )
         modelContext.insert(actionRecord)
 
-        let sanitizedService = sanitized(service: service)
         let serviceRecord = fetchServiceRecord(id: sanitizedService.id) ?? {
             let record = ServiceHistoryRecord(
                 id: sanitizedService.id,
@@ -213,7 +222,8 @@ final class ServiceHistoryStore {
     }
 
     func loadWindowState(id: String) -> PersistedWindowState? {
-        guard let record = fetchWindowStateRecord(id: PersistedTextSanitizer.identifier(id) ?? id) else { return nil }
+        guard let sanitizedWindowID = PersistedTextSanitizer.identifier(id),
+              let record = fetchWindowStateRecord(id: sanitizedWindowID) else { return nil }
         return PersistedWindowState(
             selectedWorkspaceID: PersistedTextSanitizer.identifier(record.selectedWorkspaceID),
             selectedServiceID: PersistedTextSanitizer.identifier(record.selectedServiceID),
@@ -229,7 +239,10 @@ final class ServiceHistoryStore {
         searchText: String,
         inspectorVisible: Bool
     ) {
-        let sanitizedWindowID = PersistedTextSanitizer.identifier(id) ?? id
+        guard let sanitizedWindowID = PersistedTextSanitizer.identifier(id) else {
+            Log.general.warning("Skipping window state persistence for invalid window identifier.")
+            return
+        }
         let sanitizedWorkspaceID = PersistedTextSanitizer.identifier(selectedWorkspaceID)
         let sanitizedServiceID = PersistedTextSanitizer.identifier(selectedServiceID)
         let sanitizedSearchText = PersistedTextSanitizer.text(searchText) ?? ""
@@ -255,7 +268,10 @@ final class ServiceHistoryStore {
     }
 
     private func upsert(service: ManagedService, seenAt: Date) {
-        let sanitizedService = sanitized(service: service)
+        guard let sanitizedService = sanitized(service: service) else {
+            Log.general.warning("Skipping service history persistence for invalid service identifier.")
+            return
+        }
         let record = fetchServiceRecord(id: sanitizedService.id) ?? {
             let newRecord = ServiceHistoryRecord(
                 id: sanitizedService.id,
@@ -283,7 +299,10 @@ final class ServiceHistoryStore {
     }
 
     private func upsert(workspace: WorkspaceIdentity, seenAt: Date) {
-        let sanitizedWorkspace = sanitized(workspace: workspace)
+        guard let sanitizedWorkspace = sanitized(workspace: workspace) else {
+            Log.general.warning("Skipping workspace history persistence for invalid workspace identifier.")
+            return
+        }
         let record: WorkspaceHistoryRecord
         if let existingRecord = fetchWorkspaceRecord(id: sanitizedWorkspace.id) {
             record = existingRecord
@@ -303,15 +322,16 @@ final class ServiceHistoryStore {
         record.lastSeenAt = seenAt
     }
 
-    private func sanitized(service: ManagedService) -> ManagedService {
-        ManagedService(
-            id: PersistedTextSanitizer.identifier(service.id) ?? service.id,
+    private func sanitized(service: ManagedService) -> ManagedService? {
+        guard let sanitizedID = PersistedTextSanitizer.identifier(service.id) else { return nil }
+        return ManagedService(
+            id: sanitizedID,
             name: PersistedTextSanitizer.text(service.name) ?? service.name,
             kind: service.kind,
             status: service.status,
             health: service.health,
             source: service.source,
-            workspace: service.workspace.map(sanitized(workspace:)),
+            workspace: service.workspace.flatMap(sanitized(workspace:)),
             ports: service.ports,
             runtime: service.runtime,
             summary: service.summary,
@@ -325,9 +345,10 @@ final class ServiceHistoryStore {
         )
     }
 
-    private func sanitized(workspace: WorkspaceIdentity) -> WorkspaceIdentity {
-        WorkspaceIdentity(
-            id: PersistedTextSanitizer.identifier(workspace.id) ?? workspace.id,
+    private func sanitized(workspace: WorkspaceIdentity) -> WorkspaceIdentity? {
+        guard let sanitizedID = PersistedTextSanitizer.identifier(workspace.id) else { return nil }
+        return WorkspaceIdentity(
+            id: sanitizedID,
             name: PersistedTextSanitizer.text(workspace.name) ?? workspace.name,
             rootPath: PersistedTextSanitizer.text(workspace.rootPath) ?? workspace.rootPath
         )
