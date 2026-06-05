@@ -276,10 +276,14 @@ struct ServiceDashboardWindowView: View {
 
             List(selection: $selectedServiceID) {
                 if filteredServices.isEmpty {
+                    let emptyState = serviceListEmptyState(
+                        searchText: searchText,
+                        lastError: center.lastError
+                    )
                     ContentUnavailableView(
-                        "No Services Found",
-                        systemImage: "bolt.slash",
-                        description: Text("Try a broader search or refresh local discovery.")
+                        emptyState.title,
+                        systemImage: emptyState.systemImage,
+                        description: Text(emptyState.description)
                     )
                 } else {
                     ForEach(filteredServices, id: \.id) { service in
@@ -528,6 +532,10 @@ struct ServiceDashboardWindowView: View {
 
     private var selectableWorkspaceIDs: Set<String> {
         Set((recentSidebarWorkspaces + availableWorkspaces).map(\.id))
+    }
+
+    private func serviceListEmptyState(searchText: String, lastError: String?) -> ServiceListEmptyStateContent {
+        serviceListEmptyStateContent(searchText: searchText, lastError: lastError)
     }
 
     private func workspaceDisplayName(_ workspace: WorkspaceIdentity) -> String {
@@ -1417,6 +1425,36 @@ private struct ServiceWorkspaceRow: View {
             Spacer(minLength: 0)
         }
     }
+}
+
+struct ServiceListEmptyStateContent: Equatable {
+    let title: String
+    let systemImage: String
+    let description: String
+}
+
+func serviceListEmptyStateContent(searchText: String, lastError: String?) -> ServiceListEmptyStateContent {
+    if let lastError, !lastError.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        return ServiceListEmptyStateContent(
+            title: "Discovery Needs Attention",
+            systemImage: "exclamationmark.triangle",
+            description: "Refresh local discovery after resolving the latest scan error."
+        )
+    }
+
+    if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        return ServiceListEmptyStateContent(
+            title: "No Matching Services",
+            systemImage: "magnifyingglass",
+            description: "Try a broader search or clear the current filter."
+        )
+    }
+
+    return ServiceListEmptyStateContent(
+        title: "No Services Found",
+        systemImage: "bolt.slash",
+        description: "Refresh local discovery or start a local runtime to populate this list."
+    )
 }
 
 private struct ServiceListRow: View {
