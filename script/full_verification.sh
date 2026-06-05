@@ -15,6 +15,7 @@ bash -n \
   script/static-safety-check.sh \
   script/extract_release_notes.sh \
   script/validate_release_notes.sh \
+  script/test_build_and_run.sh \
   script/test_extract_release_notes.sh \
   script/test_validate_release_notes.sh
 
@@ -28,6 +29,7 @@ echo "==> Checking git diff whitespace"
 git diff --check -- . ':(exclude)Package.resolved'
 
 echo "==> Verifying release note scripts"
+bash script/test_build_and_run.sh
 bash script/test_extract_release_notes.sh
 bash script/test_validate_release_notes.sh
 
