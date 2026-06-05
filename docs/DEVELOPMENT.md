@@ -110,6 +110,30 @@ See [IMPROVEMENT_BACKLOG.md](IMPROVEMENT_BACKLOG.md) for the current maintenance
 ./test-servers.sh 120
 ```
 
+### Troubleshooting Discovery
+
+If the app shows no services, first separate "nothing is running" from "discovery failed":
+
+```bash
+./script/full_verification.sh
+ps -axo pid=,ppid=,etime=,command= | rg 'node|bun|deno|vite|next|tsx|npm|pnpm'
+lsof -nP -iTCP -sTCP:LISTEN | rg 'node|bun|deno'
+```
+
+- If `ps` is empty, there may simply be no local runtimes to discover.
+- If `ps` shows the process but `lsof` does not show a listener, SlayNode may still surface it as a degraded/watch service when command heuristics match.
+- If `ps` and `lsof` both look right but the app stays empty, run `./debug-port-detection.sh --samples-only` to confirm the command-shape fixtures still pass.
+
+If the UI looks stale after a process exits or after a local rebuild:
+
+```bash
+./script/build_and_run.sh --no-kill
+```
+
+- Use the in-app refresh action once after relaunch to force a clean discovery pass.
+- If you are testing multiple local clones, prefer the default scoped shutdown behavior in `script/build_and_run.sh` so one clone does not kill another clone's app instance.
+- When debugging a single suspect command, pass it directly to `./debug-port-detection.sh --command ...` before changing parser heuristics.
+
 ## Architecture Overview
 
 ### App Shell
