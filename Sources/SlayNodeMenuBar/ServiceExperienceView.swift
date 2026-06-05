@@ -574,9 +574,22 @@ struct ServiceDashboardWindowView: View {
     @ViewBuilder
     private func commandPanel(_ command: String) -> some View {
         ServicePanel(title: "Command", systemImage: "terminal") {
-            Text(command)
-                .font(.system(.body, design: .monospaced))
-                .textSelection(.enabled)
+            VStack(alignment: .leading, spacing: 12) {
+                Text(command)
+                    .font(.system(.body, design: .monospaced))
+                    .textSelection(.enabled)
+
+                Button {
+                    copyToPasteboard(serviceCommandCopyText(command))
+                } label: {
+                    Label("Copy Command", systemImage: "document.on.document")
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.small)
+                .help("Copy the redacted command")
+                .accessibilityLabel("Copy command")
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -1481,6 +1494,12 @@ func serviceListEmptyStateContent(searchText: String, lastError: String?) -> Ser
         systemImage: "bolt.slash",
         description: "Refresh local discovery or start a local runtime to populate this list."
     )
+}
+
+private func copyToPasteboard(_ text: String) {
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    pasteboard.setString(text, forType: .string)
 }
 
 private struct ServiceListRow: View {
