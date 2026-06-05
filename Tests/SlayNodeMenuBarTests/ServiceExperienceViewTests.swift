@@ -50,6 +50,60 @@ final class ServiceExperienceViewTests: XCTestCase {
         XCTAssertEqual(content.systemImage, "bolt.slash")
     }
 
+    func testServiceStatusAccessibilityLabelIncludesHealthContext() {
+        let service = ManagedService(
+            id: "process:101",
+            name: "api",
+            kind: .api,
+            status: .degraded,
+            health: .watch,
+            source: .process(pid: 101, command: "npm run api"),
+            workspace: nil,
+            ports: [],
+            runtime: "Node.js",
+            summary: "summary",
+            command: "npm run api",
+            configPath: nil,
+            logPath: nil,
+            tags: [],
+            availableActions: [.stop],
+            startedAt: nil,
+            lastSeenAt: Date()
+        )
+
+        XCTAssertEqual(serviceStatusAccessibilityLabel(for: service), "Status Degraded, Needs attention")
+    }
+
+    func testServicePortAccessibilityLabelDescribesLikelyPorts() {
+        let service = ManagedService(
+            id: "process:202",
+            name: "frontend",
+            kind: .app,
+            status: .running,
+            health: .healthy,
+            source: .process(pid: 202, command: "npm run dev"),
+            workspace: nil,
+            ports: [
+                ServicePort(value: 3000, isInferred: false),
+                ServicePort(value: 5173, isInferred: true)
+            ],
+            runtime: "Node.js",
+            summary: "summary",
+            command: "npm run dev",
+            configPath: nil,
+            logPath: nil,
+            tags: [],
+            availableActions: [.stop],
+            startedAt: nil,
+            lastSeenAt: Date()
+        )
+
+        XCTAssertEqual(
+            servicePortAccessibilityLabel(for: service),
+            "Listening on ports port 3000, likely port 5173"
+        )
+    }
+
     private func makeService(id: String, name: String, workspace: WorkspaceIdentity?) -> ManagedService {
         ManagedService(
             id: id,
