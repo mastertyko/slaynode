@@ -229,7 +229,8 @@ struct ServiceDashboardWindowView: View {
                     ForEach(availableWorkspaces, id: \.id) { workspace in
                         ServiceWorkspaceRow(
                             workspace: workspace,
-                            title: workspaceDisplayName(workspace)
+                            title: workspaceDisplayName(workspace),
+                            liveServiceCount: liveServiceCountByWorkspaceID[workspace.id]
                         )
                             .tag(Optional(workspace.id))
                     }
@@ -240,7 +241,8 @@ struct ServiceDashboardWindowView: View {
                         ForEach(recentSidebarWorkspaces, id: \.id) { workspace in
                             ServiceWorkspaceRow(
                                 workspace: workspace,
-                                title: workspaceDisplayName(workspace)
+                                title: workspaceDisplayName(workspace),
+                                liveServiceCount: liveServiceCountByWorkspaceID[workspace.id]
                             )
                                 .tag(Optional(workspace.id))
                         }
@@ -253,7 +255,8 @@ struct ServiceDashboardWindowView: View {
                     ForEach(availableWorkspaces, id: \.id) { workspace in
                         ServiceWorkspaceRow(
                             workspace: workspace,
-                            title: workspaceDisplayName(workspace)
+                            title: workspaceDisplayName(workspace),
+                            liveServiceCount: liveServiceCountByWorkspaceID[workspace.id]
                         )
                             .tag(Optional(workspace.id))
                     }
@@ -532,6 +535,10 @@ struct ServiceDashboardWindowView: View {
 
     private var selectableWorkspaceIDs: Set<String> {
         Set((recentSidebarWorkspaces + availableWorkspaces).map(\.id))
+    }
+
+    private var liveServiceCountByWorkspaceID: [String: Int] {
+        workspaceServiceCounts(services: center.services)
     }
 
     private func serviceListEmptyState(searchText: String, lastError: String?) -> ServiceListEmptyStateContent {
@@ -1397,6 +1404,7 @@ private struct ServiceMenuBarMetaBadge: View {
 private struct ServiceWorkspaceRow: View {
     let workspace: WorkspaceIdentity
     let title: String
+    let liveServiceCount: Int?
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -1423,6 +1431,17 @@ private struct ServiceWorkspaceRow: View {
             }
 
             Spacer(minLength: 0)
+
+            if let liveServiceCount, liveServiceCount > 0 {
+                Text("\(liveServiceCount)")
+                    .font(.caption.weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(.white.opacity(0.06), in: Capsule())
+                    .accessibilityLabel("\(liveServiceCount) live service\(liveServiceCount == 1 ? "" : "s")")
+            }
         }
     }
 }
@@ -1431,6 +1450,13 @@ struct ServiceListEmptyStateContent: Equatable {
     let title: String
     let systemImage: String
     let description: String
+}
+
+func workspaceServiceCounts(services: [ManagedService]) -> [String: Int] {
+    services.reduce(into: [:]) { result, service in
+        guard let workspaceID = service.workspace?.id else { return }
+        result[workspaceID, default: 0] += 1
+    }
 }
 
 func serviceListEmptyStateContent(searchText: String, lastError: String?) -> ServiceListEmptyStateContent {
