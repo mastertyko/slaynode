@@ -47,7 +47,23 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
         let tempRoot = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: tempRoot) }
 
-        for name in ["coverage", "out", "storybook-static", ".next", ".turbo", ".pnpm-store", ".omx", ".codex", ".claude"] {
+        for name in [
+            "coverage",
+            "out",
+            "storybook-static",
+            "deriveddata",
+            ".build",
+            ".direnv",
+            ".next",
+            ".pytest_cache",
+            ".swiftpm",
+            ".turbo",
+            ".pnpm-store",
+            ".venv",
+            ".omx",
+            ".codex",
+            ".claude"
+        ] {
             let workspace = WorkspaceIdentity(
                 id: tempRoot.appendingPathComponent(name).path.lowercased(),
                 name: name,
@@ -124,6 +140,26 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
             id: omxStatePath.path.lowercased(),
             name: "frontend",
             rootPath: omxStatePath.path
+        )
+
+        XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
+    }
+
+    func testEligibleRecentWorkspaceRejectsXcodeDerivedDataPaths() throws {
+        let tempRoot = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+        let derivedDataPath = tempRoot
+            .appendingPathComponent("Library")
+            .appendingPathComponent("Developer")
+            .appendingPathComponent("Xcode")
+            .appendingPathComponent("DerivedData")
+            .appendingPathComponent("MyApp-abc123")
+        try FileManager.default.createDirectory(at: derivedDataPath, withIntermediateDirectories: true)
+
+        let workspace = WorkspaceIdentity(
+            id: derivedDataPath.path.lowercased(),
+            name: "MyApp-abc123",
+            rootPath: derivedDataPath.path
         )
 
         XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))

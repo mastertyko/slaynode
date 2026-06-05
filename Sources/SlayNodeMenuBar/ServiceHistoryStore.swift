@@ -11,15 +11,21 @@ enum WorkspaceHistoryHeuristics {
         ".bin",
         ".cache",
         ".claude",
+        ".direnv",
         ".next",
         ".nuxt",
         ".pnpm-store",
+        ".pytest_cache",
+        ".swiftpm",
         ".svelte-kit",
         ".turbo",
+        ".venv",
         ".yarn",
+        ".build",
         "build",
         "cache",
         "coverage",
+        "deriveddata",
         "dist",
         "node_modules",
         "out",
@@ -60,7 +66,23 @@ enum WorkspaceHistoryHeuristics {
 
     private static func hasDisallowedPathComponent(_ path: String) -> Bool {
         let components = URL(fileURLWithPath: path).standardized.pathComponents.map { $0.lowercased() }
+        if containsDerivedDataComponents(components) {
+            return true
+        }
         return components.contains { disallowedNames.contains($0) }
+    }
+
+    private static func containsDerivedDataComponents(_ components: [String]) -> Bool {
+        guard components.count >= 4 else { return false }
+
+        for index in 0...(components.count - 4) {
+            let window = Array(components[index..<(index + 4)])
+            if window == ["library", "developer", "xcode", "deriveddata"] {
+                return true
+            }
+        }
+
+        return false
     }
 }
 
