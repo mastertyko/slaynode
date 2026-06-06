@@ -21,5 +21,26 @@ final class RuntimePresentationSupportTests: XCTestCase {
             "High confidence"
         )
     }
+
+    func testRuntimeActionAccessibilityLabelForOpenPort() {
+        XCTAssertEqual(
+            runtimeActionAccessibilityLabel(.openPort(3000), processTitle: "demo-api"),
+            "Open localhost port 3000 for demo-api"
+        )
+    }
+
+    func testRuntimeActionAccessibilityLabelForCopyCommand() {
+        XCTAssertEqual(
+            runtimeActionAccessibilityLabel(.copyCommand, processTitle: "demo-api"),
+            "Copy redacted command for demo-api"
+        )
+    }
+
+    func testRuntimeActionAccessibilityLabelForSlay() {
+        XCTAssertEqual(
+            runtimeActionAccessibilityLabel(.slay, processTitle: "demo-api"),
+            "Slay demo-api"
+        )
+    }
 }
 #endif

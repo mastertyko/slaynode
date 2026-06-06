@@ -1159,6 +1159,7 @@ private struct WindowProcessHeroCard: View {
                         Label("Open :\(primaryPort)", systemImage: "safari")
                     }
                     .buttonStyle(.bordered)
+                    .accessibilityLabel(runtimeActionAccessibilityLabel(.openPort(primaryPort), processTitle: process.title))
                 }
 
                 if let directory = process.workingDirectory {
@@ -1168,6 +1169,7 @@ private struct WindowProcessHeroCard: View {
                         Label("Open Folder", systemImage: "folder")
                     }
                     .buttonStyle(.bordered)
+                    .accessibilityLabel(runtimeActionAccessibilityLabel(.openFolder, processTitle: process.title))
                 }
 
                 Button {
@@ -1176,6 +1178,7 @@ private struct WindowProcessHeroCard: View {
                     Label("Copy Command", systemImage: "document.on.document")
                 }
                 .buttonStyle(.bordered)
+                .accessibilityLabel(runtimeActionAccessibilityLabel(.copyCommand, processTitle: process.title))
 
                 Spacer(minLength: 0)
 
@@ -1205,6 +1208,7 @@ private struct WindowProcessHeroCard: View {
                     .buttonStyle(.bordered)
                     .controlSize(.regular)
                     .tint(.red)
+                    .accessibilityLabel(runtimeActionAccessibilityLabel(.slay, processTitle: process.title))
                 }
             }
 
@@ -1436,6 +1440,7 @@ private struct WindowPortRow: View {
                     openLocalhost(port: port)
                 }
                 .buttonStyle(.borderless)
+                .accessibilityLabel("Open localhost port \(port)")
             }
         }
     }

@@ -266,6 +266,29 @@ func runtimeStatusPillAccessibilityLabel(text: String) -> String {
     text
 }
 
+enum RuntimeActionAccessibilityKind: Equatable {
+    case openPort(Int)
+    case openFolder
+    case copyCommand
+    case slay
+}
+
+func runtimeActionAccessibilityLabel(
+    _ action: RuntimeActionAccessibilityKind,
+    processTitle: String
+) -> String {
+    switch action {
+    case .openPort(let port):
+        return "Open localhost port \(port) for \(processTitle)"
+    case .openFolder:
+        return "Open workspace folder for \(processTitle)"
+    case .copyCommand:
+        return "Copy redacted command for \(processTitle)"
+    case .slay:
+        return "Slay \(processTitle)"
+    }
+}
+
 private extension Sequence where Element: Hashable {
     func uniqued() -> [Element] {
         var seen: Set<Element> = []
