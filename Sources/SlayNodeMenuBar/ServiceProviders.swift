@@ -214,7 +214,9 @@ struct DockerServiceProvider: DiscoveryProvider, ControlProvider {
         for row in rows where row.isValid {
             let inspection = await inspect(containerID: row.id)
             let mounts = inspection.mounts
-            let workspace = ServiceHeuristics.workspaceIdentity(from: mounts.first(where: { $0.type == "bind" })?.source)
+            let workspaceMountSource = preferredWorkspaceMountSource(in: mounts)
+            let workspace = ServiceHeuristics.workspaceIdentity(from: workspaceMountSource)
+            let configSource = preferredConfigMountSource(in: mounts)
             let kind = ServiceHeuristics.classifyContainer(name: row.name, image: row.image)
             let hostPorts = ServiceHeuristics.parseDockerPorts(row.ports).map { ServicePort(value: $0, isInferred: false) }
             let normalizedStatus = row.status.lowercased()
@@ -244,7 +246,7 @@ struct DockerServiceProvider: DiscoveryProvider, ControlProvider {
                     runtime: row.image,
                     summary: summary,
                     command: nil,
-                    configPath: mounts.first(where: { $0.type == "bind" })?.source,
+                    configPath: configSource,
                     logPath: inspection.logPath,
                     tags: ["docker", row.image],
                     availableActions: actions,
@@ -360,6 +362,33 @@ struct DockerServiceProvider: DiscoveryProvider, ControlProvider {
         let fileURL = directory.appendingPathComponent(filename)
         try content.write(to: fileURL, atomically: true, encoding: .utf8)
         return fileURL
+    }
+
+    private func preferredWorkspaceMountSource(in mounts: [DockerMount]) -> String? {
+        mounts
+            .filter { $0.type == "bind" }
+            .compactMap(\.source)
+            .first { source in
+                var isDirectory: ObjCBool = false
+                guard FileManager.default.fileExists(atPath: source, isDirectory: &isDirectory) else {
+                    return false
+                }
+                guard isDirectory.boolValue else {
+                    return false
+                }
+                return ServiceHeuristics.workspaceIdentity(from: source) != nil
+            }
+    }
+
+    private func preferredConfigMountSource(in mounts: [DockerMount]) -> String? {
+        if let workspaceMountSource = preferredWorkspaceMountSource(in: mounts) {
+            return workspaceMountSource
+        }
+
+        return mounts
+            .filter { $0.type == "bind" }
+            .compactMap(\.source)
+            .first(where: { !$0.isEmpty })
     }
 
     private struct DockerRow: Sendable {

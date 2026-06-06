@@ -349,6 +349,61 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertFalse(batch.services.first?.supports(.openWorkspace) ?? true)
     }
 
+    func testDockerServiceFileBindMountDoesNotOfferOpenWorkspace() async throws {
+        let mock = MockShellExecutor()
+        let root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let socketPath = root.appendingPathComponent("docker.sock")
+        try Data().write(to: socketPath)
+
+        mock.responses["/usr/bin/env docker ps --format {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"] = (
+            0,
+            "abc123\tweb\tnginx:latest\t0.0.0.0:8080->80/tcp\tUp 2 minutes"
+        )
+        mock.responses["/usr/bin/env docker inspect --format {{json .Mounts}}@@{{.LogPath}} abc123"] = (
+            0,
+            #" [{"Type":"bind","Source":"\#(socketPath.path)"}] @@/tmp/web.log "#
+        )
+        let provider = DockerServiceProvider(shell: mock)
+
+        let service = await provider.discoverServices().services.first
+
+        XCTAssertFalse(service?.supports(.openWorkspace) ?? true)
+        XCTAssertEqual(service?.configPath, socketPath.path)
+    }
+
+    func testDockerServicePrefersDirectoryBindMountForWorkspace() async throws {
+        let mock = MockShellExecutor()
+        let root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent(UUID().uuidString)
+        let workspacePath = root.appendingPathComponent("demo-app")
+        try FileManager.default.createDirectory(at: workspacePath, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let socketPath = root.appendingPathComponent("docker.sock")
+        try Data().write(to: socketPath)
+
+        mock.responses["/usr/bin/env docker ps --format {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"] = (
+            0,
+            "abc123\tweb\tnginx:latest\t0.0.0.0:8080->80/tcp\tUp 2 minutes"
+        )
+        mock.responses["/usr/bin/env docker inspect --format {{json .Mounts}}@@{{.LogPath}} abc123"] = (
+            0,
+            #" [{"Type":"bind","Source":"\#(socketPath.path)"},{"Type":"bind","Source":"\#(workspacePath.path)"}] @@/tmp/web.log "#
+        )
+        let provider = DockerServiceProvider(shell: mock)
+        let discoveredServices = await provider.discoverServices().services
+
+        let service = try XCTUnwrap(discoveredServices.first)
+
+        XCTAssertTrue(service.supports(.openWorkspace))
+        XCTAssertEqual(service.workspace?.rootPath, workspacePath.path)
+        XCTAssertEqual(service.configPath, workspacePath.path)
+    }
+
     func testDockerServiceOffersForceStopBeforeOrchestration() async {
         let mock = MockShellExecutor()
         mock.responses["/usr/bin/env docker ps --format {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"] = (
