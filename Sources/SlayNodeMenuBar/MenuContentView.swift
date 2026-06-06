@@ -465,6 +465,7 @@ private struct ProcessRowView: View {
                     .lineLimit(presentation == .mainWindow ? 2 : 1)
                     .foregroundStyle(.secondary)
                     .padding(.top, 2)
+                    .help(process.command)
             }
 
             // Info chips (URL, Node.js, etc.)

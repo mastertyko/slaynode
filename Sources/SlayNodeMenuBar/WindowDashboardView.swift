@@ -938,6 +938,7 @@ private struct WindowProcessDetailPanel: View {
                                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                                             .fill(Color.primary.opacity(0.05))
                                     )
+                                    .help(process.command)
                             }
 
                             WindowInfoCard(
@@ -1131,6 +1132,7 @@ private struct WindowProcessHeroCard: View {
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                             .truncationMode(.middle)
+                            .help(workingDirectory)
                     }
 
                     HStack(spacing: 8) {
@@ -1459,6 +1461,7 @@ private struct WindowPathBlock: View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(Color.primary.opacity(0.05))
             )
+            .help(path)
     }
 }
 
