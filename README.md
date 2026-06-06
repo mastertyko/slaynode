@@ -86,6 +86,7 @@ Run the same full verification gate that CI and release automation use with:
 - [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for architecture, release automation, and contributor context
 - [docs/ICON_SYSTEM.md](docs/ICON_SYSTEM.md) for the brand asset pipeline
 - [docs/IMPROVEMENT_BACKLOG.md](docs/IMPROVEMENT_BACKLOG.md) for the current maintenance and hardening backlog
+- [docs/SUPPORTED_EXAMPLES.md](docs/SUPPORTED_EXAMPLES.md) for concrete service and runtime scenarios SlayNode recognizes today
 
 ## License
 
