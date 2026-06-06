@@ -452,8 +452,9 @@ struct BrewServiceProvider: DiscoveryProvider, ControlProvider {
                         status = .stopped
                         health = .passive
                     }
+                    let configPath = validBrewConfigPath(row.file)
                     var actions: [ServiceAction] = [.stop, .restart]
-                    if row.file != nil {
+                    if configPath != nil {
                         actions.append(.revealConfig)
                     }
 
@@ -469,7 +470,7 @@ struct BrewServiceProvider: DiscoveryProvider, ControlProvider {
                         runtime: "Homebrew Services",
                         summary: "Managed by Homebrew Services",
                         command: nil,
-                        configPath: row.file,
+                        configPath: configPath,
                         logPath: nil,
                         tags: ["brew", row.status],
                         availableActions: actions,
@@ -526,6 +527,17 @@ struct BrewServiceProvider: DiscoveryProvider, ControlProvider {
         }
 
         return output.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func validBrewConfigPath(_ path: String?) -> String? {
+        guard let trimmed = path?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty else {
+            return nil
+        }
+        guard FileManager.default.fileExists(atPath: trimmed) else {
+            return nil
+        }
+        return trimmed
     }
 
     private struct BrewRow: Codable, Sendable {
