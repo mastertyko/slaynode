@@ -1387,6 +1387,7 @@ private struct WindowStatusPill: View {
                 )
         )
         .foregroundStyle(tint)
+        .accessibilityLabel(runtimeStatusPillAccessibilityLabel(text: text))
     }
 }
 

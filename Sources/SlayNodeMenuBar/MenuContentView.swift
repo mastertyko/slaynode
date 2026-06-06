@@ -533,6 +533,7 @@ private struct PortBadgeView: View {
             .background(portBackground)
             .foregroundStyle(portForeground)
             .clipShape(Capsule())
+            .accessibilityLabel(runtimePortBadgeAccessibilityLabel(for: badge))
     }
 
     private var badgeText: String {

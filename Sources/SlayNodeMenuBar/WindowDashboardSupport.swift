@@ -254,6 +254,18 @@ func slayScopeNarrative(for process: NodeProcessItemViewModel) -> String {
     return "Slay stops the selected process group, which can include helper workers or child processes launched together with this runtime."
 }
 
+func runtimePortBadgeAccessibilityLabel(for badge: NodeProcessItemViewModel.PortBadge) -> String {
+    if badge.isLikely {
+        return "Likely port \(badge.text)"
+    }
+
+    return "Live port \(badge.text)"
+}
+
+func runtimeStatusPillAccessibilityLabel(text: String) -> String {
+    text
+}
+
 private extension Sequence where Element: Hashable {
     func uniqued() -> [Element] {
         var seen: Set<Element> = []
