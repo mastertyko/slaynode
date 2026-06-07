@@ -24,7 +24,7 @@ jobs:
     
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -39,7 +39,7 @@ jobs:
           echo "build_number=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
       - name: Cache Swift packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .build
           key: ${{ runner.os }}-xcode-${{ env.XCODE_VERSION }}-swift-${{ hashFiles('Package.resolved', 'Package.swift') }}
@@ -58,7 +58,7 @@ jobs:
           SLAYNODE_BUILD_NUMBER="${{ steps.metadata.outputs.build_number }}" ./build.sh release
 
       - name: Upload App Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: SlayNode-v${{ steps.metadata.outputs.version }}-ci.${{ steps.metadata.outputs.build_number }}
           path: SlayNode.app
