@@ -72,6 +72,7 @@ Run the same full verification gate that CI and release automation use with:
 - Docker containers and Homebrew Services are first-class sources with source-specific actions.
 - Working directory, command parsing, ports, health, and dependency heuristics are combined to reduce false positives.
 - Sensitive arguments such as API keys and tokens are redacted before commands are shown in the UI.
+- Destructive actions prefer scoped process previews so you can see when a stop targets a full process tree instead of a single PID.
 
 ## Product Shape
 
