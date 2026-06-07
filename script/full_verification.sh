@@ -17,7 +17,8 @@ bash -n \
   script/validate_release_notes.sh \
   script/test_extract_release_notes.sh \
   script/test_validate_release_notes.sh \
-  script/test_debug_port_detection.sh
+  script/test_debug_port_detection.sh \
+  script/test_release_preflight.sh
 
 echo "==> Running static safety checks"
 ./script/static-safety-check.sh
@@ -31,6 +32,7 @@ git diff --check -- . ':(exclude)Package.resolved'
 echo "==> Verifying release note scripts"
 bash script/test_extract_release_notes.sh
 bash script/test_validate_release_notes.sh
+bash script/test_release_preflight.sh
 
 echo "==> Verifying debug port helper"
 bash script/test_debug_port_detection.sh
