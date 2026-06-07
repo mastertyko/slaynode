@@ -59,6 +59,9 @@ trap cleanup EXIT
 
 echo "🚀 Creating SlayNode release v${VERSION}..."
 
+echo "📝 Validating release notes..."
+"${ROOT_DIR}/script/validate_release_notes.sh" "${VERSION}" >/dev/null
+
 # Build the app
 echo "🔨 Building release version..."
 SLAYNODE_VERSION="${VERSION}" ./build.sh release
