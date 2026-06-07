@@ -26,19 +26,12 @@ concurrency:
 env:
   XCODE_VERSION: '26.3'
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  CERTIFICATE_BASE64: ${{ secrets.CERTIFICATE_BASE64 }}
-  CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
-  KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-  SIGNING_IDENTITY: ${{ secrets.SIGNING_IDENTITY }}
-  APPLE_ID: ${{ secrets.APPLE_ID }}
-  APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
-  APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
   SPARKLE_FEED_URL: ${{ secrets.SPARKLE_FEED_URL }}
   SPARKLE_PUBLIC_ED_KEY: ${{ secrets.SPARKLE_PUBLIC_ED_KEY }}
 
 jobs:
   build-and-release:
-    name: Build, Sign & Release
+    name: Build Ad-Hoc Release
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: macos-26
 
@@ -99,49 +92,12 @@ jobs:
           SLAYNODE_SPARKLE_PUBLIC_ED_KEY="${SPARKLE_PUBLIC_ED_KEY}" \
           ./build.sh release
 
-      - name: Import Code Signing Certificate
-        if: ${{ env.CERTIFICATE_BASE64 != '' }}
+      - name: Ad-Hoc Code Sign App
         run: |
-          CERTIFICATE_PATH="$RUNNER_TEMP/certificate.p12"
-          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
-
-          echo -n "$CERTIFICATE_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
-
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-
-          security import "$CERTIFICATE_PATH" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security list-keychain -d user -s "$KEYCHAIN_PATH"
-
-      - name: Code Sign App
-        run: |
-          if [ -n "$SIGNING_IDENTITY" ]; then
-            codesign --force --deep --sign "$SIGNING_IDENTITY" \
-              --entitlements SlayNode.entitlements \
-              --options runtime \
-              SlayNode.app
-          else
-            echo "No signing identity configured, using ad-hoc signing"
-            codesign --force --deep --sign - \
-              --entitlements SlayNode.entitlements \
-              SlayNode.app
-          fi
-
-      - name: Notarize App
-        if: ${{ env.APPLE_ID != '' && env.APPLE_APP_PASSWORD != '' && env.APPLE_TEAM_ID != '' }}
-        run: |
-          ditto -c -k --keepParent SlayNode.app SlayNode-notarize.zip
-
-          xcrun notarytool submit SlayNode-notarize.zip \
-            --apple-id "$APPLE_ID" \
-            --password "$APPLE_APP_PASSWORD" \
-            --team-id "$APPLE_TEAM_ID" \
-            --wait
-
-          xcrun stapler staple SlayNode.app
-          rm SlayNode-notarize.zip
+          echo "GitHub release builds intentionally use ad-hoc signing only."
+          codesign --force --deep --sign - \
+            --entitlements SlayNode.entitlements \
+            SlayNode.app
 
       - name: Create DMG
         run: |
@@ -185,6 +141,11 @@ jobs:
             echo
             echo "- macOS ${{ steps.metadata.outputs.minimum_system_version }} or later"
             echo
+            echo "## Signing"
+            echo
+            echo "- GitHub release assets are ad-hoc signed and not notarized."
+            echo "- macOS may show a first-launch warning because no Apple Developer ID is used for public releases."
+            echo
             echo "## Build Metadata"
             echo
             echo "- Version: ${{ steps.metadata.outputs.version }}"
@@ -215,10 +176,3 @@ jobs:
             ${{ env.ZIP_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Cleanup Keychain
-        if: always()
-        run: |
-          if [ -f "$RUNNER_TEMP/app-signing.keychain-db" ]; then
-            security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true
-          fi

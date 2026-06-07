@@ -70,10 +70,14 @@ To preserve other running SlayNode instances from different clones, `script/buil
 ./release.sh 1.0
 ```
 
-### Notarization Flow
+### Optional Local Notarization Flow
 ```bash
 ./notarize.sh 1.0
 ```
+
+`notarize.sh` is a local helper for private Developer ID workflows only. GitHub
+release automation intentionally does not read Apple Developer certificates,
+Apple ID credentials, or notarization secrets.
 
 Successful CI runs on `main` automatically trigger the GitHub release workflow. Each release now gets:
 
@@ -82,6 +86,7 @@ Successful CI runs on `main` automatically trigger the GitHub release workflow. 
 - a build-specific tag in the form `v<version>-build.<number>`
 - release notes generated from the current changelog section or recent commits
 - DMG and ZIP assets named with both version and build number
+- ad-hoc code signing only, without Apple Developer ID notarization
 
 You can also trigger the release workflow manually with `workflow_dispatch` if you need to target a specific ref.
 
