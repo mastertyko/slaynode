@@ -82,7 +82,8 @@ sudo xcode-select --reset
 
 ### Commands Show Sensitive Flags
 - SlayNode redacts known secret-bearing arguments before displaying commands in the UI.
-- Source commands still run exactly as launched by the system; only the presentation is sanitized.
+- This includes common auth headers, cookies, URL credentials, connection strings, and query parameters such as `token` or `access_token`.
+- Source commands still run exactly as launched by the system; only the presentation and local history copy are sanitized.
 
 ## Logs
 

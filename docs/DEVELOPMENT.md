@@ -195,6 +195,26 @@ If the UI looks stale after a process exits or after a local rebuild:
 - Crash reporting is optional and depends on build-time configuration.
 - The Xcode project remains in the repo, but SwiftPM plus `script/build_and_run.sh` is the primary local workflow.
 
+## Privacy Boundary For Command Capture
+
+SlayNode only inspects process metadata that is already available locally on the Mac:
+
+- process command lines from `ps`
+- listening ports and working directories from `lsof`
+- Docker metadata from local `docker` CLI queries
+- Homebrew service state from local `brew services` output
+
+That metadata stays on-device. SlayNode does not upload process names, commands, ports, paths, or workspace history to any remote service as part of normal discovery.
+
+Before command text is shown in the UI or persisted into local history, it is sanitized through the shared service model. The sanitizer currently redacts:
+
+- secret-bearing flags such as `--token`, `--api-key`, `--password`, `--client-secret`, and connection-string style arguments
+- URL credentials such as `postgres://user:password@host/db`
+- sensitive query parameters such as `token`, `access_token`, and `api_key`
+- secret-bearing headers such as `Authorization:`, `Cookie:`, `Set-Cookie:`, `X-Api-Key:`, and `Proxy-Authorization:`
+
+The raw process continues running exactly as launched by the user or the system. Redaction only affects presentation and locally persisted UI-facing history.
+
 ## Contributing
 
 1. Fork the repository.
