@@ -15,7 +15,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.0"),
-        .package(url: "https://github.com/getsentry/sentry-cocoa", from: "8.40.0")
+        .package(url: "https://github.com/getsentry/sentry-cocoa", from: "9.16.1")
     ],
     targets: [
         .executableTarget(
