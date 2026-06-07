@@ -9,17 +9,32 @@ BUNDLE_ID="se.slaynode.menubar"
 APP_BUNDLE="$ROOT_DIR/${APP_NAME}.app"
 APP_BINARY="$APP_BUNDLE/Contents/MacOS/${PROCESS_NAME}"
 KILL_STRATEGY="bundle"
+BUILD_SCRIPT="${BUILD_SCRIPT:-$ROOT_DIR/build.sh}"
+OPEN_BIN="${OPEN_BIN:-/usr/bin/open}"
+PGREP_BIN="${PGREP_BIN:-pgrep}"
+PS_BIN="${PS_BIN:-ps}"
+SLEEP_BIN="${SLEEP_BIN:-sleep}"
+
+find_running_bundle_instances() {
+  local pids=()
+  while IFS= read -r pid; do
+    [[ -z "$pid" ]] && continue
+    local command
+    command="$("$PS_BIN" -p "$pid" -o command= 2>/dev/null || true)"
+    if [[ "$command" == "$APP_BINARY"* ]]; then
+      pids+=("$pid")
+    fi
+  done < <("$PGREP_BIN" -x "$PROCESS_NAME" || true)
+
+  printf '%s\n' "${pids[@]}"
+}
 
 kill_existing_bundle_instances() {
   local pids=()
   while IFS= read -r pid; do
     [[ -z "$pid" ]] && continue
-    local command
-    command="$(ps -p "$pid" -o command= 2>/dev/null || true)"
-    if [[ "$command" == "$APP_BINARY"* ]]; then
-      pids+=("$pid")
-    fi
-  done < <(pgrep -x "$PROCESS_NAME" || true)
+    pids+=("$pid")
+  done < <(find_running_bundle_instances)
 
   if [[ ${#pids[@]} -eq 0 ]]; then
     return
@@ -50,11 +65,27 @@ kill_existing() {
 }
 
 build_app() {
-  "$ROOT_DIR/build.sh" debug
+  "$BUILD_SCRIPT" debug
 }
 
 open_app() {
-  /usr/bin/open -n "$APP_BUNDLE"
+  "$OPEN_BIN" -n "$APP_BUNDLE"
+}
+
+verify_current_bundle_running() {
+  local matches=()
+  while IFS= read -r pid; do
+    [[ -z "$pid" ]] && continue
+    matches+=("$pid")
+  done < <(find_running_bundle_instances)
+
+  if [[ ${#matches[@]} -gt 0 ]]; then
+    echo "✅ $PROCESS_NAME is running from the current bundle"
+    return 0
+  fi
+
+  echo "❌ $PROCESS_NAME did not start from the current bundle as expected" >&2
+  return 1
 }
 
 usage() {
@@ -108,13 +139,8 @@ case "$MODE" in
     ;;
   --verify|verify)
     open_app
-    sleep 2
-    if pgrep -x "$PROCESS_NAME" >/dev/null; then
-      echo "✅ $PROCESS_NAME is running"
-    else
-      echo "❌ $PROCESS_NAME did not start as expected" >&2
-      exit 1
-    fi
+    "$SLEEP_BIN" 2
+    verify_current_bundle_running
     ;;
   *)
     usage

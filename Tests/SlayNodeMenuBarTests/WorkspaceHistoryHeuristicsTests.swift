@@ -30,6 +30,21 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
         XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
     }
 
+    func testEligibleRecentWorkspaceRejectsFilePath() throws {
+        let tempRoot = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+        let filePath = tempRoot.appendingPathComponent("workspace.txt")
+        try "not a directory".write(to: filePath, atomically: true, encoding: .utf8)
+
+        let workspace = WorkspaceIdentity(
+            id: filePath.path.lowercased(),
+            name: "workspace",
+            rootPath: filePath.path
+        )
+
+        XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
+    }
+
     func testEligibleRecentWorkspaceRejectsDisallowedFolderName() throws {
         let tempRoot = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: tempRoot) }
@@ -53,13 +68,19 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
             "storybook-static",
             "deriveddata",
             ".build",
+            ".angular",
             ".direnv",
+            ".expo",
             ".next",
             ".pytest_cache",
+            ".parcel-cache",
             ".swiftpm",
             ".turbo",
             ".pnpm-store",
+            ".vercel",
             ".venv",
+            ".vite",
+            ".wrangler",
             ".omx",
             ".codex",
             ".claude"
@@ -94,19 +115,24 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
     func testEligibleRecentWorkspaceRejectsDisallowedGeneratedPathComponents() throws {
         let tempRoot = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: tempRoot) }
-        let generatedPath = tempRoot
-            .appendingPathComponent("frontend")
-            .appendingPathComponent("dist")
-            .appendingPathComponent("web")
-        try FileManager.default.createDirectory(at: generatedPath, withIntermediateDirectories: true)
+        for component in ["dist", ".output", "cache", ".parcel-cache"] {
+            let generatedPath = tempRoot
+                .appendingPathComponent("frontend")
+                .appendingPathComponent(component)
+                .appendingPathComponent("web")
+            try FileManager.default.createDirectory(at: generatedPath, withIntermediateDirectories: true)
 
-        let workspace = WorkspaceIdentity(
-            id: generatedPath.path.lowercased(),
-            name: "frontend",
-            rootPath: generatedPath.path
-        )
+            let workspace = WorkspaceIdentity(
+                id: generatedPath.path.lowercased(),
+                name: "frontend",
+                rootPath: generatedPath.path
+            )
 
-        XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
+            XCTAssertFalse(
+                WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace),
+                "Expected \(component) paths to be ignored"
+            )
+        }
     }
 
     func testEligibleRecentWorkspaceRejectsVersionControlMetadataPaths() throws {
@@ -143,6 +169,35 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
         )
 
         XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
+    }
+
+    func testEligibleRecentWorkspaceRejectsEditorAndAgentStatePaths() throws {
+        let tempRoot = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+
+        for components in [
+            ["frontend", ".vscode", "workspaceStorage"],
+            ["frontend", ".cursor", "state"],
+            ["frontend", ".idea", "shelf"],
+            ["frontend", ".zed", "workspace"],
+            ["frontend", ".sisyphus", "evidence"]
+        ] {
+            let statePath = components.reduce(tempRoot) { partialResult, component in
+                partialResult.appendingPathComponent(component)
+            }
+            try FileManager.default.createDirectory(at: statePath, withIntermediateDirectories: true)
+
+            let workspace = WorkspaceIdentity(
+                id: statePath.path.lowercased(),
+                name: "frontend",
+                rootPath: statePath.path
+            )
+
+            XCTAssertFalse(
+                WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace),
+                statePath.path
+            )
+        }
     }
 
     func testEligibleRecentWorkspaceRejectsXcodeDerivedDataPaths() throws {

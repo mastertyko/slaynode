@@ -555,6 +555,7 @@ struct ServiceDashboardWindowView: View {
             Text(service.summary)
                 .font(.body)
                 .foregroundStyle(.primary)
+                .help(service.summary)
 
             if !service.tags.isEmpty {
                 FlowLayout(spacing: 8) {
@@ -574,9 +575,22 @@ struct ServiceDashboardWindowView: View {
     @ViewBuilder
     private func commandPanel(_ command: String) -> some View {
         ServicePanel(title: "Command", systemImage: "terminal") {
-            Text(command)
-                .font(.system(.body, design: .monospaced))
-                .textSelection(.enabled)
+            VStack(alignment: .leading, spacing: 12) {
+                Text(command)
+                    .font(.system(.body, design: .monospaced))
+                    .textSelection(.enabled)
+
+                Button {
+                    copyToPasteboard(serviceCommandCopyText(command))
+                } label: {
+                    Label("Copy Command", systemImage: "document.on.document")
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.small)
+                .help("Copy the redacted command")
+                .accessibilityLabel("Copy command")
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -967,6 +981,7 @@ private struct ServiceHeroCard<Actions: View>: View {
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .lineLimit(3)
+                        .help(service.summary)
 
                     Text(refreshLabel)
                         .font(.caption)
@@ -995,6 +1010,7 @@ private struct ServiceHeroCard<Actions: View>: View {
             .padding(.vertical, 6)
             .foregroundStyle(.primary)
             .glassEffect(in: Capsule())
+            .accessibilityLabel(serviceStatusAccessibilityLabel(for: service))
     }
 
     private var refreshLabel: String {
@@ -1203,6 +1219,7 @@ private struct ServiceMenuBarRow: View {
                         .background(healthTint(for: service.health).opacity(0.14), in: Capsule())
                         .foregroundStyle(healthTint(for: service.health))
                         .lineLimit(1)
+                        .accessibilityLabel(serviceStatusAccessibilityLabel(for: service))
                 }
 
                 if isExpanded {
@@ -1210,6 +1227,7 @@ private struct ServiceMenuBarRow: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                        .help(service.summary)
 
                     HStack(spacing: 6) {
                         ServiceMenuBarMetaBadge(
@@ -1220,7 +1238,8 @@ private struct ServiceMenuBarRow: View {
                         if let workspaceTitle {
                             ServiceMenuBarMetaBadge(
                                 text: workspaceTitle,
-                                systemImage: "folder.fill"
+                                systemImage: "folder.fill",
+                                accessibilityLabel: "Workspace \(workspaceTitle)"
                             )
                         }
 
@@ -1228,7 +1247,8 @@ private struct ServiceMenuBarRow: View {
                             ServiceMenuBarMetaBadge(
                                 text: service.ports.map { ":\($0.value)" }.joined(separator: "  "),
                                 systemImage: "dot.radiowaves.left.and.right",
-                                monospaced: true
+                                monospaced: true,
+                                accessibilityLabel: servicePortAccessibilityLabel(for: service)
                             )
                         }
                     }
@@ -1384,6 +1404,7 @@ private struct ServiceMenuBarMetaBadge: View {
     let text: String
     let systemImage: String
     var monospaced: Bool = false
+    var accessibilityLabel: String?
 
     var body: some View {
         HStack(spacing: 4) {
@@ -1398,6 +1419,8 @@ private struct ServiceMenuBarMetaBadge: View {
         .padding(.horizontal, 7)
         .padding(.vertical, 5)
         .background(.white.opacity(0.06), in: Capsule())
+        .accessibilityLabel(accessibilityLabel ?? text)
+        .help(text)
     }
 }
 
@@ -1428,6 +1451,7 @@ private struct ServiceWorkspaceRow: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
+                    .help(workspace.rootPath)
             }
 
             Spacer(minLength: 0)
@@ -1483,6 +1507,24 @@ func serviceListEmptyStateContent(searchText: String, lastError: String?) -> Ser
     )
 }
 
+func serviceStatusAccessibilityLabel(for service: ManagedService) -> String {
+    "Status \(service.status.title), \(service.health.title)"
+}
+
+func servicePortAccessibilityLabel(for service: ManagedService) -> String {
+    let labels = service.ports.map { port in
+        port.isInferred ? "likely port \(port.value)" : "port \(port.value)"
+    }
+    let prefix = labels.count == 1 ? "Listening on " : "Listening on ports "
+    return prefix + labels.joined(separator: ", ")
+}
+
+private func copyToPasteboard(_ text: String) {
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    pasteboard.setString(text, forType: .string)
+}
+
 private struct ServiceListRow: View {
     let service: ManagedService
 
@@ -1507,17 +1549,20 @@ private struct ServiceListRow: View {
                         .padding(.vertical, 4)
                         .background(healthTint(for: service.health).opacity(0.14), in: Capsule())
                         .foregroundStyle(healthTint(for: service.health))
+                        .accessibilityLabel(serviceStatusAccessibilityLabel(for: service))
                 }
 
                 Text(service.summary)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
+                    .help(service.summary)
 
                 if !service.ports.isEmpty {
                     Text(service.ports.map { ":\($0.value)" }.joined(separator: "  "))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.tertiary)
+                        .accessibilityLabel(servicePortAccessibilityLabel(for: service))
                 }
             }
 
@@ -1594,6 +1639,7 @@ private struct ServiceInspectorPanel: View {
                                         .foregroundStyle(.secondary)
                                         .lineLimit(1)
                                         .truncationMode(.middle)
+                                        .help(workspace.rootPath)
                                 }
                             }
                         }

@@ -6,22 +6,34 @@ enum WorkspaceHistoryHeuristics {
         ".codex",
         ".git",
         ".hg",
+        ".idea",
         ".omx",
+        ".sisyphus",
         ".svn",
+        ".vscode",
+        ".zed",
         ".bin",
+        ".build",
+        ".angular",
         ".cache",
         ".claude",
+        ".cursor",
         ".direnv",
+        ".expo",
         ".next",
         ".nuxt",
+        ".output",
+        ".parcel-cache",
         ".pnpm-store",
         ".pytest_cache",
         ".swiftpm",
         ".svelte-kit",
         ".turbo",
         ".venv",
+        ".vercel",
+        ".vite",
+        ".wrangler",
         ".yarn",
-        ".build",
         "build",
         "cache",
         "coverage",
@@ -45,7 +57,9 @@ enum WorkspaceHistoryHeuristics {
         guard !disallowedNames.contains(trimmedName.lowercased()) else { return false }
         guard !looksOpaqueIdentifier(trimmedName) else { return false }
         guard !hasDisallowedPathComponent(workspace.rootPath) else { return false }
-        guard fileManager.fileExists(atPath: workspace.rootPath) else { return false }
+        var isDirectory: ObjCBool = false
+        guard fileManager.fileExists(atPath: workspace.rootPath, isDirectory: &isDirectory),
+              isDirectory.boolValue else { return false }
         return true
     }
 

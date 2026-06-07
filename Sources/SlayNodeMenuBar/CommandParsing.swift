@@ -88,6 +88,11 @@ enum CommandParser {
                 continue
             }
 
+            if let jvmPort = extractJVMPortProperty(from: token) {
+                collected.insert(jvmPort)
+                continue
+            }
+
             if let inlinePort = extractInlinePort(from: token) {
                 collected.insert(inlinePort)
                 continue
@@ -165,6 +170,8 @@ enum CommandParser {
                 token.hasSuffix(".ts") || token.hasSuffix(".tsx") || token.hasSuffix(".mts") || token.hasSuffix(".cts") {
                 return true
             }
+            let component = (token as NSString).lastPathComponent.lowercased()
+            if extensionlessServerEntrypoints.contains(component) { return true }
             if token.contains("next") || token.contains("vite") || token.contains("nuxt") { return true }
             return token.contains("/src/") || token.contains("/server/")
         })
@@ -194,6 +201,11 @@ enum CommandParser {
         "--workspace",
         "--prefix",
         "-C"
+    ])
+
+    private static let extensionlessServerEntrypoints = Set([
+        "server",
+        "dev-server"
     ])
 
     private static func inlineWorkingDirectoryPath(from token: String) -> String? {
@@ -298,6 +310,10 @@ enum CommandParser {
             return port
         }
 
+        if let port = extractURLPort(from: normalizedValue) {
+            return port
+        }
+
         if let port = extractShellDefaultPort(from: normalizedValue) {
             return port
         }
@@ -316,12 +332,43 @@ enum CommandParser {
         return parts.last == "port"
     }
 
+    private static func extractJVMPortProperty(from token: String) -> Int? {
+        guard token.hasPrefix("-D"),
+              let separator = token.firstIndex(of: "="),
+              separator > token.index(token.startIndex, offsetBy: 2) else {
+            return nil
+        }
+
+        let keyStart = token.index(token.startIndex, offsetBy: 2)
+        let key = String(token[keyStart..<separator]).lowercased()
+        guard isJVMPortPropertyKey(key) else { return nil }
+
+        let valueStart = token.index(after: separator)
+        let rawValue = String(token[valueStart...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        return extractPortCandidate(from: rawValue)
+            ?? extractURLPort(from: rawValue)
+            ?? extractShellDefaultPort(from: rawValue)
+            ?? parsePortPrefix(rawValue)
+    }
+
+    private static func isJVMPortPropertyKey(_ key: String) -> Bool {
+        guard !key.isEmpty else { return false }
+        let separators = CharacterSet(charactersIn: ".-_")
+        let keyParts = key.components(separatedBy: separators).filter { !$0.isEmpty }
+        guard let last = keyParts.last else { return false }
+        return last == "port"
+    }
+
     private static func extractPortCandidate(from value: String) -> Int? {
-        if let directPort = Int(value), isValidPort(directPort) {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let unwrapped = unwrappedQuotedValue(trimmed)
+        let sanitized = unwrapped.trimmingCharacters(in: CharacterSet(charactersIn: ",;)"))
+
+        if let directPort = Int(sanitized), isValidPort(directPort) {
             return directPort
         }
 
-        return extractTrailingPort(from: value)
+        return extractTrailingPort(from: sanitized)
     }
 
     private static func extractTrailingPort(from value: String) -> Int? {
@@ -420,7 +467,9 @@ enum CommandParser {
             guard let range = expression.range(of: separator) else { continue }
             let candidate = String(expression[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
             let unwrappedCandidate = unwrappedQuotedValue(candidate)
-            return extractPortCandidate(from: unwrappedCandidate) ?? parsePortPrefix(unwrappedCandidate)
+            return extractPortCandidate(from: unwrappedCandidate)
+                ?? extractURLPort(from: unwrappedCandidate)
+                ?? parsePortPrefix(unwrappedCandidate)
         }
 
         return nil
@@ -436,7 +485,8 @@ enum CommandParser {
             lowered.contains("[::") ||
             lowered.contains("*:") ||
             token.contains("://") ||
-            looksLikeIPv4HostPort(token)
+            looksLikeIPv4HostPort(token) ||
+            looksLikeHostnamePort(token)
     }
 
     private static func looksLikeIPv4HostPort(_ token: String) -> Bool {
@@ -457,6 +507,19 @@ enum CommandParser {
         }
 
         return true
+    }
+
+    private static func looksLikeHostnamePort(_ token: String) -> Bool {
+        guard let colonIndex = token.lastIndex(of: ":") else { return false }
+        let hostSlice = token[..<colonIndex].trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !hostSlice.isEmpty else { return false }
+
+        let host = hostSlice.split(separator: "/").last.map(String.init) ?? String(hostSlice)
+        guard host.contains("."), host.contains(where: \.isLetter) else { return false }
+        guard !host.contains(where: \.isWhitespace) else { return false }
+
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: ".-"))
+        return host.unicodeScalars.allSatisfy { allowed.contains($0) }
     }
 
     private static func isValidPort(_ value: Int) -> Bool {

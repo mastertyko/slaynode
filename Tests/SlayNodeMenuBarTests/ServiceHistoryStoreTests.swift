@@ -313,6 +313,30 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertTrue(records.isEmpty)
     }
 
+    func testRecordSnapshotSkipsEditorStateWorkspaceHistory() throws {
+        let store = try makeStore()
+        let root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent(UUID().uuidString)
+        let editorStatePath = root
+            .appendingPathComponent("frontend")
+            .appendingPathComponent(".vscode")
+            .appendingPathComponent("workspaceStorage")
+        try FileManager.default.createDirectory(at: editorStatePath, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let workspace = WorkspaceIdentity(
+            id: editorStatePath.path.lowercased(),
+            name: "frontend",
+            rootPath: editorStatePath.path
+        )
+        let service = makeService(name: "vite", kind: .app, workspace: workspace, status: .running)
+
+        store.record(snapshot: ServiceSnapshot(services: [service], dependencies: [], generatedAt: Date()))
+
+        let records = try store.modelContext.fetch(FetchDescriptor<WorkspaceHistoryRecord>())
+        XCTAssertTrue(records.isEmpty)
+    }
+
     private func makeStore() throws -> ServiceHistoryStore {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(

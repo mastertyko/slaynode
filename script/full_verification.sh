@@ -15,8 +15,11 @@ bash -n \
   script/static-safety-check.sh \
   script/extract_release_notes.sh \
   script/validate_release_notes.sh \
+  script/test_build_and_run.sh \
   script/test_extract_release_notes.sh \
-  script/test_validate_release_notes.sh
+  script/test_validate_release_notes.sh \
+  script/test_debug_port_detection.sh \
+  script/test_release_preflight.sh
 
 echo "==> Running static safety checks"
 ./script/static-safety-check.sh
@@ -28,8 +31,13 @@ echo "==> Checking git diff whitespace"
 git diff --check -- . ':(exclude)Package.resolved'
 
 echo "==> Verifying release note scripts"
+bash script/test_build_and_run.sh
 bash script/test_extract_release_notes.sh
 bash script/test_validate_release_notes.sh
+bash script/test_release_preflight.sh
+
+echo "==> Verifying debug port helper"
+bash script/test_debug_port_detection.sh
 
 echo "==> Verifying debug port detection samples"
 ./debug-port-detection.sh --samples-only

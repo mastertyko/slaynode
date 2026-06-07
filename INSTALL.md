@@ -69,6 +69,32 @@ codesign --force --sign - SlayNode.app
   - a Homebrew Service
 - Use the in-app `Refresh` action.
 - Check Console.app for `SlayNodeMenuBar` log entries.
+- Validate that expected runtime commands are visible to `ps`:
+  ```bash
+  ps -axo pid=,command= | rg '(node|npm|pnpm|yarn|bun|deno|python|ruby|go)' | head -20
+  ```
+- Validate that service ports are actually listening:
+  ```bash
+  lsof -nP -iTCP -sTCP:LISTEN | rg '(3000|4173|5173|8000|8080|8787)'
+  ```
+- Run the built-in port detection samples to confirm parser behavior:
+  ```bash
+  ./debug-port-detection.sh --samples-only
+  ```
+- If `lsof` is blocked by OS permissions, grant Terminal or your shell host app permissions in System Settings and retry.
+
+### Menu Bar State Looks Stale After a Process Exits
+- Trigger `Refresh` in SlayNode and wait one polling interval.
+- Verify that the process is truly gone:
+  ```bash
+  ps -p <PID_FROM_SLAYNODE> -o pid=,command=
+  ```
+- If stale rows remain, relaunch SlayNode from terminal and capture logs:
+  ```bash
+  ./script/build_and_run.sh --verify
+  ./script/build_and_run.sh --logs
+  ```
+- Include the last refresh timestamp and affected PID in bug reports to simplify diagnosis.
 
 ### Source Builds Fail
 ```bash
@@ -82,7 +108,8 @@ sudo xcode-select --reset
 
 ### Commands Show Sensitive Flags
 - SlayNode redacts known secret-bearing arguments before displaying commands in the UI.
-- Source commands still run exactly as launched by the system; only the presentation is sanitized.
+- This includes common auth headers, cookies, URL credentials, connection strings, and query parameters such as `token` or `access_token`.
+- Source commands still run exactly as launched by the system; only the presentation and local history copy are sanitized.
 
 ## Logs
 

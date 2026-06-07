@@ -31,6 +31,15 @@ final class CommandParserTests: XCTestCase {
         )
     }
 
+    func testFirstScriptTokenDetectsExtensionlessServerEntrypoints() {
+        let tokens = ["node", "/Users/demo/app/scripts/dev-server", "--watch"]
+
+        XCTAssertEqual(
+            CommandParser.firstScriptToken(from: tokens),
+            "/Users/demo/app/scripts/dev-server"
+        )
+    }
+
     func testDescriptorDetectsNextJS() {
         let tokens = ["node_modules/.bin/next", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
@@ -66,6 +75,13 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 9229])
     }
 
+    func testInferPortsFromInlineFlagsWithQuotedValues() {
+        let tokens = ["node", "server.js", "--port=\"3000\"", "--inspect='127.0.0.1:9229'"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000, 9229])
+    }
+
     func testInferPortsDeduplicatesAndSortsValues() {
         let tokens = ["node", "server.js", "--port=3000", "-p", "3000", "--inspect=127.0.0.1:9229"]
         let ports = CommandParser.inferPorts(from: tokens)
@@ -76,6 +92,13 @@ final class CommandParserTests: XCTestCase {
     func testInferPortsFromSeparateFlagArguments() {
         let tokens = ["vite", "--port", "4173", "--inspect", "127.0.0.1:9230"]
         let ports = CommandParser.inferPorts(from: tokens)
+        XCTAssertEqual(ports, [4173, 9230])
+    }
+
+    func testInferPortsFromQuotedFlagArguments() {
+        let tokens = ["vite", "--port", "\"4173\"", "--inspect", "'127.0.0.1:9230'"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
         XCTAssertEqual(ports, [4173, 9230])
     }
 
@@ -155,6 +178,20 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 4173, 9229])
     }
 
+    func testInferPortsFromEnvironmentAssignmentsWithURLValues() {
+        let tokens = [
+            "PORT=http://localhost:3000",
+            "WEB_PORT=\"https://127.0.0.1:4173/app\"",
+            "API_PORT='http://0.0.0.0:8080,'",
+            "npm",
+            "run",
+            "dev"
+        ]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000, 4173, 8080])
+    }
+
     func testInferPortsFromEnvironmentAssignmentsWithShellDefaults() {
         let tokens = [
             "PORT=${PORT:-3000}",
@@ -162,13 +199,29 @@ final class CommandParserTests: XCTestCase {
             "APP_PORT=${APP_PORT:-\"8080\"}",
             "ALT_PORT=${ALT_PORT:=9229}",
             "FALLBACK_PORT=${FALLBACK_PORT=9333}",
+            "URL_PORT=${URL_PORT:-http://localhost:5050}",
+            "GRAPH_PORT=${GRAPH_PORT:=https://127.0.0.1:6060/graphql}",
             "npm",
             "run",
             "dev"
         ]
         let ports = CommandParser.inferPorts(from: tokens)
 
-        XCTAssertEqual(ports, [3000, 4173, 8080, 9229, 9333])
+        XCTAssertEqual(ports, [3000, 4173, 5050, 6060, 8080, 9229, 9333])
+    }
+
+    func testInferPortsFromEnvironmentAssignmentsWithURLShellDefaults() {
+        let tokens = [
+            "PORT=${PORT:-http://localhost:3000}",
+            "API_PORT=${API_PORT:=https://127.0.0.1:8443/graphql}",
+            "WEB_PORT=${WEB_PORT-\"http://0.0.0.0:4173\"}",
+            "npm",
+            "run",
+            "dev"
+        ]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000, 4173, 8443])
     }
 
     func testInferPortsFromSocketAddressFlags() {
@@ -184,6 +237,36 @@ final class CommandParserTests: XCTestCase {
         ]
         let ports = CommandParser.inferPorts(from: tokens)
         XCTAssertEqual(ports, [8000, 9000, 9100, 9200])
+    }
+
+    func testInferPortsFromJVMSystemProperties() {
+        let tokens = [
+            "java",
+            "-Dhttp.port=8080",
+            "-Djetty.http.port=127.0.0.1:9000",
+            "-Dmanagement.server.port=9001",
+            "-Dgrpc.threads=32",
+            "-jar",
+            "app.jar"
+        ]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [8080, 9000, 9001])
+    }
+
+    func testInferPortsFromURLJVMSystemProperties() {
+        let tokens = [
+            "java",
+            "-Dserver.port=http://localhost:8080",
+            "-Dmanagement.server.port=https://127.0.0.1:9001/actuator",
+            "-Ddebug.port=${DEBUG_PORT:-9229}",
+            "-Dapi.port=${API_PORT:=http://0.0.0.0:4173}",
+            "-jar",
+            "app.jar"
+        ]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [4173, 8080, 9001, 9229])
     }
 
     func testInferPortsFromIPv6HostPortToken() {
@@ -209,6 +292,13 @@ final class CommandParserTests: XCTestCase {
 
     func testInferPortsFromPrivateIPv4HostTokens() {
         let tokens = ["node", "server.js", "10.20.30.40:4173/graphql", "192.168.0.12:3000,"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000, 4173])
+    }
+
+    func testInferPortsFromHostnameHostTokens() {
+        let tokens = ["node", "server.js", "api.local:4173/graphql", "dev.internal:3000,"]
         let ports = CommandParser.inferPorts(from: tokens)
 
         XCTAssertEqual(ports, [3000, 4173])
@@ -249,6 +339,13 @@ final class CommandParserTests: XCTestCase {
 
     func testInferPortsIgnoresInvalidIPv4HostTokens() {
         let tokens = ["node", "server.js", "999.20.30.40:4173", "1.2.3:3000"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertTrue(ports.isEmpty)
+    }
+
+    func testInferPortsIgnoresAmbiguousTokenWithoutHostnameSignal() {
+        let tokens = ["node", "server.js", "build:3000"]
         let ports = CommandParser.inferPorts(from: tokens)
 
         XCTAssertTrue(ports.isEmpty)
@@ -308,6 +405,21 @@ final class CommandParserTests: XCTestCase {
         let path = CommandParser.inferWorkingDirectory(from: tokens)
 
         XCTAssertEqual(path, "/Users/test/My App")
+    }
+
+    func testInferWorkingDirectoryFromExtensionlessServerEntrypoint() throws {
+        let tempRoot = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let scriptsDirectory = tempRoot.appendingPathComponent("scripts", isDirectory: true)
+        let serverPath = scriptsDirectory.appendingPathComponent("dev-server", isDirectory: false)
+
+        try FileManager.default.createDirectory(at: scriptsDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+        FileManager.default.createFile(atPath: serverPath.path, contents: Data())
+
+        let tokens = ["node", serverPath.path, "--watch"]
+
+        XCTAssertEqual(CommandParser.inferWorkingDirectory(from: tokens), scriptsDirectory.path)
     }
 }
 extension CommandParserTests {
@@ -391,6 +503,67 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [3001])
     }
 
+    func testPackageManagerWrapperParsesBunRunBunViteCommand() {
+        let tokens = ["bun", "--bun", "vite", "dev", "--port", "5174"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.packageManager, "bun")
+        XCTAssertEqual(descriptor.displayName, "Vite")
+        XCTAssertEqual(descriptor.script, "vite")
+        XCTAssertEqual(descriptor.category, .bundler)
+        XCTAssertEqual(ports, [5174])
+    }
+
+    func testPackageManagerWrapperParsesBunWatchCommand() {
+        let tokens = ["bun", "--watch", "src/server.ts", "--port", "4173"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.packageManager, "bun")
+        XCTAssertEqual(descriptor.script, "src/server.ts")
+        XCTAssertEqual(descriptor.runtime, "Bun")
+        XCTAssertEqual(ports, [4173])
+    }
+
+    func testPackageManagerWrapperParsesBunHotCommand() {
+        let tokens = ["bun", "--hot", "src/server.ts", "--inspect=127.0.0.1:9230"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.packageManager, "bun")
+        XCTAssertEqual(descriptor.script, "src/server.ts")
+        XCTAssertEqual(descriptor.runtime, "Bun")
+        XCTAssertEqual(ports, [9230])
+    }
+
+    func testDenoTaskCommandWithInlinePortIsDetected() {
+        let tokens = ["deno", "task", "dev", "--port", "8000"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Deno")
+        XCTAssertEqual(descriptor.runtime, "Deno")
+        XCTAssertEqual(descriptor.category, .runtime)
+        XCTAssertEqual(ports, [8000])
+    }
+
+    func testDenoTaskCommandWithPassthroughPortIsDetected() {
+        let tokens = ["deno", "task", "dev", "--", "--port=8080", "--host", "127.0.0.1"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Deno")
+        XCTAssertEqual(descriptor.runtime, "Deno")
+        XCTAssertEqual(descriptor.category, .runtime)
+        XCTAssertEqual(ports, [8080])
+    }
+
     func testYarnWorkspaceScriptNameIsParsed() {
         let tokens = ["yarn", "workspace", "web", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
@@ -427,6 +600,15 @@ extension CommandParserTests {
         XCTAssertEqual(descriptor.details, "Mode: PREVIEW")
         XCTAssertEqual(descriptor.category, .bundler)
         XCTAssertEqual(descriptor.portHints, [5173])
+    }
+
+    func testViteModeDetectionIsCaseInsensitiveAndPunctuationTolerant() {
+        let tokens = ["vite", "DEV,", "--port", "5173"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+
+        XCTAssertEqual(descriptor.displayName, "Vite")
+        XCTAssertEqual(descriptor.details, "Mode: DEV")
     }
 
     func testWebpackServeCommandIsDetected() {
