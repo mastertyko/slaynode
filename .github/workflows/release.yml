@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.event.inputs.git_ref || github.ref_name }}
@@ -30,9 +31,52 @@ env:
   SPARKLE_PUBLIC_ED_KEY: ${{ secrets.SPARKLE_PUBLIC_ED_KEY }}
 
 jobs:
+  release-gate:
+    name: Release Gate
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.classify.outputs.should_release }}
+
+    steps:
+      - name: Classify source commit
+        id: classify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          WORKFLOW_CONCLUSION: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion || 'success' }}
+        run: |
+          if [ "${WORKFLOW_CONCLUSION}" != "success" ]; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${GITHUB_EVENT_NAME}" != "workflow_run" ]; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          pulls_json="$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${GITHUB_REPOSITORY}/commits/${SOURCE_SHA}/pulls")"
+
+          pr_author="$(jq -r '.[0].user.login // ""' <<<"${pulls_json}")"
+          pr_head="$(jq -r '.[0].head.ref // ""' <<<"${pulls_json}")"
+          pr_title="$(jq -r '.[0].title // ""' <<<"${pulls_json}")"
+
+          if [ "${pr_author}" = "dependabot[bot]" ] ||
+             [[ "${pr_head}" == dependabot/* ]] ||
+             [[ "${pr_title}" == "build(deps): bump "* ]]; then
+            echo "Skipping release for Dependabot dependency update."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
+
   build-and-release:
     name: Build Ad-Hoc Release
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    needs: release-gate
+    if: ${{ needs.release-gate.outputs.should_release == 'true' }}
     runs-on: macos-26
 
     env:
