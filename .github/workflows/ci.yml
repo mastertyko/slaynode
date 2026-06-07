@@ -58,7 +58,7 @@ jobs:
           SLAYNODE_BUILD_NUMBER="${{ steps.metadata.outputs.build_number }}" ./build.sh release
 
       - name: Upload App Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: SlayNode-v${{ steps.metadata.outputs.version }}-ci.${{ steps.metadata.outputs.build_number }}
           path: SlayNode.app
