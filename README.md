@@ -34,6 +34,9 @@ SlayNode gives you one place to discover, inspect, and control local services on
    open /Applications/SlayNode.app
    ```
 
+GitHub release assets are ad-hoc signed and not notarized. macOS may show a
+first-launch warning because public releases do not use an Apple Developer ID.
+
 ## Build From Source
 
 **Requirements**
