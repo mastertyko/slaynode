@@ -17,7 +17,8 @@ bash -n \
   script/validate_release_notes.sh \
   script/test_build_and_run.sh \
   script/test_extract_release_notes.sh \
-  script/test_validate_release_notes.sh
+  script/test_validate_release_notes.sh \
+  script/test_debug_port_detection.sh
 
 echo "==> Running static safety checks"
 ./script/static-safety-check.sh
@@ -32,6 +33,9 @@ echo "==> Verifying release note scripts"
 bash script/test_build_and_run.sh
 bash script/test_extract_release_notes.sh
 bash script/test_validate_release_notes.sh
+
+echo "==> Verifying debug port helper"
+bash script/test_debug_port_detection.sh
 
 echo "==> Verifying debug port detection samples"
 ./debug-port-detection.sh --samples-only

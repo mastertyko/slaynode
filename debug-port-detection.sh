@@ -76,7 +76,11 @@ show_samples() {
     "node --inspect-wait=127.0.0.1:9330 app.js"
     "node --inspect-wait=::1 app.js"
     "next dev --hostname [::1] --port=3000"
+    "bun --hot server.ts --port 3002"
+    "bun --watch --inspect-wait=127.0.0.1:9330 server.ts"
     "deno serve --listen 0.0.0.0:8787"
+    "PORT=8788 deno task dev"
+    "deno task dev -- --listen 127.0.0.1:8789"
   )
 
   echo "=== Sample command extraction ==="
