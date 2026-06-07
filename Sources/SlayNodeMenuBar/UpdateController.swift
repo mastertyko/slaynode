@@ -2,6 +2,7 @@ import Combine
 import Foundation
 import Sparkle
 
+@MainActor
 final class UpdateController: ObservableObject {
     struct Configuration {
         let feedURL: String?
