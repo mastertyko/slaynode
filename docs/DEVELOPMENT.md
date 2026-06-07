@@ -220,6 +220,27 @@ Before command text is shown in the UI or persisted into local history, it is sa
 
 The raw process continues running exactly as launched by the user or the system. Redaction only affects presentation and locally persisted UI-facing history.
 
+## Process Control Safety Model
+
+SlayNode favors explainable, scoped process control over blind termination:
+
+- `Stop` attempts a graceful shutdown first and prefers the selected process tree over unrelated system processes.
+- `Force Stop` is reserved for cases where a process or its group is no longer responding to graceful termination.
+- `Restart` is only offered for sources where SlayNode has a credible restart surface, such as Docker containers and Homebrew Services.
+
+Before destructive local-process actions, the app builds a preview from live `ps` data so the UI can explain:
+
+- whether the selected PID is the group leader or only one member of a larger tree
+- which descendants are expected to be affected by the action
+- whether live command text drifted from the originally discovered command
+- whether only sanitized command differences are present, which should not escalate the warning level
+
+The practical rule is that SlayNode tries to preserve user intent and workspace context:
+
+- package-manager wrappers are promoted so previews describe the framework process users actually care about
+- workspace-aware actions prefer the most relevant discovered working directory instead of stale shell defaults
+- destructive actions are hidden when the current source cannot support them safely
+
 ## Contributing
 
 1. Fork the repository.
