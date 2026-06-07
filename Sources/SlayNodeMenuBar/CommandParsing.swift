@@ -170,6 +170,8 @@ enum CommandParser {
                 token.hasSuffix(".ts") || token.hasSuffix(".tsx") || token.hasSuffix(".mts") || token.hasSuffix(".cts") {
                 return true
             }
+            let component = (token as NSString).lastPathComponent.lowercased()
+            if extensionlessServerEntrypoints.contains(component) { return true }
             if token.contains("next") || token.contains("vite") || token.contains("nuxt") { return true }
             return token.contains("/src/") || token.contains("/server/")
         })
@@ -199,6 +201,11 @@ enum CommandParser {
         "--workspace",
         "--prefix",
         "-C"
+    ])
+
+    private static let extensionlessServerEntrypoints = Set([
+        "server",
+        "dev-server"
     ])
 
     private static func inlineWorkingDirectoryPath(from token: String) -> String? {

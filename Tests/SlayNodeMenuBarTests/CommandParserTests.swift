@@ -31,6 +31,15 @@ final class CommandParserTests: XCTestCase {
         )
     }
 
+    func testFirstScriptTokenDetectsExtensionlessServerEntrypoints() {
+        let tokens = ["node", "/Users/demo/app/scripts/dev-server", "--watch"]
+
+        XCTAssertEqual(
+            CommandParser.firstScriptToken(from: tokens),
+            "/Users/demo/app/scripts/dev-server"
+        )
+    }
+
     func testDescriptorDetectsNextJS() {
         let tokens = ["node_modules/.bin/next", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
@@ -380,6 +389,21 @@ final class CommandParserTests: XCTestCase {
         let path = CommandParser.inferWorkingDirectory(from: tokens)
 
         XCTAssertEqual(path, "/Users/test/My App")
+    }
+
+    func testInferWorkingDirectoryFromExtensionlessServerEntrypoint() throws {
+        let tempRoot = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let scriptsDirectory = tempRoot.appendingPathComponent("scripts", isDirectory: true)
+        let serverPath = scriptsDirectory.appendingPathComponent("dev-server", isDirectory: false)
+
+        try FileManager.default.createDirectory(at: scriptsDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+        FileManager.default.createFile(atPath: serverPath.path, contents: Data())
+
+        let tokens = ["node", serverPath.path, "--watch"]
+
+        XCTAssertEqual(CommandParser.inferWorkingDirectory(from: tokens), scriptsDirectory.path)
     }
 }
 extension CommandParserTests {
