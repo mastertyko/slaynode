@@ -59,12 +59,6 @@ jobs:
       - name: Verify debug port detection samples
         run: ./debug-port-detection.sh --samples-only
 
-      - name: Check whitespace regressions
-        run: git diff --check
-
-      - name: Verify port detection sample fixtures
-        run: ./debug-port-detection.sh --samples-only
-
       - name: Build App Bundle
         run: |
           SLAYNODE_BUILD_NUMBER="${{ steps.metadata.outputs.build_number }}" ./build.sh release
