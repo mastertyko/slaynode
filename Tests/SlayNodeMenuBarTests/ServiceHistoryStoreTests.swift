@@ -337,6 +337,53 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertTrue(records.isEmpty)
     }
 
+    func testRecentWorkspacesPrunesStaleWorkspaceHistory() throws {
+        let store = try makeStore()
+        let root = try makeWorkspaceRoot(name: "stale-history")
+        defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+
+        store.modelContext.insert(WorkspaceHistoryRecord(
+            id: "workspace:\(root.path)",
+            name: "stale-history",
+            rootPath: root.path,
+            lastSeenAt: Date().addingTimeInterval(-(60 * 60 * 24 * 121))
+        ))
+        try store.modelContext.save()
+
+        XCTAssertEqual(store.recentWorkspaces(), [])
+        let records = try store.modelContext.fetch(FetchDescriptor<WorkspaceHistoryRecord>())
+        XCTAssertTrue(records.isEmpty)
+    }
+
+    func testRecentWorkspacesTrimsHistoryToMostRecentRecords() throws {
+        let store = try makeStore()
+        let root = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("slaynode-history-retention", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        for index in 0..<30 {
+            let workspaceRoot = root.appendingPathComponent("workspace-\(index)")
+            try FileManager.default.createDirectory(at: workspaceRoot, withIntermediateDirectories: true)
+            store.modelContext.insert(WorkspaceHistoryRecord(
+                id: "workspace:\(workspaceRoot.path)",
+                name: "workspace-\(index)",
+                rootPath: workspaceRoot.path,
+                lastSeenAt: Date().addingTimeInterval(TimeInterval(index))
+            ))
+        }
+        try store.modelContext.save()
+
+        _ = store.recentWorkspaces(limit: 24)
+
+        let records = try store.modelContext.fetch(FetchDescriptor<WorkspaceHistoryRecord>(
+            sortBy: [SortDescriptor(\.lastSeenAt, order: .reverse)]
+        ))
+        XCTAssertEqual(records.count, 24)
+        XCTAssertEqual(records.first?.name, "workspace-29")
+        XCTAssertEqual(records.last?.name, "workspace-6")
+    }
+
     private func makeStore() throws -> ServiceHistoryStore {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
@@ -374,6 +421,14 @@ final class ServiceHistoryStoreTests: XCTestCase {
             startedAt: nil,
             lastSeenAt: Date()
         )
+    }
+
+    private func makeWorkspaceRoot(name: String) throws -> URL {
+        let root = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("slaynode-history-tests", isDirectory: true)
+        let workspaceRoot = root.appendingPathComponent(name)
+        try FileManager.default.createDirectory(at: workspaceRoot, withIntermediateDirectories: true)
+        return workspaceRoot
     }
 }
 #endif

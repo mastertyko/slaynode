@@ -128,6 +128,11 @@ private enum PersistedTextSanitizer {
 
 @MainActor
 final class ServiceHistoryStore {
+    private enum Retention {
+        static let maxWorkspaceCount = 24
+        static let maxWorkspaceAge: TimeInterval = 60 * 60 * 24 * 120
+    }
+
     let container: ModelContainer
     let modelContext: ModelContext
 
@@ -416,8 +421,14 @@ final class ServiceHistoryStore {
         guard !records.isEmpty else { return }
 
         var keptCanonicalIDs = Set<String>()
+        let cutoffDate = Date().addingTimeInterval(-Retention.maxWorkspaceAge)
 
         for record in records {
+            if record.lastSeenAt < cutoffDate {
+                modelContext.delete(record)
+                continue
+            }
+
             guard let canonicalWorkspace = ServiceHeuristics.workspaceIdentity(from: record.rootPath),
                   WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(canonicalWorkspace) else {
                 modelContext.delete(record)
@@ -431,6 +442,11 @@ final class ServiceHistoryStore {
 
             record.name = canonicalWorkspace.name
             record.rootPath = canonicalWorkspace.rootPath
+        }
+
+        let refreshedRecords = (try? modelContext.fetch(descriptor)) ?? []
+        for record in refreshedRecords.dropFirst(Retention.maxWorkspaceCount) {
+            modelContext.delete(record)
         }
 
         saveIfNeeded()
