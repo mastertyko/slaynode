@@ -131,6 +131,8 @@ final class ServiceHistoryStore {
     private enum Retention {
         static let maxWorkspaceCount = 24
         static let maxWorkspaceAge: TimeInterval = 60 * 60 * 24 * 120
+        static let maxActionCount = 200
+        static let maxActionAge: TimeInterval = 60 * 60 * 24 * 45
     }
 
     let container: ModelContainer
@@ -234,6 +236,8 @@ final class ServiceHistoryStore {
 
     func recentActions(limit: Int = 10) -> [ServiceActionSummary] {
         guard limit > 0 else { return [] }
+
+        pruneActionHistory()
 
         var descriptor = FetchDescriptor<ServiceActionRecord>(
             sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
@@ -446,6 +450,29 @@ final class ServiceHistoryStore {
 
         let refreshedRecords = (try? modelContext.fetch(descriptor)) ?? []
         for record in refreshedRecords.dropFirst(Retention.maxWorkspaceCount) {
+            modelContext.delete(record)
+        }
+
+        saveIfNeeded()
+    }
+
+    private func pruneActionHistory() {
+        let descriptor = FetchDescriptor<ServiceActionRecord>(
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        let records = (try? modelContext.fetch(descriptor)) ?? []
+        guard !records.isEmpty else { return }
+
+        let cutoffDate = Date().addingTimeInterval(-Retention.maxActionAge)
+
+        for record in records {
+            if record.timestamp < cutoffDate || ServiceAction(rawValue: record.actionRawValue) == nil {
+                modelContext.delete(record)
+            }
+        }
+
+        let refreshedRecords = (try? modelContext.fetch(descriptor)) ?? []
+        for record in refreshedRecords.dropFirst(Retention.maxActionCount) {
             modelContext.delete(record)
         }
 

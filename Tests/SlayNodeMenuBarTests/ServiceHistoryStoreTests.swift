@@ -79,19 +79,20 @@ final class ServiceHistoryStoreTests: XCTestCase {
 
     func testRecentActionsSkipsUnknownLegacyRows() throws {
         let store = try makeStore()
+        let now = Date()
         store.modelContext.insert(ServiceActionRecord(
             serviceID: "process:1",
             serviceName: "legacy",
             actionRawValue: "obsolete",
             outcome: "Ignored",
-            timestamp: Date(timeIntervalSince1970: 2)
+            timestamp: now.addingTimeInterval(2)
         ))
         store.modelContext.insert(ServiceActionRecord(
             serviceID: "process:2",
             serviceName: "server",
             actionRawValue: ServiceAction.stop.rawValue,
             outcome: "Stopped",
-            timestamp: Date(timeIntervalSince1970: 1)
+            timestamp: now.addingTimeInterval(1)
         ))
         try store.modelContext.save()
 
@@ -103,13 +104,14 @@ final class ServiceHistoryStoreTests: XCTestCase {
 
     func testRecentActionsFindsValidRowsPastLegacyRows() throws {
         let store = try makeStore()
+        let now = Date()
         for offset in 0..<12 {
             store.modelContext.insert(ServiceActionRecord(
                 serviceID: "process:legacy-\(offset)",
                 serviceName: "legacy",
                 actionRawValue: "obsolete",
                 outcome: "Ignored",
-                timestamp: Date(timeIntervalSince1970: TimeInterval(100 + offset))
+                timestamp: now.addingTimeInterval(TimeInterval(100 + offset))
             ))
         }
         store.modelContext.insert(ServiceActionRecord(
@@ -117,7 +119,7 @@ final class ServiceHistoryStoreTests: XCTestCase {
             serviceName: "server",
             actionRawValue: ServiceAction.restart.rawValue,
             outcome: "Restarted",
-            timestamp: Date(timeIntervalSince1970: 1)
+            timestamp: now.addingTimeInterval(1)
         ))
         try store.modelContext.save()
 
@@ -125,6 +127,50 @@ final class ServiceHistoryStoreTests: XCTestCase {
 
         XCTAssertEqual(actions.count, 1)
         XCTAssertEqual(actions.first?.action, .restart)
+    }
+
+    func testRecentActionsPrunesStaleHistoryRows() throws {
+        let store = try makeStore()
+        store.modelContext.insert(ServiceActionRecord(
+            serviceID: "process:stale",
+            serviceName: "stale",
+            actionRawValue: ServiceAction.stop.rawValue,
+            outcome: "Stopped",
+            timestamp: Date().addingTimeInterval(-(60 * 60 * 24 * 46))
+        ))
+        try store.modelContext.save()
+
+        XCTAssertEqual(store.recentActions(), [])
+        XCTAssertTrue(try store.modelContext.fetch(FetchDescriptor<ServiceActionRecord>()).isEmpty)
+    }
+
+    func testRecentActionsTrimsHistoryToMostRecentRecords() throws {
+        let store = try makeStore()
+        let now = Date()
+
+        for index in 0..<230 {
+            store.modelContext.insert(ServiceActionRecord(
+                serviceID: "process:\(index)",
+                serviceName: "service-\(index)",
+                actionRawValue: ServiceAction.stop.rawValue,
+                outcome: "Stopped",
+                timestamp: now.addingTimeInterval(TimeInterval(index))
+            ))
+        }
+        try store.modelContext.save()
+
+        let actions = store.recentActions(limit: 200)
+
+        XCTAssertEqual(actions.count, 200)
+        XCTAssertEqual(actions.first?.serviceID, "process:229")
+        XCTAssertEqual(actions.last?.serviceID, "process:30")
+
+        let records = try store.modelContext.fetch(FetchDescriptor<ServiceActionRecord>(
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        ))
+        XCTAssertEqual(records.count, 200)
+        XCTAssertEqual(records.first?.serviceID, "process:229")
+        XCTAssertEqual(records.last?.serviceID, "process:30")
     }
 
     func testRecordActionRefreshesExistingServiceMetadata() throws {
