@@ -133,6 +133,8 @@ final class ServiceHistoryStore {
         static let maxWorkspaceAge: TimeInterval = 60 * 60 * 24 * 120
         static let maxActionCount = 200
         static let maxActionAge: TimeInterval = 60 * 60 * 24 * 45
+        static let maxServiceCount = 400
+        static let maxServiceAge: TimeInterval = 60 * 60 * 24 * 30
     }
 
     let container: ModelContainer
@@ -144,6 +146,8 @@ final class ServiceHistoryStore {
     }
 
     func record(snapshot: ServiceSnapshot) {
+        pruneServiceHistory(referenceDate: snapshot.generatedAt)
+
         for service in snapshot.services {
             upsert(service: service, seenAt: snapshot.generatedAt)
         }
@@ -153,11 +157,14 @@ final class ServiceHistoryStore {
             upsert(workspace: workspace, seenAt: snapshot.generatedAt)
         }
 
+        pruneServiceHistory(referenceDate: snapshot.generatedAt)
         saveIfNeeded()
     }
 
     func record(action: ServiceAction, on service: ManagedService, outcome: String) {
         let now = Date()
+        pruneServiceHistory(referenceDate: now)
+
         guard let sanitizedActionServiceID = PersistedTextSanitizer.identifier(service.id),
               let sanitizedService = sanitized(service: service) else {
             Log.general.warning("Skipping action history persistence for invalid service identifier.")
@@ -204,6 +211,7 @@ final class ServiceHistoryStore {
             upsert(workspace: workspace, seenAt: now)
         }
 
+        pruneServiceHistory(referenceDate: now)
         saveIfNeeded()
     }
 
@@ -473,6 +481,27 @@ final class ServiceHistoryStore {
 
         let refreshedRecords = (try? modelContext.fetch(descriptor)) ?? []
         for record in refreshedRecords.dropFirst(Retention.maxActionCount) {
+            modelContext.delete(record)
+        }
+
+        saveIfNeeded()
+    }
+
+    private func pruneServiceHistory(referenceDate: Date) {
+        let descriptor = FetchDescriptor<ServiceHistoryRecord>(
+            sortBy: [SortDescriptor(\.lastSeenAt, order: .reverse)]
+        )
+        let records = (try? modelContext.fetch(descriptor)) ?? []
+        guard !records.isEmpty else { return }
+
+        let cutoffDate = referenceDate.addingTimeInterval(-Retention.maxServiceAge)
+
+        for record in records where record.lastSeenAt < cutoffDate {
+            modelContext.delete(record)
+        }
+
+        let refreshedRecords = (try? modelContext.fetch(descriptor)) ?? []
+        for record in refreshedRecords.dropFirst(Retention.maxServiceCount) {
             modelContext.delete(record)
         }
 

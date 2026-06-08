@@ -198,6 +198,66 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertEqual(record.statusRawValue, ManagedServiceStatus.degraded.rawValue)
     }
 
+    func testRecordActionPrunesStaleServiceHistoryRows() throws {
+        let store = try makeStore()
+        store.modelContext.insert(ServiceHistoryRecord(
+            id: "process:stale",
+            name: "stale",
+            kindRawValue: ServiceKind.app.rawValue,
+            sourceRawValue: ServiceSource.process(pid: 1, command: "npm run dev").title,
+            workspaceID: nil,
+            workspaceName: nil,
+            workspacePath: nil,
+            statusRawValue: ManagedServiceStatus.running.rawValue,
+            lastSeenAt: Date().addingTimeInterval(-(60 * 60 * 24 * 31))
+        ))
+        try store.modelContext.save()
+
+        store.record(
+            action: .stop,
+            on: makeService(name: "fresh", kind: .app, workspace: nil, status: .running),
+            outcome: "Stopped"
+        )
+
+        let records = try store.modelContext.fetch(FetchDescriptor<ServiceHistoryRecord>(
+            sortBy: [SortDescriptor(\.lastSeenAt, order: .reverse)]
+        ))
+        XCTAssertEqual(records.map(\.id), ["process:999"])
+    }
+
+    func testRecordSnapshotTrimsServiceHistoryToMostRecentRecords() throws {
+        let store = try makeStore()
+        let now = Date()
+
+        for index in 0..<430 {
+            store.modelContext.insert(ServiceHistoryRecord(
+                id: "process:\(index)",
+                name: "service-\(index)",
+                kindRawValue: ServiceKind.app.rawValue,
+                sourceRawValue: ServiceSource.process(pid: Int32(index), command: "npm run dev").title,
+                workspaceID: nil,
+                workspaceName: nil,
+                workspacePath: nil,
+                statusRawValue: ManagedServiceStatus.running.rawValue,
+                lastSeenAt: now.addingTimeInterval(TimeInterval(index))
+            ))
+        }
+        try store.modelContext.save()
+
+        store.record(snapshot: ServiceSnapshot(
+            services: [makeService(name: "fresh", kind: .app, workspace: nil, status: .running)],
+            dependencies: [],
+            generatedAt: now.addingTimeInterval(1_000)
+        ))
+
+        let records = try store.modelContext.fetch(FetchDescriptor<ServiceHistoryRecord>(
+            sortBy: [SortDescriptor(\.lastSeenAt, order: .reverse)]
+        ))
+        XCTAssertEqual(records.count, 400)
+        XCTAssertEqual(records.first?.id, "process:999")
+        XCTAssertEqual(records.last?.id, "process:31")
+    }
+
     func testRecordSnapshotSanitizesPersistedServiceAndWorkspaceFields() throws {
         let store = try makeStore()
         let workspace = WorkspaceIdentity(
