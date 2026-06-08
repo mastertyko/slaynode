@@ -90,6 +90,20 @@ Successful CI runs on `main` automatically trigger the GitHub release workflow. 
 
 You can also trigger the release workflow manually with `workflow_dispatch` if you need to target a specific ref.
 
+### Release Checklist
+
+Use this when you want to mirror the repository's real release path instead of guessing:
+
+1. Run `./script/full_verification.sh` locally and resolve any failures before pushing.
+2. Confirm the intended marketing version in `XcodeSupport/Info.plist`.
+3. Push to a branch that will merge into `main` and wait for `Build & Test` to pass.
+4. Confirm the merge is not dependency-only, because the release gate intentionally skips Dependabot-only updates.
+5. Inspect the CI app artifact and the `SlayNode-build-metadata-<build>` artifact for the exact commit that is about to release.
+6. After merge, verify that the Release workflow starts from the successful `main` CI run.
+7. Confirm the generated tag follows `v<version>-build.<number>` and points at the merged commit.
+8. Confirm the GitHub release includes both DMG and ZIP assets plus changelog-derived release notes.
+9. Re-check that public release copy still says the truth: ad-hoc signed and not notarized.
+
 ### Running Tests
 ```bash
 swift test --disable-sandbox
@@ -101,6 +115,16 @@ swift test --disable-sandbox
 ```
 
 That shared gate runs shell syntax checks, static safety checks, plist linting, `git diff --check`, release-note regression scripts, debug port sample validation, and `swift test --disable-sandbox`.
+
+### Why Full Xcode Is Preferred Over Command Line Tools
+
+`build.sh`, `script/build_and_run.sh`, and the full verification gate prefer `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` when it exists.
+
+- Full Xcode ships the SwiftData and macro/plugin pieces this app relies on for repeatable scripted builds.
+- The CLI-only toolchain can lag behind the macOS runner image used in CI, which makes local/CI skew more likely.
+- The release workflow and local ad-hoc bundle build assume the same Xcode-major surface, so matching that toolchain keeps bundle assembly, plist stamping, and signing behavior aligned.
+
+If you intentionally need a different toolchain, export `DEVELOPER_DIR` explicitly before running the scripts and treat that as a deliberate divergence from the default project path.
 
 ### Improvement Backlog
 

@@ -35,8 +35,23 @@ jobs:
         id: metadata
         run: |
           VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' XcodeSupport/Info.plist)
+          MIN_SYSTEM_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' XcodeSupport/Info.plist)
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "build_number=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "minimum_system_version=${MIN_SYSTEM_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Write build metadata artifact
+        run: |
+          mkdir -p ci-artifacts
+          cat > ci-artifacts/release-metadata.json <<EOF
+          {
+            "version": "${{ steps.metadata.outputs.version }}",
+            "build_number": "${{ steps.metadata.outputs.build_number }}",
+            "minimum_macos": "${{ steps.metadata.outputs.minimum_system_version }}",
+            "git_ref": "${GITHUB_REF}",
+            "git_sha": "${GITHUB_SHA}"
+          }
+          EOF
 
       - name: Cache Swift packages
         uses: actions/cache@v5
@@ -68,4 +83,11 @@ jobs:
         with:
           name: SlayNode-v${{ steps.metadata.outputs.version }}-ci.${{ steps.metadata.outputs.build_number }}
           path: SlayNode.app
+          retention-days: 7
+
+      - name: Upload Build Metadata Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: SlayNode-build-metadata-${{ steps.metadata.outputs.build_number }}
+          path: ci-artifacts/release-metadata.json
           retention-days: 7

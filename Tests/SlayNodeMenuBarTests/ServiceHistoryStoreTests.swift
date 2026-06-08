@@ -79,19 +79,20 @@ final class ServiceHistoryStoreTests: XCTestCase {
 
     func testRecentActionsSkipsUnknownLegacyRows() throws {
         let store = try makeStore()
+        let now = Date()
         store.modelContext.insert(ServiceActionRecord(
             serviceID: "process:1",
             serviceName: "legacy",
             actionRawValue: "obsolete",
             outcome: "Ignored",
-            timestamp: Date(timeIntervalSince1970: 2)
+            timestamp: now.addingTimeInterval(2)
         ))
         store.modelContext.insert(ServiceActionRecord(
             serviceID: "process:2",
             serviceName: "server",
             actionRawValue: ServiceAction.stop.rawValue,
             outcome: "Stopped",
-            timestamp: Date(timeIntervalSince1970: 1)
+            timestamp: now.addingTimeInterval(1)
         ))
         try store.modelContext.save()
 
@@ -103,13 +104,14 @@ final class ServiceHistoryStoreTests: XCTestCase {
 
     func testRecentActionsFindsValidRowsPastLegacyRows() throws {
         let store = try makeStore()
+        let now = Date()
         for offset in 0..<12 {
             store.modelContext.insert(ServiceActionRecord(
                 serviceID: "process:legacy-\(offset)",
                 serviceName: "legacy",
                 actionRawValue: "obsolete",
                 outcome: "Ignored",
-                timestamp: Date(timeIntervalSince1970: TimeInterval(100 + offset))
+                timestamp: now.addingTimeInterval(TimeInterval(100 + offset))
             ))
         }
         store.modelContext.insert(ServiceActionRecord(
@@ -117,7 +119,7 @@ final class ServiceHistoryStoreTests: XCTestCase {
             serviceName: "server",
             actionRawValue: ServiceAction.restart.rawValue,
             outcome: "Restarted",
-            timestamp: Date(timeIntervalSince1970: 1)
+            timestamp: now.addingTimeInterval(1)
         ))
         try store.modelContext.save()
 
@@ -125,6 +127,50 @@ final class ServiceHistoryStoreTests: XCTestCase {
 
         XCTAssertEqual(actions.count, 1)
         XCTAssertEqual(actions.first?.action, .restart)
+    }
+
+    func testRecentActionsPrunesStaleHistoryRows() throws {
+        let store = try makeStore()
+        store.modelContext.insert(ServiceActionRecord(
+            serviceID: "process:stale",
+            serviceName: "stale",
+            actionRawValue: ServiceAction.stop.rawValue,
+            outcome: "Stopped",
+            timestamp: Date().addingTimeInterval(-(60 * 60 * 24 * 46))
+        ))
+        try store.modelContext.save()
+
+        XCTAssertEqual(store.recentActions(), [])
+        XCTAssertTrue(try store.modelContext.fetch(FetchDescriptor<ServiceActionRecord>()).isEmpty)
+    }
+
+    func testRecentActionsTrimsHistoryToMostRecentRecords() throws {
+        let store = try makeStore()
+        let now = Date()
+
+        for index in 0..<230 {
+            store.modelContext.insert(ServiceActionRecord(
+                serviceID: "process:\(index)",
+                serviceName: "service-\(index)",
+                actionRawValue: ServiceAction.stop.rawValue,
+                outcome: "Stopped",
+                timestamp: now.addingTimeInterval(TimeInterval(index))
+            ))
+        }
+        try store.modelContext.save()
+
+        let actions = store.recentActions(limit: 200)
+
+        XCTAssertEqual(actions.count, 200)
+        XCTAssertEqual(actions.first?.serviceID, "process:229")
+        XCTAssertEqual(actions.last?.serviceID, "process:30")
+
+        let records = try store.modelContext.fetch(FetchDescriptor<ServiceActionRecord>(
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        ))
+        XCTAssertEqual(records.count, 200)
+        XCTAssertEqual(records.first?.serviceID, "process:229")
+        XCTAssertEqual(records.last?.serviceID, "process:30")
     }
 
     func testRecordActionRefreshesExistingServiceMetadata() throws {
@@ -150,6 +196,66 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertEqual(record.workspaceID, "new")
         XCTAssertEqual(record.workspaceName, "new")
         XCTAssertEqual(record.statusRawValue, ManagedServiceStatus.degraded.rawValue)
+    }
+
+    func testRecordActionPrunesStaleServiceHistoryRows() throws {
+        let store = try makeStore()
+        store.modelContext.insert(ServiceHistoryRecord(
+            id: "process:stale",
+            name: "stale",
+            kindRawValue: ServiceKind.app.rawValue,
+            sourceRawValue: ServiceSource.process(pid: 1, command: "npm run dev").title,
+            workspaceID: nil,
+            workspaceName: nil,
+            workspacePath: nil,
+            statusRawValue: ManagedServiceStatus.running.rawValue,
+            lastSeenAt: Date().addingTimeInterval(-(60 * 60 * 24 * 31))
+        ))
+        try store.modelContext.save()
+
+        store.record(
+            action: .stop,
+            on: makeService(name: "fresh", kind: .app, workspace: nil, status: .running),
+            outcome: "Stopped"
+        )
+
+        let records = try store.modelContext.fetch(FetchDescriptor<ServiceHistoryRecord>(
+            sortBy: [SortDescriptor(\.lastSeenAt, order: .reverse)]
+        ))
+        XCTAssertEqual(records.map(\.id), ["process:999"])
+    }
+
+    func testRecordSnapshotTrimsServiceHistoryToMostRecentRecords() throws {
+        let store = try makeStore()
+        let now = Date()
+
+        for index in 0..<430 {
+            store.modelContext.insert(ServiceHistoryRecord(
+                id: "process:\(index)",
+                name: "service-\(index)",
+                kindRawValue: ServiceKind.app.rawValue,
+                sourceRawValue: ServiceSource.process(pid: Int32(index), command: "npm run dev").title,
+                workspaceID: nil,
+                workspaceName: nil,
+                workspacePath: nil,
+                statusRawValue: ManagedServiceStatus.running.rawValue,
+                lastSeenAt: now.addingTimeInterval(TimeInterval(index))
+            ))
+        }
+        try store.modelContext.save()
+
+        store.record(snapshot: ServiceSnapshot(
+            services: [makeService(name: "fresh", kind: .app, workspace: nil, status: .running)],
+            dependencies: [],
+            generatedAt: now.addingTimeInterval(1_000)
+        ))
+
+        let records = try store.modelContext.fetch(FetchDescriptor<ServiceHistoryRecord>(
+            sortBy: [SortDescriptor(\.lastSeenAt, order: .reverse)]
+        ))
+        XCTAssertEqual(records.count, 400)
+        XCTAssertEqual(records.first?.id, "process:999")
+        XCTAssertEqual(records.last?.id, "process:31")
     }
 
     func testRecordSnapshotSanitizesPersistedServiceAndWorkspaceFields() throws {
@@ -337,6 +443,53 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertTrue(records.isEmpty)
     }
 
+    func testRecentWorkspacesPrunesStaleWorkspaceHistory() throws {
+        let store = try makeStore()
+        let root = try makeWorkspaceRoot(name: "stale-history")
+        defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+
+        store.modelContext.insert(WorkspaceHistoryRecord(
+            id: "workspace:\(root.path)",
+            name: "stale-history",
+            rootPath: root.path,
+            lastSeenAt: Date().addingTimeInterval(-(60 * 60 * 24 * 121))
+        ))
+        try store.modelContext.save()
+
+        XCTAssertEqual(store.recentWorkspaces(), [])
+        let records = try store.modelContext.fetch(FetchDescriptor<WorkspaceHistoryRecord>())
+        XCTAssertTrue(records.isEmpty)
+    }
+
+    func testRecentWorkspacesTrimsHistoryToMostRecentRecords() throws {
+        let store = try makeStore()
+        let root = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("slaynode-history-retention", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        for index in 0..<30 {
+            let workspaceRoot = root.appendingPathComponent("workspace-\(index)")
+            try FileManager.default.createDirectory(at: workspaceRoot, withIntermediateDirectories: true)
+            store.modelContext.insert(WorkspaceHistoryRecord(
+                id: "workspace:\(workspaceRoot.path)",
+                name: "workspace-\(index)",
+                rootPath: workspaceRoot.path,
+                lastSeenAt: Date().addingTimeInterval(TimeInterval(index))
+            ))
+        }
+        try store.modelContext.save()
+
+        _ = store.recentWorkspaces(limit: 24)
+
+        let records = try store.modelContext.fetch(FetchDescriptor<WorkspaceHistoryRecord>(
+            sortBy: [SortDescriptor(\.lastSeenAt, order: .reverse)]
+        ))
+        XCTAssertEqual(records.count, 24)
+        XCTAssertEqual(records.first?.name, "workspace-29")
+        XCTAssertEqual(records.last?.name, "workspace-6")
+    }
+
     private func makeStore() throws -> ServiceHistoryStore {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(
@@ -374,6 +527,14 @@ final class ServiceHistoryStoreTests: XCTestCase {
             startedAt: nil,
             lastSeenAt: Date()
         )
+    }
+
+    private func makeWorkspaceRoot(name: String) throws -> URL {
+        let root = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("slaynode-history-tests", isDirectory: true)
+        let workspaceRoot = root.appendingPathComponent(name)
+        try FileManager.default.createDirectory(at: workspaceRoot, withIntermediateDirectories: true)
+        return workspaceRoot
     }
 }
 #endif
