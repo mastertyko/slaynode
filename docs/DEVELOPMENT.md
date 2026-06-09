@@ -224,6 +224,16 @@ If the UI looks stale after a process exits or after a local rebuild:
 - Crash reporting is optional and depends on build-time configuration.
 - The Xcode project remains in the repo, but SwiftPM plus `script/build_and_run.sh` is the primary local workflow.
 
+## Adding Process Classifiers Safely
+
+When you add or widen a process classifier, optimize for false-positive control first and nicer labels second.
+
+- Prefer exact executable or token matches over broad substring matches when a tool name can appear inside unrelated script paths.
+- Keep package-manager wrappers and the promoted child runtime aligned so the UI preserves both the human service name and the real runtime details.
+- Add at least one positive fixture and one nearby negative fixture in `Tests/SlayNodeMenuBarTests/CommandParserTests.swift` so a new classifier does not silently widen matches.
+- If the new classifier should surface a service without a live port, also add or update a discovery-focused test in `ProcessDiscoveryTests.swift` or `ProcessMonitorUnitTests.swift`.
+- Re-run `./debug-port-detection.sh --samples-only` and `swift test --disable-sandbox` after classifier changes; together they catch both parser drift and discovery drift.
+
 ## Privacy Boundary For Command Capture
 
 SlayNode only inspects process metadata that is already available locally on the Mac:
