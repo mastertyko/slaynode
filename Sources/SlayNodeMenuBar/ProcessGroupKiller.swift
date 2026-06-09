@@ -10,13 +10,13 @@ enum ProcessGroupTerminationError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidPid:
-            return "Invalid process ID."
+            return ProcessControlErrorMessages.invalidProcessID
         case .permissionDenied:
-            return "Permission denied to stop process."
+            return ProcessControlErrorMessages.permissionDenied
         case let .terminationFailed(status):
-            return "Could not stop process (errno: \(status))."
+            return ProcessControlErrorMessages.terminationFailed(errno: status)
         case .processGroupNotFound:
-            return "Could not find process group."
+            return ProcessControlErrorMessages.processGroupNotFound
         }
     }
 }

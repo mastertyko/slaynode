@@ -9,11 +9,11 @@ enum ProcessTerminationError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidPid:
-            return "Invalid process ID."
+            return ProcessControlErrorMessages.invalidProcessID
         case .permissionDenied:
-            return "Missing permission to stop the process."
+            return ProcessControlErrorMessages.permissionDenied
         case let .terminationFailed(status):
-            return "Could not stop the process (errno: \(status))."
+            return ProcessControlErrorMessages.terminationFailed(errno: status)
         }
     }
 }

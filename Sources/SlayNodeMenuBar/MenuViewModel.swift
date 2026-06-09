@@ -27,7 +27,7 @@ enum MenuViewModelError: Error, LocalizedError {
         case .timeoutWaitingForShutdown(let pid):
             return "Process \(pid) is taking longer than expected to stop. It may still be shutting down."
         case .permissionDenied(let pid):
-            return "Permission denied for process \(pid). Try running as administrator."
+            return "Permission denied to stop the process \(pid)."
         case .commandExecutionFailed:
             return "A system command failed. Try again."
         case .processIdentityChanged(let pid):
