@@ -13,6 +13,7 @@ bash -n \
   debug-port-detection.sh \
   script/build_and_run.sh \
   script/static-safety-check.sh \
+  script/test_build_preflight.sh \
   script/extract_release_notes.sh \
   script/validate_release_notes.sh \
   script/test_build_and_run.sh \
@@ -31,6 +32,7 @@ echo "==> Checking git diff whitespace"
 git diff --check -- . ':(exclude)Package.resolved'
 
 echo "==> Verifying release note scripts"
+bash script/test_build_preflight.sh
 bash script/test_build_and_run.sh
 bash script/test_extract_release_notes.sh
 bash script/test_validate_release_notes.sh
