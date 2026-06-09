@@ -568,6 +568,48 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(service.configPath, plistURL.path)
     }
 
+    func testBrewServiceWithDirectoryPathDoesNotOfferRevealConfig() async throws {
+        let mock = MockShellExecutor()
+        let directoryURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("slaynode-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+        mock.responses["/usr/bin/env brew services list --json"] = (
+            0,
+            #"[{"name":"postgresql@16","status":"started","user":"tyko","file":"\#(directoryURL.path)"}]"#
+        )
+        let provider = BrewServiceProvider(shell: mock)
+
+        let service = await provider.discoverServices().services.first
+
+        XCTAssertFalse(service?.supports(.revealConfig) ?? true)
+        XCTAssertNil(service?.configPath)
+    }
+
+    func testBrewServiceWithUnreadableFileDoesNotOfferRevealConfig() async throws {
+        let mock = MockShellExecutor()
+        let plistURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("slaynode-\(UUID().uuidString).plist")
+        try Data("plist".utf8).write(to: plistURL)
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: plistURL.path)
+            try? FileManager.default.removeItem(at: plistURL)
+        }
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: plistURL.path)
+
+        mock.responses["/usr/bin/env brew services list --json"] = (
+            0,
+            #"[{"name":"postgresql@16","status":"started","user":"tyko","file":"\#(plistURL.path)"}]"#
+        )
+        let provider = BrewServiceProvider(shell: mock)
+
+        let service = await provider.discoverServices().services.first
+
+        XCTAssertFalse(service?.supports(.revealConfig) ?? true)
+        XCTAssertNil(service?.configPath)
+    }
+
     func testBrewErrorStatusWithCodeIsCritical() async {
         let mock = MockShellExecutor()
         mock.responses["/usr/bin/env brew services list --json"] = (
