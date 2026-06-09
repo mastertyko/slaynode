@@ -534,9 +534,12 @@ struct BrewServiceProvider: DiscoveryProvider, ControlProvider {
               !trimmed.isEmpty else {
             return nil
         }
-        guard FileManager.default.fileExists(atPath: trimmed) else {
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: trimmed, isDirectory: &isDirectory) else {
             return nil
         }
+        guard !isDirectory.boolValue else { return nil }
+        guard FileManager.default.isReadableFile(atPath: trimmed) else { return nil }
         return trimmed
     }
 

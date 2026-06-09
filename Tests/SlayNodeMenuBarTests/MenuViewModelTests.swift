@@ -66,9 +66,20 @@ final class MenuViewModelTests: XCTestCase {
         let viewModel = MenuViewModel(preferences: preferences, monitor: monitor)
         
         viewModel.stopProcess(99999)
-        
+
         XCTAssertNotNil(viewModel.lastError)
         XCTAssertTrue(viewModel.lastError?.contains("stopped") == true || viewModel.lastError?.contains("not found") == true)
+    }
+
+    func testPermissionDeniedErrorUsesSharedProcessControlCopy() {
+        XCTAssertEqual(
+            MenuViewModelError.permissionDenied(2222).localizedDescription,
+            "Permission denied to stop the process 2222."
+        )
+        XCTAssertEqual(
+            ProcessTerminationError.permissionDenied.errorDescription,
+            "Permission denied to stop the process."
+        )
     }
     
     @MainActor

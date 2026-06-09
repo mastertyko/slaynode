@@ -45,8 +45,8 @@ final class ProcessGroupKillerTests: XCTestCase {
     
     func testErrorDescriptions() {
         XCTAssertEqual(ProcessGroupTerminationError.invalidPid.errorDescription, "Invalid process ID.")
-        XCTAssertEqual(ProcessGroupTerminationError.permissionDenied.errorDescription, "Permission denied to stop process.")
-        XCTAssertEqual(ProcessGroupTerminationError.terminationFailed(1).errorDescription, "Could not stop process (errno: 1).")
+        XCTAssertEqual(ProcessGroupTerminationError.permissionDenied.errorDescription, "Permission denied to stop the process.")
+        XCTAssertEqual(ProcessGroupTerminationError.terminationFailed(1).errorDescription, "Could not stop the process (errno: 1).")
         XCTAssertEqual(ProcessGroupTerminationError.processGroupNotFound.errorDescription, "Could not find process group.")
     }
 

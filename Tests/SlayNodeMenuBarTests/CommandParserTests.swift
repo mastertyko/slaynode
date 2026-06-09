@@ -407,6 +407,13 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(path, "/Users/test/My App")
     }
 
+    func testInferWorkingDirectoryFromEscapedSpacePrefixFlagValue() {
+        let tokens = CommandParser.tokenize("npm --prefix /Users/test/My\\ App run dev")
+        let path = CommandParser.inferWorkingDirectory(from: tokens)
+
+        XCTAssertEqual(path, "/Users/test/My App")
+    }
+
     func testInferWorkingDirectoryFromExtensionlessServerEntrypoint() throws {
         let tempRoot = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
