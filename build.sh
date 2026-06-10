@@ -193,9 +193,26 @@ validate_sparkle_pairing() {
   fi
 }
 
+validate_sparkle_metadata_format() {
+  if [[ -z "${SPARKLE_FEED_URL}" && -z "${SPARKLE_PUBLIC_ED_KEY}" ]]; then
+    return
+  fi
+
+  if [[ ! "${SPARKLE_FEED_URL}" =~ ^https://[^[:space:]]+$ ]]; then
+    echo "❌ Invalid SLAYNODE_SPARKLE_FEED_URL value: '${SPARKLE_FEED_URL}' (expected an https URL without spaces)." >&2
+    exit 2
+  fi
+
+  if [[ ! "${SPARKLE_PUBLIC_ED_KEY}" =~ ^[A-Za-z0-9+/=]+$ ]]; then
+    echo "❌ Invalid SLAYNODE_SPARKLE_PUBLIC_ED_KEY value: expected base64-like characters only." >&2
+    exit 2
+  fi
+}
+
 validate_bundle_metadata "${APP_VERSION}" "${APP_BUILD}"
 validate_minimum_system_version "${MIN_SYSTEM_VERSION}"
 validate_sparkle_pairing
+validate_sparkle_metadata_format
 
 run_verify_only_checks() {
   echo "🔎 Running SlayNode build preflight..."
