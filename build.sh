@@ -172,6 +172,15 @@ validate_bundle_metadata() {
   fi
 }
 
+validate_minimum_system_version() {
+  local minimum_system_version="$1"
+
+  if [[ ! "${minimum_system_version}" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
+    echo "❌ Invalid LSMinimumSystemVersion in XcodeSupport/Info.plist: '${minimum_system_version}' (expected numeric macOS version like 26.0)." >&2
+    exit 2
+  fi
+}
+
 validate_sparkle_pairing() {
   local has_feed=false
   local has_key=false
@@ -185,6 +194,7 @@ validate_sparkle_pairing() {
 }
 
 validate_bundle_metadata "${APP_VERSION}" "${APP_BUILD}"
+validate_minimum_system_version "${MIN_SYSTEM_VERSION}"
 validate_sparkle_pairing
 
 run_verify_only_checks() {
@@ -195,6 +205,7 @@ run_verify_only_checks() {
   echo "   Configuration: ${CONFIGURATION}"
   echo "   Version: ${APP_VERSION}"
   echo "   Build: ${APP_BUILD}"
+  echo "   Minimum macOS: ${MIN_SYSTEM_VERSION}"
   if [[ -n "${SPARKLE_FEED_URL}" ]]; then
     echo "   Sparkle metadata: configured"
   else

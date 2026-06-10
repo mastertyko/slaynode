@@ -56,6 +56,21 @@ if output="$(run_verify_only "${repo}" env SLAYNODE_BUILD_NUMBER=abc 2>&1)"; the
 fi
 assert_contains "${output}" "Invalid SLAYNODE_BUILD_NUMBER value"
 
+python3 - <<'PY' "${repo}/XcodeSupport/Info.plist"
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+path.write_text(path.read_text().replace("<string>26.0</string>", "<string>bogus</string>"))
+PY
+
+if output="$(run_verify_only "${repo}" 2>&1)"; then
+  fail "expected invalid LSMinimumSystemVersion to fail build preflight"
+fi
+assert_contains "${output}" "Invalid LSMinimumSystemVersion"
+
+repo="$(copy_repo_fixture)"
+
 if output="$(run_verify_only "${repo}" env SLAYNODE_SPARKLE_FEED_URL=https://example.test/appcast.xml 2>&1)"; then
   fail "expected missing Sparkle public key pairing to fail build preflight"
 fi
@@ -69,6 +84,7 @@ output="$(run_verify_only "${repo}" env \
 assert_contains "${output}" "Preflight OK"
 assert_contains "${output}" "Version: 1.2.3"
 assert_contains "${output}" "Build: 456"
+assert_contains "${output}" "Minimum macOS: 26.0"
 assert_contains "${output}" "Sparkle metadata: configured"
 
 echo "PASS: build_preflight"
