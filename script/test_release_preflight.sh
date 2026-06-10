@@ -40,6 +40,8 @@ cat > "${REPO}/XcodeSupport/Info.plist" <<'EOF'
 <dict>
   <key>CFBundleShortVersionString</key>
   <string>1.2.3</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>26.0</string>
 </dict>
 </plist>
 EOF
