@@ -47,6 +47,12 @@ swift test
 # Build a release bundle
 ./build.sh release
 
+# Run fast bundle metadata/plist preflight checks
+./build.sh --verify-only
+
+# Create CI-style local release artifact names
+./release.sh 1.0.0 --build-number 150
+
 # Build, launch, and verify the app process
 ./script/build_and_run.sh --verify
 
@@ -104,7 +110,7 @@ sudo xcode-select --reset
 
 ### Update Checks Are Missing
 - Local builds intentionally disable Sparkle when the feed URL or EdDSA key is not configured.
-- This is expected until release metadata is wired correctly.
+- `./build.sh --verify-only` now also fails fast if the Sparkle feed URL is not `https://...` or the ED key contains invalid characters, so release metadata problems surface before packaging.
 
 ### Commands Show Sensitive Flags
 - SlayNode redacts known secret-bearing arguments before displaying commands in the UI.
