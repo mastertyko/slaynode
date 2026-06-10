@@ -19,6 +19,8 @@ bash -n \
   script/test_build_and_run.sh \
   script/test_extract_release_notes.sh \
   script/test_validate_release_notes.sh \
+  script/test_release_build_number.sh \
+  script/test_release_metadata.sh \
   script/test_debug_port_detection.sh \
   script/test_release_preflight.sh
 
@@ -36,6 +38,8 @@ bash script/test_build_preflight.sh
 bash script/test_build_and_run.sh
 bash script/test_extract_release_notes.sh
 bash script/test_validate_release_notes.sh
+bash script/test_release_build_number.sh
+bash script/test_release_metadata.sh
 bash script/test_release_preflight.sh
 
 echo "==> Verifying debug port helper"

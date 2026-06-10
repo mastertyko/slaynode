@@ -68,6 +68,7 @@ To preserve other running SlayNode instances from different clones, `script/buil
 ### Create DMG for Distribution
 ```bash
 ./release.sh 1.0
+./release.sh 1.0 --build-number 150
 ```
 
 ### Optional Local Notarization Flow
@@ -89,6 +90,7 @@ Successful CI runs on `main` automatically trigger the GitHub release workflow. 
 - ad-hoc code signing only, without Apple Developer ID notarization
 
 You can also trigger the release workflow manually with `workflow_dispatch` if you need to target a specific ref.
+Local `./release.sh` runs now support the same build-number suffix via `--build-number <n>` and also emit a sibling `*-release-metadata.json` file so you can compare local packaging output with CI metadata without opening the bundle manually.
 
 ### Release Checklist
 
@@ -217,6 +219,7 @@ If the UI looks stale after a process exits or after a local rebuild:
 - Use `./script/full_verification.sh` when you want the same broader gate as CI and release automation before pushing changes.
 - The minimum deployment target is now `macOS 26.0`.
 - `build.sh` accepts `SLAYNODE_VERSION`, `SLAYNODE_BUILD_NUMBER`, and optional Sparkle metadata overrides so CI/release builds can stamp unique bundle metadata without editing tracked plist files.
+- `build.sh --verify-only` now fails early if `LSMinimumSystemVersion`, Sparkle feed URL, or Sparkle ED key format is invalid, which keeps broken release metadata out of later packaging steps.
 - When `DEVELOPER_DIR` is unset and `/Applications/Xcode.app/Contents/Developer` exists, `build.sh` uses that Xcode toolchain so SwiftData and Foundation macro plugins are available from scripted local builds.
 - The preferred state model is `@Observable` plus structured concurrency, not `ObservableObject` plus Combine, unless working in legacy compatibility code.
 - All user-facing command strings should be sanitized through the shared service model before they reach the UI.
