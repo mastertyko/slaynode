@@ -42,7 +42,7 @@ cd slaynode
 ### Useful Commands
 ```bash
 # Run the full test suite
-swift test
+swift test --disable-sandbox
 
 # Build a release bundle
 ./build.sh release
@@ -111,6 +111,7 @@ sudo xcode-select --reset
 ### Update Checks Are Missing
 - Local builds intentionally disable Sparkle when the feed URL or EdDSA key is not configured.
 - `./build.sh --verify-only` now also fails fast if the Sparkle feed URL is not `https://...` or the ED key contains invalid characters, so release metadata problems surface before packaging.
+- Local `./release.sh` runs emit a sibling `*-release-metadata.json`, and GitHub releases publish a matching `release-metadata.json` asset with the selected note source and commit provenance.
 
 ### Commands Show Sensitive Flags
 - SlayNode redacts known secret-bearing arguments before displaying commands in the UI.

@@ -61,6 +61,8 @@ Run the same full verification gate that CI and release automation use with:
 ./script/full_verification.sh
 ```
 
+GitHub releases also publish a sibling `release-metadata.json` asset beside the DMG and ZIP so you can verify the exact build number, macOS floor, release-note source, and commit provenance without unpacking the bundle.
+
 ## Using SlayNode
 
 1. Launch the app and let the dashboard refresh.

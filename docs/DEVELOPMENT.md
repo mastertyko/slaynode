@@ -40,7 +40,7 @@ The project uses Swift Package Manager for dependency management.
 ### Recommended Local Loop
 ```bash
 ./script/build_and_run.sh
-swift test
+swift test --disable-sandbox
 ```
 
 To preserve other running SlayNode instances from different clones, `script/build_and_run.sh` now only stops processes launched from the current bundle path by default. Use `--kill-all` to restore global `pkill` behavior, or `--no-kill` to skip shutdown entirely.
@@ -91,6 +91,7 @@ Successful CI runs on `main` automatically trigger the GitHub release workflow. 
 
 You can also trigger the release workflow manually with `workflow_dispatch` if you need to target a specific ref.
 Local `./release.sh` runs now support the same build-number suffix via `--build-number <n>` and also emit a sibling `*-release-metadata.json` file so you can compare local packaging output with CI metadata without opening the bundle manually.
+GitHub Releases now publish a matching top-level `release-metadata.json` asset with artifact names, release-note source selection, and commit provenance for the released build.
 
 ### Release Checklist
 
