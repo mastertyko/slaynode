@@ -22,7 +22,9 @@ assert_contains() {
 REPO="${TEST_ROOT}/repo"
 mkdir -p "${REPO}/script" "${REPO}/XcodeSupport"
 cp "${ROOT_DIR}/release.sh" "${REPO}/release.sh"
+cp "${ROOT_DIR}/script/extract_release_notes.sh" "${REPO}/script/extract_release_notes.sh"
 chmod +x "${REPO}/release.sh"
+chmod +x "${REPO}/script/extract_release_notes.sh"
 
 cat > "${REPO}/build.sh" <<'EOF'
 #!/usr/bin/env bash
@@ -38,6 +40,15 @@ set -euo pipefail
 exit 0
 EOF
 chmod +x "${REPO}/script/validate_release_notes.sh"
+
+cat > "${REPO}/CHANGELOG.md" <<'EOF'
+# Changelog
+
+## [1.2.3] - 2026-06-11
+
+### Changed
+- Local build number parity
+EOF
 
 cat > "${REPO}/XcodeSupport/Info.plist" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -65,6 +76,12 @@ set -euo pipefail
 touch "${@: -1}"
 EOF
 chmod +x "${REPO}/hdiutil"
+
+git -C "${REPO}" init -q
+git -C "${REPO}" config user.name "SlayNode Test"
+git -C "${REPO}" config user.email "slaynode-test@example.com"
+git -C "${REPO}" add .
+git -C "${REPO}" commit -q -m "chore: bootstrap"
 
 if output="$(cd "${REPO}" && PATH="${REPO}:$PATH" ./release.sh 1.2.3 --build-number 150 2>&1)"; then
   :

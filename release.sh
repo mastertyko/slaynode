@@ -84,10 +84,20 @@ ARTIFACT_SUFFIX="-v${VERSION}"
 if [[ -n "${BUILD_NUMBER}" ]]; then
     ARTIFACT_SUFFIX="${ARTIFACT_SUFFIX}-build.${BUILD_NUMBER}"
 fi
+ARTIFACT_BASENAME="${APP_NAME}${ARTIFACT_SUFFIX}"
 ZIP_NAME="${APP_NAME}${ARTIFACT_SUFFIX}.zip"
 DMG_NAME="${APP_NAME}${ARTIFACT_SUFFIX}.dmg"
 METADATA_NAME="${APP_NAME}${ARTIFACT_SUFFIX}-release-metadata.json"
 DMG_TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/slaynode-dmg.XXXXXX")"
+RELEASE_NOTES_SOURCE="$("${ROOT_DIR}/script/extract_release_notes.sh" "${VERSION}" --print-source)"
+GIT_SHA="$(git -C "${ROOT_DIR}" rev-parse HEAD 2>/dev/null || true)"
+GIT_BRANCH="$(git -C "${ROOT_DIR}" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+
+if git -C "${ROOT_DIR}" diff --quiet --ignore-submodules HEAD -- 2>/dev/null; then
+    GIT_DIRTY=false
+else
+    GIT_DIRTY=true
+fi
 
 cleanup() {
     rm -rf "${DMG_TEMP_DIR}"
@@ -127,7 +137,18 @@ ln -s /Applications "${DMG_TEMP_DIR}/Applications"
 # Create DMG
 hdiutil create -volname "${APP_NAME}" -srcfolder "${DMG_TEMP_DIR}" -ov -format UDZO "${DMG_NAME}"
 
-python3 - <<'PY' "${METADATA_NAME}" "${VERSION}" "${BUILD_NUMBER}" "${MIN_SYSTEM_VERSION}" "${DMG_NAME}" "${ZIP_NAME}"
+python3 - <<'PY' \
+  "${METADATA_NAME}" \
+  "${VERSION}" \
+  "${BUILD_NUMBER}" \
+  "${MIN_SYSTEM_VERSION}" \
+  "${DMG_NAME}" \
+  "${ZIP_NAME}" \
+  "${ARTIFACT_BASENAME}" \
+  "${RELEASE_NOTES_SOURCE}" \
+  "${GIT_SHA}" \
+  "${GIT_BRANCH}" \
+  "${GIT_DIRTY}"
 from __future__ import annotations
 
 import json
@@ -135,14 +156,30 @@ import sys
 from pathlib import Path
 
 metadata_path = Path(sys.argv[1])
-version, build_number, minimum_system_version, dmg_name, zip_name = sys.argv[2:]
+(
+    version,
+    build_number,
+    minimum_system_version,
+    dmg_name,
+    zip_name,
+    artifact_basename,
+    release_notes_source,
+    git_sha,
+    git_branch,
+    git_dirty,
+) = sys.argv[2:]
 
 payload = {
     "version": version,
     "build_number": build_number or None,
     "minimum_macos": minimum_system_version,
+    "artifact_basename": artifact_basename,
     "dmg_name": dmg_name,
     "zip_name": zip_name,
+    "release_notes_source": release_notes_source,
+    "git_sha": git_sha or None,
+    "git_branch": git_branch or None,
+    "git_dirty": git_dirty == "true",
     "source": "local_release",
 }
 

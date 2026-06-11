@@ -22,7 +22,9 @@ assert_contains() {
 REPO="${TEST_ROOT}/repo"
 mkdir -p "${REPO}/script" "${REPO}/XcodeSupport"
 cp "${ROOT_DIR}/release.sh" "${REPO}/release.sh"
+cp "${ROOT_DIR}/script/extract_release_notes.sh" "${REPO}/script/extract_release_notes.sh"
 chmod +x "${REPO}/release.sh"
+chmod +x "${REPO}/script/extract_release_notes.sh"
 
 cat > "${REPO}/build.sh" <<'EOF'
 #!/usr/bin/env bash
@@ -37,6 +39,15 @@ set -euo pipefail
 exit 0
 EOF
 chmod +x "${REPO}/script/validate_release_notes.sh"
+
+cat > "${REPO}/CHANGELOG.md" <<'EOF'
+# Changelog
+
+## [1.2.3] - 2026-06-11
+
+### Added
+- Release metadata parity
+EOF
 
 cat > "${REPO}/XcodeSupport/Info.plist" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -65,6 +76,12 @@ touch "${@: -1}"
 EOF
 chmod +x "${REPO}/hdiutil"
 
+git -C "${REPO}" init -q
+git -C "${REPO}" config user.name "SlayNode Test"
+git -C "${REPO}" config user.email "slaynode-test@example.com"
+git -C "${REPO}" add .
+git -C "${REPO}" commit -q -m "chore: bootstrap"
+
 output="$(cd "${REPO}" && PATH="${REPO}:$PATH" ./release.sh 1.2.3 --build-number 150)"
 assert_contains "${output}" "Release metadata: SlayNode-v1.2.3-build.150-release-metadata.json"
 
@@ -79,8 +96,13 @@ payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["version"] == "1.2.3"
 assert payload["build_number"] == "150"
 assert payload["minimum_macos"] == "26.0"
+assert payload["artifact_basename"] == "SlayNode-v1.2.3-build.150"
 assert payload["dmg_name"] == "SlayNode-v1.2.3-build.150.dmg"
 assert payload["zip_name"] == "SlayNode-v1.2.3-build.150.zip"
+assert payload["release_notes_source"] == "versioned"
+assert len(payload["git_sha"]) == 40
+assert payload["git_branch"] in {"master", "main"}
+assert payload["git_dirty"] is False
 assert payload["source"] == "local_release"
 PY
 
