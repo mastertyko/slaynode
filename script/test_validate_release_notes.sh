@@ -114,9 +114,34 @@ EOF
   assert_contains "${output}" "Stable release text"
 }
 
+test_passes_through_git_log_fallback_notes() {
+  local repo
+  repo="$(make_repo "case-git-log-fallback")"
+
+  cat > "${repo}/CHANGELOG.md" <<'EOF'
+# Changelog
+
+## [Unreleased] - 2026-06-03
+EOF
+
+  printf "tag base\n" > "${repo}/tagged.txt"
+  git -C "${repo}" add tagged.txt
+  git -C "${repo}" commit -q -m "chore: tagged base"
+  git -C "${repo}" tag v1.0.0
+
+  printf "fresh change\n" > "${repo}/fresh-change.txt"
+  git -C "${repo}" add fresh-change.txt
+  git -C "${repo}" commit -q -m "fix: keep git-log fallback releasable"
+
+  local output
+  output="$("${repo}/script/validate_release_notes.sh")"
+  assert_contains "${output}" "fix: keep git-log fallback releasable"
+}
+
 test_passes_through_non_empty_release_notes
 test_fails_when_extracted_release_notes_are_blank
 test_fails_when_release_notes_only_contain_headings
 test_passes_through_requested_version_notes
+test_passes_through_git_log_fallback_notes
 
 echo "PASS: validate_release_notes"
