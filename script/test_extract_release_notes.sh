@@ -63,6 +63,9 @@ EOF
   output="$("${repo}/script/extract_release_notes.sh")"
   assert_contains "${output}" "Fresh note from unreleased section"
   assert_not_contains "${output}" "Old release note"
+
+  output="$("${repo}/script/extract_release_notes.sh" --print-source)"
+  assert_contains "${output}" "unreleased"
 }
 
 test_uses_requested_version_when_unreleased_is_empty() {
@@ -83,6 +86,9 @@ EOF
   local output
   output="$("${repo}/script/extract_release_notes.sh" "1.2.3")"
   assert_contains "${output}" "Patched release line"
+
+  output="$("${repo}/script/extract_release_notes.sh" "1.2.3" --print-source)"
+  assert_contains "${output}" "versioned"
 }
 
 test_falls_back_to_git_log_since_previous_tag() {
@@ -107,6 +113,9 @@ EOF
   local output
   output="$("${repo}/script/extract_release_notes.sh")"
   assert_contains "${output}" "- feat: add git-log fallback note"
+
+  output="$("${repo}/script/extract_release_notes.sh" --print-source)"
+  assert_contains "${output}" "git-log"
 }
 
 test_falls_back_to_git_log_when_requested_version_is_missing() {
