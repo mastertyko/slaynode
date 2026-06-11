@@ -115,6 +115,7 @@ jobs:
           RELEASE_TAG="v${VERSION}-build.${BUILD_NUMBER}"
           RELEASE_NAME="SlayNode v${VERSION} (build ${BUILD_NUMBER})"
           ARTIFACT_BASENAME="SlayNode-v${VERSION}-build.${BUILD_NUMBER}"
+          RELEASE_NOTES_SOURCE="$(./script/extract_release_notes.sh "${VERSION}" --print-source)"
 
           {
             echo "version=${VERSION}"
@@ -123,6 +124,7 @@ jobs:
             echo "release_name=${RELEASE_NAME}"
             echo "artifact_basename=${ARTIFACT_BASENAME}"
             echo "minimum_system_version=${MIN_SYSTEM_VERSION}"
+            echo "release_notes_source=${RELEASE_NOTES_SOURCE}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Run shared verification gate
@@ -199,6 +201,24 @@ jobs:
             echo "- Workflow run: [#${GITHUB_RUN_NUMBER}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
           } > release-notes.md
 
+      - name: Write release metadata asset
+        run: |
+          cat > release-metadata.json <<EOF
+          {
+            "version": "${{ steps.metadata.outputs.version }}",
+            "build_number": "${{ steps.metadata.outputs.build_number }}",
+            "minimum_macos": "${{ steps.metadata.outputs.minimum_system_version }}",
+            "artifact_basename": "${{ steps.metadata.outputs.artifact_basename }}",
+            "dmg_name": "${{ env.DMG_NAME }}",
+            "zip_name": "${{ env.ZIP_NAME }}",
+            "release_notes_source": "${{ steps.metadata.outputs.release_notes_source }}",
+            "git_sha": "${{ env.SOURCE_SHA }}",
+            "git_branch": "${{ env.SOURCE_BRANCH }}",
+            "git_dirty": false,
+            "source": "github_release_workflow"
+          }
+          EOF
+
       - name: Sync release tag
         run: |
           git config user.name "github-actions[bot]"
@@ -218,5 +238,6 @@ jobs:
           files: |
             ${{ env.DMG_NAME }}
             ${{ env.ZIP_NAME }}
+            release-metadata.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
