@@ -70,6 +70,28 @@ final class ProcessActionPreviewTests: XCTestCase {
         XCTAssertTrue(preview.warnings.contains { $0.contains("SIGKILL to the selected process") })
     }
 
+    func testStopPreviewForSingleProcessIncludesGracefulShutdownWarning() throws {
+        let service = makeProcessService(pid: 4106)
+        let rows = [
+            ProcessActionPreviewer.ProcessRow(pid: 4106, parentPID: 1, processGroupID: 0, command: "node solo.js")
+        ]
+
+        let preview = try XCTUnwrap(
+            ProcessActionPreviewer.makePreview(
+                action: .stop,
+                service: service,
+                targetPID: 4106,
+                fallbackCommand: "node solo.js",
+                rows: rows,
+                portsByPid: [:]
+            )
+        )
+
+        XCTAssertEqual(preview.scope, .singleProcess)
+        XCTAssertEqual(preview.riskLevel, .low)
+        XCTAssertTrue(preview.warnings.contains { $0.contains("graceful shutdown first") })
+    }
+
     func testStopPreviewForGroupLeaderIncludesRecursiveDescendants() throws {
         let service = makeProcessService(pid: 4200)
         let rows = [

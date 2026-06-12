@@ -439,6 +439,10 @@ struct ProcessActionPreviewer: Sendable {
             warnings.append("Force Stop sends SIGKILL to \(targetDescription) and skips graceful shutdown if the process is still alive.")
         }
 
+        if action == .stop, scope == .singleProcess {
+            warnings.append("Stop will signal the selected process only and attempt a graceful shutdown first.")
+        }
+
         let groupMemberCount = processes.filter { $0.role == .groupMember }.count
         if groupMemberCount > 0 {
             warnings.append("This action will signal \(groupMemberCount) additional process-group member\(groupMemberCount == 1 ? "" : "s").")
