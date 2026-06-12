@@ -2,6 +2,8 @@
 
 This documentation is for developers who want to contribute to or understand the technical implementation of SlayNode.
 
+If you want a concrete queue of small, repo-grounded hardening tasks, start with [`docs/IMPROVEMENT_BACKLOG.md`](IMPROVEMENT_BACKLOG.md).
+
 ## Current Product Shape
 
 SlayNode is now a macOS 26-first desktop app built with SwiftUI, Observation, SwiftData, and SwiftPM. The primary experience is a Tahoe-native main window backed by a normalized local service graph, while the menu bar extra, app intents, and system integrations all share the same state and action layer.
@@ -234,6 +236,7 @@ When you add or widen a process classifier, optimize for false-positive control 
 
 - Prefer exact executable or token matches over broad substring matches when a tool name can appear inside unrelated script paths.
 - Keep package-manager wrappers and the promoted child runtime aligned so the UI preserves both the human service name and the real runtime details.
+- When adding wrapper aliases such as `bun x`, `pnpm dlx`, or `npm exec`, add a fixture that proves `descriptor.script` stays pinned to the promoted tool rather than the wrapper subcommand.
 - Add at least one positive fixture and one nearby negative fixture in `Tests/SlayNodeMenuBarTests/CommandParserTests.swift` so a new classifier does not silently widen matches.
 - If the new classifier should surface a service without a live port, also add or update a discovery-focused test in `ProcessDiscoveryTests.swift` or `ProcessMonitorUnitTests.swift`.
 - Re-run `./debug-port-detection.sh --samples-only` and `swift test --disable-sandbox` after classifier changes; together they catch both parser drift and discovery drift.
