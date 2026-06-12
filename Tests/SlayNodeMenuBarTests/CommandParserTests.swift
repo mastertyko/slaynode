@@ -523,6 +523,19 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [5174])
     }
 
+    func testPackageManagerWrapperParsesBunXViteCommand() {
+        let tokens = ["bun", "x", "vite", "--port", "4173"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.packageManager, "bun")
+        XCTAssertEqual(descriptor.displayName, "Vite")
+        XCTAssertEqual(descriptor.script, "vite")
+        XCTAssertEqual(descriptor.category, .bundler)
+        XCTAssertEqual(ports, [4173])
+    }
+
     func testPackageManagerWrapperParsesBunWatchCommand() {
         let tokens = ["bun", "--watch", "src/server.ts", "--port", "4173"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")

@@ -126,6 +126,10 @@ enum ProcessClassifier {
             return firstScriptArgument(in: arguments, startingAt: commandIndex + 1)
         }
 
+        if first == "bun", command == "x" {
+            return firstScriptArgument(in: arguments, startingAt: commandIndex + 1)
+        }
+
         if first == "bun" && (command == "run" || command == "wip") {
             return firstScriptArgument(in: arguments, startingAt: commandIndex + 1)
         }
