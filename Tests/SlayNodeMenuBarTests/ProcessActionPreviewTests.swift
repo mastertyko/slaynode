@@ -240,8 +240,9 @@ final class ProcessActionPreviewTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(preview.riskLevel, .elevated)
-        XCTAssertTrue(preview.warnings.contains { $0.contains("live command differs") })
+        XCTAssertEqual(preview.riskLevel, .low)
+        XCTAssertTrue(preview.warnings.contains { $0.contains("only differs by redacted values") })
+        XCTAssertFalse(preview.warnings.contains { $0.contains("live command differs") })
         XCTAssertFalse(preview.processes.first?.command.contains("live-secret") ?? true)
     }
 

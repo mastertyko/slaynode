@@ -192,6 +192,12 @@ private struct ProcessActionPreviewTree: Sendable {
 struct ProcessActionPreviewer: Sendable {
     static let maxProcessCount = 24
 
+    private enum CommandDrift {
+        case none
+        case sanitizedOnly
+        case substantive
+    }
+
     struct ProcessRow: Hashable, Sendable {
         let pid: Int32
         let parentPID: Int32
@@ -309,13 +315,13 @@ struct ProcessActionPreviewer: Sendable {
             )
         }
         let scope = scope(for: target, action: action, rows: scopedRows.rows)
-        let hasCommandDrift = commandsDiffer(target.command, fallbackCommand)
+        let commandDrift = commandDrift(target.command, fallbackCommand)
         let riskLevel = riskLevel(
             action: action,
             scope: scope,
             processes: processes,
             omittedProcessCount: scopedRows.omittedProcessCount,
-            hasCommandDrift: hasCommandDrift
+            hasSubstantiveCommandDrift: commandDrift == .substantive
         )
 
         return ServiceActionPreview(
@@ -335,7 +341,8 @@ struct ProcessActionPreviewer: Sendable {
                 processes: processes,
                 target: target,
                 fallbackCommand: fallbackCommand,
-                omittedProcessCount: scopedRows.omittedProcessCount
+                omittedProcessCount: scopedRows.omittedProcessCount,
+                commandDrift: commandDrift
             )
         )
     }
@@ -422,7 +429,8 @@ struct ProcessActionPreviewer: Sendable {
         processes: [ProcessActionPreviewProcess],
         target: ProcessRow,
         fallbackCommand: String,
-        omittedProcessCount: Int
+        omittedProcessCount: Int,
+        commandDrift: CommandDrift
     ) -> [String] {
         var warnings: [String] = []
 
@@ -445,8 +453,12 @@ struct ProcessActionPreviewer: Sendable {
             warnings.append("\(omittedProcessCount) additional process\(omittedProcessCount == 1 ? "" : "es") are hidden from this preview.")
         }
 
-        if commandsDiffer(target.command, fallbackCommand) {
+        if commandDrift == .substantive {
             warnings.append("The live command differs from the last discovered command; SlayNode will still revalidate before acting.")
+        }
+
+        if commandDrift == .sanitizedOnly {
+            warnings.append("The live command only differs by redacted values; SlayNode will still revalidate before acting.")
         }
 
         if scope == .singleProcess, target.processGroupID == target.pid {
@@ -461,13 +473,13 @@ struct ProcessActionPreviewer: Sendable {
         scope: ProcessActionScope,
         processes: [ProcessActionPreviewProcess],
         omittedProcessCount: Int,
-        hasCommandDrift: Bool
+        hasSubstantiveCommandDrift: Bool
     ) -> ProcessActionRiskLevel {
         if scope == .unavailable { return .unknown }
         if action == .forceStop { return .high }
         if omittedProcessCount > 0 { return .elevated }
         if processes.contains(where: { $0.role == .groupMember }) { return .elevated }
-        if hasCommandDrift { return .elevated }
+        if hasSubstantiveCommandDrift { return .elevated }
         if processes.count > 1 { return .moderate }
         return .low
     }
@@ -476,8 +488,15 @@ struct ProcessActionPreviewer: Sendable {
         ServiceSanitizer.redactSecrets(in: command)
     }
 
-    private static func commandsDiffer(_ lhs: String, _ rhs: String) -> Bool {
-        lhs.trimmingCharacters(in: .whitespacesAndNewlines) != rhs.trimmingCharacters(in: .whitespacesAndNewlines)
+    private static func commandDrift(_ lhs: String, _ rhs: String) -> CommandDrift {
+        let normalizedLHS = lhs.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedRHS = rhs.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard normalizedLHS != normalizedRHS else { return .none }
+
+        let sanitizedLHS = sanitizedCommand(normalizedLHS)
+        let sanitizedRHS = sanitizedCommand(normalizedRHS)
+        return sanitizedLHS == sanitizedRHS ? .sanitizedOnly : .substantive
     }
 
     private static func fallbackPorts(
