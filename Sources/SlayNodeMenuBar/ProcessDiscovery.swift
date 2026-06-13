@@ -3,13 +3,16 @@ import Foundation
 struct ProcessDiscovery: Sendable {
     private let shell: any ShellExecuting
     private let portResolver: PortResolver
+    private let pidQueryBatchSize: Int
 
     init(
         shell: any ShellExecuting = SystemShellExecutor(),
-        portResolver: PortResolver = PortResolver()
+        portResolver: PortResolver = PortResolver(),
+        pidQueryBatchSize: Int = Constants.Buffer.maxPIDQueryBatchSize
     ) {
         self.shell = shell
         self.portResolver = portResolver
+        self.pidQueryBatchSize = max(1, pidQueryBatchSize)
     }
 
     func discoverProcesses() async -> [NodeProcess] {
@@ -486,17 +489,23 @@ struct ProcessDiscovery: Sendable {
     }
 
     private func resolveWorkingDirectories(for pids: [Int32]) async -> [Int32: String] {
-        guard !pids.isEmpty else { return [:] }
+        var resolved: [Int32: String] = [:]
 
-        let pidList = pids.map(String.init).joined(separator: ",")
-        guard let (status, output) = try? await runCommand(
-            Constants.Path.lsof,
-            arguments: ["-a", "-d", "cwd", "-Fn", "-p", pidList]
-        ), status == 0 else {
-            return [:]
+        for pidBatch in Self.pidBatches(for: pids, batchSize: pidQueryBatchSize) {
+            let pidList = pidBatch.map(String.init).joined(separator: ",")
+            guard let (status, output) = try? await runCommand(
+                Constants.Path.lsof,
+                arguments: ["-a", "-d", "cwd", "-Fn", "-p", pidList]
+            ), status == 0 else {
+                continue
+            }
+
+            for (pid, path) in Self.parseWorkingDirectories(from: output) {
+                resolved[pid] = path
+            }
         }
 
-        return Self.parseWorkingDirectories(from: output)
+        return resolved
     }
 
     private func fetchCommandLine(for pid: Int32) async -> String? {
@@ -582,4 +591,22 @@ struct ProcessDiscovery: Sendable {
         "webpack-dev-server",
         "storybook"
     ])
+
+    static func pidBatches(for pids: [Int32], batchSize: Int) -> [[Int32]] {
+        let normalized = Array(Set(pids.filter { $0 > 0 })).sorted()
+        guard !normalized.isEmpty else { return [] }
+
+        let safeBatchSize = max(1, batchSize)
+        var batches: [[Int32]] = []
+        batches.reserveCapacity((normalized.count + safeBatchSize - 1) / safeBatchSize)
+
+        var index = 0
+        while index < normalized.count {
+            let endIndex = min(index + safeBatchSize, normalized.count)
+            batches.append(Array(normalized[index..<endIndex]))
+            index = endIndex
+        }
+
+        return batches
+    }
 }

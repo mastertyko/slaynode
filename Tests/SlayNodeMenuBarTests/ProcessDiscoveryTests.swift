@@ -123,6 +123,14 @@ final class ProcessDiscoveryTests: XCTestCase {
         XCTAssertEqual(directories[201], "/Users/test/api")
     }
 
+    func testPidBatchesNormalizeAndChunkValues() {
+        XCTAssertEqual(
+            ProcessDiscovery.pidBatches(for: [4, 2, 2, -1, 3, 1], batchSize: 2),
+            [[1, 2], [3, 4]]
+        )
+        XCTAssertEqual(ProcessDiscovery.pidBatches(for: [], batchSize: 3), [])
+    }
+
     #if DEBUG
     func testDiscoveryAndProcessProviderUsePromotedProcessShape() async throws {
         let psOutput = """
@@ -221,6 +229,43 @@ final class ProcessDiscoveryTests: XCTestCase {
         XCTAssertEqual(processes.first?.descriptor.packageManager, "npm")
         XCTAssertEqual(processes.first?.ports, [5_173])
         XCTAssertEqual(processes.first?.workingDirectory, "/Users/test/frontend")
+    }
+
+    func testDiscoveryMergesWorkingDirectoriesAcrossPidBatches() async throws {
+        let psOutput = """
+        23010     1 00:20 /usr/local/bin/npm run dev
+        23011 23010 00:19 node /Users/test/frontend/node_modules/.bin/vite --port 5173
+        23020     1 00:18 /usr/local/bin/pnpm run preview
+        23021 23020 00:17 node /Users/test/api/node_modules/.bin/vite preview --port 4173
+        """
+        let firstBatchCwdOutput = """
+        p23010
+        fcwd
+        n/Users/test/frontend
+        p23011
+        fcwd
+        n/Users/test/frontend
+        """
+        let secondBatchCwdOutput = """
+        p23020
+        fcwd
+        n/Users/test/api
+        p23021
+        fcwd
+        n/Users/test/api
+        """
+        let mock = MockShellExecutor()
+        mock.responses["\(Constants.Path.ps) -axo pid=,ppid=,etime=,command="] = (0, psOutput)
+        mock.responses["\(Constants.Path.lsof) -a -d cwd -Fn -p 23010,23011"] = (0, firstBatchCwdOutput)
+        mock.responses["\(Constants.Path.lsof) -a -d cwd -Fn -p 23020,23021"] = (0, secondBatchCwdOutput)
+        mock.defaultResponse = (0, "")
+
+        let discovery = ProcessDiscovery(shell: mock, pidQueryBatchSize: 2)
+        let processes = await discovery.discoverProcesses()
+
+        XCTAssertEqual(processes.map(\.workingDirectory), ["/Users/test/frontend", "/Users/test/api"])
+        XCTAssertEqual(processes.map(\.descriptor.displayName), ["Vite", "Vite"])
+        XCTAssertEqual(processes.map(\.ports), [[5_173], [4_173]])
     }
     #endif
 }

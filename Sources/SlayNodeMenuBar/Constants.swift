@@ -60,6 +60,8 @@ enum Constants {
         
         /// Maximum expected process count for pre-allocation
         static let maxProcessCount = 2_000
+
+        static let maxPIDQueryBatchSize = 128
         
         /// Maximum length for executable names
         static let maxExecutableNameLength = 256
