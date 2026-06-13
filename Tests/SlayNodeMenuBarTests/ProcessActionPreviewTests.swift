@@ -116,6 +116,7 @@ final class ProcessActionPreviewTests: XCTestCase {
         XCTAssertEqual(preview.processes.map(\.pid), [4200, 4201, 4202])
         XCTAssertEqual(preview.processes.map(\.role), [.target, .child, .descendant])
         XCTAssertEqual(preview.processes.map(\.depth), [0, 1, 2])
+        XCTAssertTrue(preview.warnings.contains { $0.contains("process tree") && $0.contains("graceful shutdown first") })
     }
 
     func testStopPreviewOrdersDescendantsByTreeDepthBeforePid() throws {
@@ -164,6 +165,7 @@ final class ProcessActionPreviewTests: XCTestCase {
         XCTAssertEqual(preview.riskLevel, .elevated)
         XCTAssertEqual(preview.processes.map(\.pid), [4261, 4260, 4262])
         XCTAssertTrue(preview.processes.contains { $0.role == .groupMember })
+        XCTAssertTrue(preview.warnings.contains { $0.contains("process group") && $0.contains("graceful shutdown first") })
         XCTAssertTrue(preview.warnings.contains { $0.contains("additional process-group member") })
     }
 
