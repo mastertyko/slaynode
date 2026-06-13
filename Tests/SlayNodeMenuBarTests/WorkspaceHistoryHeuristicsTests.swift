@@ -71,11 +71,17 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
             ".angular",
             ".direnv",
             ".expo",
+            ".gradle",
+            ".mypy_cache",
             ".next",
+            ".npm",
             ".pytest_cache",
             ".parcel-cache",
+            ".playwright",
             ".swiftpm",
+            ".ruff_cache",
             ".turbo",
+            ".terraform",
             ".pnpm-store",
             ".vercel",
             ".venv",
@@ -115,7 +121,7 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
     func testEligibleRecentWorkspaceRejectsDisallowedGeneratedPathComponents() throws {
         let tempRoot = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: tempRoot) }
-        for component in ["dist", ".output", "cache", ".parcel-cache"] {
+        for component in ["dist", ".output", "cache", ".parcel-cache", ".ruff_cache", ".terraform", "target"] {
             let generatedPath = tempRoot
                 .appendingPathComponent("frontend")
                 .appendingPathComponent(component)
