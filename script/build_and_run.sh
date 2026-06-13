@@ -14,6 +14,8 @@ OPEN_BIN="${OPEN_BIN:-/usr/bin/open}"
 PGREP_BIN="${PGREP_BIN:-pgrep}"
 PS_BIN="${PS_BIN:-ps}"
 SLEEP_BIN="${SLEEP_BIN:-sleep}"
+VERIFY_ATTEMPTS="${VERIFY_ATTEMPTS:-10}"
+VERIFY_SLEEP_SECONDS="${VERIFY_SLEEP_SECONDS:-1}"
 
 find_running_bundle_instances() {
   local pids=()
@@ -88,6 +90,26 @@ verify_current_bundle_running() {
   return 1
 }
 
+wait_for_current_bundle_running() {
+  local attempt=1
+  while (( attempt <= VERIFY_ATTEMPTS )); do
+    if verify_current_bundle_running >/dev/null 2>&1; then
+      echo "✅ $PROCESS_NAME is running from the current bundle"
+      return 0
+    fi
+
+    if (( attempt == VERIFY_ATTEMPTS )); then
+      break
+    fi
+
+    "$SLEEP_BIN" "$VERIFY_SLEEP_SECONDS"
+    ((attempt += 1))
+  done
+
+  echo "❌ $PROCESS_NAME did not start from the current bundle after ${VERIFY_ATTEMPTS} checks" >&2
+  return 1
+}
+
 usage() {
   echo "usage: $0 [run|--debug|--logs|--telemetry|--verify] [--no-kill|--kill-all]" >&2
   exit "${1:-2}"
@@ -139,8 +161,7 @@ case "$MODE" in
     ;;
   --verify|verify)
     open_app
-    "$SLEEP_BIN" 2
-    verify_current_bundle_running
+    wait_for_current_bundle_running
     ;;
   *)
     usage
