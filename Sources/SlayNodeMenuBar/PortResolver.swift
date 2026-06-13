@@ -1,122 +1,98 @@
 import Darwin
 import Foundation
 
-/// Resolves listening TCP ports for processes using lsof
 struct PortResolver: Sendable {
-    private var timeoutNanoseconds: UInt64 {
-        UInt64(Constants.Timeout.lsofTimeout * Double(Constants.Time.nanosecondsPerSecond))
+    private let shell: any ShellExecuting
+    private let pidQueryBatchSize: Int
+
+    init(
+        shell: any ShellExecuting = SystemShellExecutor(),
+        pidQueryBatchSize: Int = Constants.Buffer.maxPIDQueryBatchSize
+    ) {
+        self.shell = shell
+        self.pidQueryBatchSize = max(1, pidQueryBatchSize)
     }
-    
-    /// Resolves listening ports for given process IDs using lsof
-    /// - Parameter pids: Array of process IDs to check
-    /// - Returns: Dictionary mapping PID to array of listening ports
-    /// - Note: Returns empty dictionary on timeout rather than throwing
+
     func resolvePorts(for pids: [Int32]) async -> [Int32: [Int]] {
-        let normalizedPids = Self.normalizedPIDs(pids)
-        guard !normalizedPids.isEmpty else { return [:] }
-        
-        let pidList = normalizedPids.map(String.init).joined(separator: ",")
-        
-        do {
-            let output = try await runLsofWithTimeout(pidList: pidList)
-            return Self.parseLsofOutput(output)
-        } catch {
-            Log.network.warning("Port resolution failed: \(error.localizedDescription)")
-            return [:]
+        var resolved: [Int32: [Int]] = [:]
+
+        for pidBatch in Self.pidBatches(for: pids, batchSize: pidQueryBatchSize) {
+            let pidList = pidBatch.map(String.init).joined(separator: ",")
+
+            do {
+                let (status, output) = try await shell.run(
+                    Constants.Path.lsof,
+                    arguments: ["-Pan", "-p", pidList, "-iTCP", "-sTCP:LISTEN"],
+                    timeout: Constants.Timeout.lsofTimeout
+                )
+                guard status == 0 else { continue }
+
+                for (pid, ports) in Self.parseLsofOutput(output) {
+                    resolved[pid, default: []].append(contentsOf: ports)
+                }
+            } catch {
+                Log.network.warning("Port resolution failed: \(error.localizedDescription)")
+            }
         }
+
+        for (pid, ports) in resolved {
+            resolved[pid] = Array(Set(ports)).sorted()
+        }
+
+        return resolved
     }
 
     static func normalizedPIDs(_ pids: [Int32]) -> [Int32] {
         Array(Set(pids.filter { $0 > 0 })).sorted()
     }
-    
-    private func runLsofWithTimeout(pidList: String) async throws -> String {
-        try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                let process = Process()
-                process.executableURL = URL(fileURLWithPath: Constants.Path.lsof)
-                process.arguments = ["-Pan", "-p", pidList, "-iTCP", "-sTCP:LISTEN"]
-                
-                let outputPipe = Pipe()
-                process.standardOutput = outputPipe
-                process.standardError = FileHandle.nullDevice
 
-                final class TimeoutState {
-                    private var value = false
-                    private let lock = NSLock()
+    static func pidBatches(for pids: [Int32], batchSize: Int) -> [[Int32]] {
+        let normalized = normalizedPIDs(pids)
+        guard !normalized.isEmpty else { return [] }
 
-                    func markTimedOut() {
-                        lock.lock()
-                        value = true
-                        lock.unlock()
-                    }
+        let safeBatchSize = max(1, batchSize)
+        var batches: [[Int32]] = []
+        batches.reserveCapacity((normalized.count + safeBatchSize - 1) / safeBatchSize)
 
-                    var didTimeout: Bool {
-                        lock.lock()
-                        defer { lock.unlock() }
-                        return value
-                    }
-                }
-                let timeoutState = TimeoutState()
-                
-                // Timeout using DispatchWorkItem (2 seconds)
-                let timeoutWork = DispatchWorkItem { [weak process] in
-                    timeoutState.markTimedOut()
-                    process?.terminate()
-                }
-                let timeoutSeconds = Double(timeoutNanoseconds) / Double(Constants.Time.nanosecondsPerSecond)
-                DispatchQueue.global().asyncAfter(deadline: .now() + timeoutSeconds, execute: timeoutWork)
-                
-                do {
-                    try process.run()
-                    let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                    process.waitUntilExit()
-                    timeoutWork.cancel()
-                    
-                    if timeoutState.didTimeout {
-                        continuation.resume(throwing: NSError(domain: "PortResolver", code: -1, userInfo: [NSLocalizedDescriptionKey: "Timeout"]))
-                        return
-                    }
-                    
-                    let output = String(data: outputData, encoding: .utf8) ?? ""
-                    continuation.resume(returning: output)
-                } catch {
-                    timeoutWork.cancel()
-                    continuation.resume(throwing: error)
-                }
-            }
+        var index = 0
+        while index < normalized.count {
+            let endIndex = min(index + safeBatchSize, normalized.count)
+            batches.append(Array(normalized[index..<endIndex]))
+            index = endIndex
         }
+
+        return batches
     }
-    
+
     static func parseLsofOutput(_ output: String) -> [Int32: [Int]] {
         guard !output.isEmpty else { return [:] }
-        
+
         var result: [Int32: [Int]] = [:]
         let lines = output.split(whereSeparator: { $0.isNewline })
-        
+
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             guard !trimmed.isEmpty, !trimmed.hasPrefix("COMMAND") else { continue }
-            
+
             let tokens = trimmed.split(omittingEmptySubsequences: true, whereSeparator: { $0.isWhitespace })
             guard tokens.count >= 9,
                   let pid = Int32(tokens[1]) else { continue }
-            
+
             let nameToken: String
             if tokens[tokens.count - 1] == "(LISTEN)" && tokens.count >= 10 {
                 nameToken = String(tokens[tokens.count - 2])
             } else {
                 nameToken = String(tokens.last ?? "")
             }
-            
+
             guard let port = Self.extractPort(from: nameToken) else { continue }
             result[pid, default: []].append(port)
         }
-        
+
         for (pid, ports) in result {
             result[pid] = Array(Set(ports)).sorted()
         }
-        
+
         return result
     }
     

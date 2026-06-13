@@ -8,6 +8,14 @@ final class PortResolverTests: XCTestCase {
         XCTAssertEqual(PortResolver.normalizedPIDs([3, -1, 2, 3, 0, 1]), [1, 2, 3])
     }
 
+    func testPidBatchesNormalizeAndChunkValues() {
+        XCTAssertEqual(
+            PortResolver.pidBatches(for: [4, 2, 2, -1, 3, 1], batchSize: 2),
+            [[1, 2], [3, 4]]
+        )
+        XCTAssertEqual(PortResolver.pidBatches(for: [], batchSize: 3), [])
+    }
+
     func testParseLsofOutputExtractsListeningPorts() {
         let output = """
         COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
@@ -83,5 +91,32 @@ final class PortResolverTests: XCTestCase {
 
         XCTAssertTrue(result.keys.allSatisfy { requestedPids.contains($0) })
     }
+
+    #if DEBUG
+    func testResolvePortsMergesResultsAcrossPidBatches() async {
+        let mock = MockShellExecutor()
+        mock.responses["\(Constants.Path.lsof) -Pan -p 101,102 -iTCP -sTCP:LISTEN"] = (
+            0,
+            """
+            COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+            node      101 user   22u  IPv4 0x0   0t0      TCP  *:3000 (LISTEN)
+            node      102 user   23u  IPv4 0x0   0t0      TCP  *:4173 (LISTEN)
+            """
+        )
+        mock.responses["\(Constants.Path.lsof) -Pan -p 103 -iTCP -sTCP:LISTEN"] = (
+            0,
+            """
+            COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+            node      103 user   24u  IPv4 0x0   0t0      TCP  *:8080 (LISTEN)
+            """
+        )
+        mock.defaultResponse = (1, "")
+
+        let resolver = PortResolver(shell: mock, pidQueryBatchSize: 2)
+        let result = await resolver.resolvePorts(for: [103, 101, 102])
+
+        XCTAssertEqual(result, [101: [3000], 102: [4173], 103: [8080]])
+    }
+    #endif
 }
 #endif
