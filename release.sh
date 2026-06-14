@@ -104,18 +104,30 @@ cleanup() {
 }
 trap cleanup EXIT
 
+run_build_script() {
+    local args=("$@")
+
+    if [[ -n "${BUILD_NUMBER}" ]]; then
+        SLAYNODE_VERSION="${VERSION}" \
+        SLAYNODE_BUILD_NUMBER="${BUILD_NUMBER}" \
+        ./build.sh "${args[@]}"
+    else
+        SLAYNODE_VERSION="${VERSION}" \
+        ./build.sh "${args[@]}"
+    fi
+}
+
 echo "🚀 Creating SlayNode release v${VERSION}..."
 
 echo "📝 Validating release notes..."
 "${ROOT_DIR}/script/validate_release_notes.sh" "${VERSION}" >/dev/null
 
+echo "🔎 Running release build preflight..."
+run_build_script --verify-only
+
 # Build the app
 echo "🔨 Building release version..."
-if [[ -n "${BUILD_NUMBER}" ]]; then
-    SLAYNODE_VERSION="${VERSION}" SLAYNODE_BUILD_NUMBER="${BUILD_NUMBER}" ./build.sh release
-else
-    SLAYNODE_VERSION="${VERSION}" ./build.sh release
-fi
+run_build_script release
 
 if [[ -f "${ZIP_NAME}" ]]; then
     rm "${ZIP_NAME}"
