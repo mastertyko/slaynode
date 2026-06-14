@@ -17,21 +17,10 @@ struct PortResolver: Sendable {
         var resolved: [Int32: [Int]] = [:]
 
         for pidBatch in Self.pidBatches(for: pids, batchSize: pidQueryBatchSize) {
-            let pidList = pidBatch.map(String.init).joined(separator: ",")
+            guard let batchResult = await resolveBatch(pidBatch) else { continue }
 
-            do {
-                let (status, output) = try await shell.run(
-                    Constants.Path.lsof,
-                    arguments: ["-Pan", "-p", pidList, "-iTCP", "-sTCP:LISTEN"],
-                    timeout: Constants.Timeout.lsofTimeout
-                )
-                guard status == 0 else { continue }
-
-                for (pid, ports) in Self.parseLsofOutput(output) {
-                    resolved[pid, default: []].append(contentsOf: ports)
-                }
-            } catch {
-                Log.network.warning("Port resolution failed: \(error.localizedDescription)")
+            for (pid, ports) in batchResult {
+                resolved[pid, default: []].append(contentsOf: ports)
             }
         }
 
@@ -40,6 +29,36 @@ struct PortResolver: Sendable {
         }
 
         return resolved
+    }
+
+    private func resolveBatch(_ pidBatch: [Int32]) async -> [Int32: [Int]]? {
+        let pidList = pidBatch.map(String.init).joined(separator: ",")
+        let arguments = ["-Pan", "-p", pidList, "-iTCP", "-sTCP:LISTEN"]
+        let retryCount = 2
+
+        for attempt in 1...retryCount {
+            do {
+                let (status, output) = try await shell.run(
+                    Constants.Path.lsof,
+                    arguments: arguments,
+                    timeout: Constants.Timeout.lsofTimeout
+                )
+                guard status == 0 else {
+                    if attempt == retryCount {
+                        Log.network.warning("Port resolution failed for pid batch \(pidList) with exit status \(status).")
+                    }
+                    continue
+                }
+
+                return Self.parseLsofOutput(output)
+            } catch {
+                if attempt == retryCount {
+                    Log.network.warning("Port resolution failed for pid batch \(pidList): \(error.localizedDescription)")
+                }
+            }
+        }
+
+        return nil
     }
 
     static func normalizedPIDs(_ pids: [Int32]) -> [Int32] {

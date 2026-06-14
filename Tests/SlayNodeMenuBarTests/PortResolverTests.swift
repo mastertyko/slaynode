@@ -117,6 +117,84 @@ final class PortResolverTests: XCTestCase {
 
         XCTAssertEqual(result, [101: [3000], 102: [4173], 103: [8080]])
     }
+
+    func testResolvePortsRetriesNonZeroBatchOnceBeforeSucceeding() async {
+        let mock = SequencedShellExecutor()
+        mock.enqueue(
+            key: "\(Constants.Path.lsof) -Pan -p 101 -iTCP -sTCP:LISTEN",
+            result: .success((1, ""))
+        )
+        mock.enqueue(
+            key: "\(Constants.Path.lsof) -Pan -p 101 -iTCP -sTCP:LISTEN",
+            result: .success((
+                0,
+                """
+                COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+                node      101 user   22u  IPv4 0x0   0t0      TCP  *:3000 (LISTEN)
+                """
+            ))
+        )
+
+        let resolver = PortResolver(shell: mock, pidQueryBatchSize: 1)
+        let result = await resolver.resolvePorts(for: [101])
+
+        XCTAssertEqual(result, [101: [3000]])
+    }
+
+    func testResolvePortsRetriesThrownBatchErrorOnceBeforeSucceeding() async {
+        let mock = SequencedShellExecutor()
+        mock.enqueue(
+            key: "\(Constants.Path.lsof) -Pan -p 101 -iTCP -sTCP:LISTEN",
+            result: .failure(TestShellError.transient)
+        )
+        mock.enqueue(
+            key: "\(Constants.Path.lsof) -Pan -p 101 -iTCP -sTCP:LISTEN",
+            result: .success((
+                0,
+                """
+                COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+                node      101 user   22u  IPv4 0x0   0t0      TCP  *:3000 (LISTEN)
+                """
+            ))
+        )
+
+        let resolver = PortResolver(shell: mock, pidQueryBatchSize: 1)
+        let result = await resolver.resolvePorts(for: [101])
+
+        XCTAssertEqual(result, [101: [3000]])
+    }
     #endif
 }
+
+#if DEBUG
+private enum TestShellError: Error {
+    case transient
+}
+
+private final class SequencedShellExecutor: ShellExecuting, @unchecked Sendable {
+    private var responses: [String: [Result<(status: Int32, output: String), Error>]] = [:]
+
+    func enqueue(
+        key: String,
+        result: Result<(status: Int32, output: String), Error>
+    ) {
+        responses[key, default: []].append(result)
+    }
+
+    func run(
+        _ launchPath: String,
+        arguments: [String],
+        timeout: TimeInterval
+    ) async throws -> (status: Int32, output: String) {
+        let key = "\(launchPath) \(arguments.joined(separator: " "))"
+        guard var queued = responses[key], !queued.isEmpty else {
+            return (0, "")
+        }
+
+        let next = queued.removeFirst()
+        responses[key] = queued
+        return try next.get()
+    }
+}
+#endif
 #endif
