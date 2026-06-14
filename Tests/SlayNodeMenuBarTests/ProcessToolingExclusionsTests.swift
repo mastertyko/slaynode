@@ -46,6 +46,37 @@ final class ProcessToolingExclusionsTests: XCTestCase {
         )
     }
 
+    func testExcludesSharedToolingDaemonFragments() {
+        let fixtures: [(executable: String, command: String)] = [
+            (
+                "/opt/homebrew/bin/node",
+                "/opt/homebrew/lib/node_modules/typescript/lib/typingsinstaller.js --globalTypingsCacheLocation /tmp/cache"
+            ),
+            (
+                "/opt/homebrew/bin/node",
+                "/opt/homebrew/bin/browser_use.skill_cli.daemon --transport pipe"
+            ),
+            (
+                "/opt/homebrew/bin/esbuild",
+                "/opt/homebrew/bin/esbuild --service=0.25.1 --ping"
+            ),
+            (
+                "/usr/bin/sourcekit-lsp",
+                "/usr/bin/sourcekit-lsp"
+            )
+        ]
+
+        for fixture in fixtures {
+            XCTAssertTrue(
+                ProcessToolingExclusions.isExcluded(
+                    executable: fixture.executable,
+                    command: fixture.command
+                ),
+                fixture.command
+            )
+        }
+    }
+
     func testExcludesOMXRuntimeCommandFragments() {
         XCTAssertTrue(
             ProcessToolingExclusions.isExcluded(
