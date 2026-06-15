@@ -53,7 +53,11 @@ enum ServiceSanitizer {
 
             if let header = redactSensitiveHeader(token) {
                 redacted.append(header)
-                index += 1
+                if token.hasSuffix(":"), index + 1 < tokens.count {
+                    index += 2
+                } else {
+                    index += 1
+                }
                 continue
             }
 

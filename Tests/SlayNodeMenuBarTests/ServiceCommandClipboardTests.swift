@@ -29,6 +29,17 @@ final class ServiceCommandClipboardTests: XCTestCase {
         XCTAssertTrue(copied.contains("Proxy-Authorization: ***"))
     }
 
+    func testServiceCommandCopyTextRedactsSplitHeaderValues() {
+        let copied = serviceCommandCopyText(
+            "curl --header Authorization: bearer-secret --header X-Trace: trace-123 https://example.test"
+        )
+
+        XCTAssertFalse(copied.contains("bearer-secret"))
+        XCTAssertTrue(copied.contains("Authorization: ***"))
+        XCTAssertTrue(copied.contains("X-Trace:"))
+        XCTAssertTrue(copied.contains("trace-123"))
+    }
+
     func testServiceCommandCopyTextRedactsUrlCredentials() {
         let copied = serviceCommandCopyText(
             "node server.js postgres://demo:super-secret@localhost:5432/app"
