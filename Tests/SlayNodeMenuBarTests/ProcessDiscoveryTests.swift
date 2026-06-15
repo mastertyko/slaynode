@@ -267,6 +267,31 @@ final class ProcessDiscoveryTests: XCTestCase {
         XCTAssertEqual(processes.map(\.descriptor.displayName), ["Vite", "Vite"])
         XCTAssertEqual(processes.map(\.ports), [[5_173], [4_173]])
     }
+
+    func testDiscoveryUsesPartialWorkingDirectoryOutputFromNonZeroLsofExit() async throws {
+        let psOutput = """
+        24010     1 00:20 /usr/local/bin/npm run dev
+        24011 24010 00:19 node /Users/test/frontend/node_modules/.bin/vite --port 5173
+        """
+        let cwdOutput = """
+        p24010
+        fcwd
+        n/Users/test/frontend
+        p24011
+        fcwd
+        n/Users/test/frontend
+        """
+        let mock = MockShellExecutor()
+        mock.responses["\(Constants.Path.ps) -axo pid=,ppid=,etime=,command="] = (0, psOutput)
+        mock.responses["\(Constants.Path.lsof) -a -d cwd -Fn -p 24010,24011"] = (1, cwdOutput)
+        mock.defaultResponse = (0, "")
+
+        let discovery = ProcessDiscovery(shell: mock)
+        let processes = await discovery.discoverProcesses()
+
+        XCTAssertEqual(processes.count, 1)
+        XCTAssertEqual(processes.first?.workingDirectory, "/Users/test/frontend")
+    }
     #endif
 }
 #endif

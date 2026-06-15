@@ -492,15 +492,19 @@ struct ProcessDiscovery: Sendable {
         var resolved: [Int32: String] = [:]
 
         for pidBatch in Self.pidBatches(for: pids, batchSize: pidQueryBatchSize) {
-            let pidList = pidBatch.map(String.init).joined(separator: ",")
             guard let (status, output) = try? await runCommand(
                 Constants.Path.lsof,
-                arguments: ["-a", "-d", "cwd", "-Fn", "-p", pidList]
-            ), status == 0 else {
+                arguments: ["-a", "-d", "cwd", "-Fn", "-p", pidBatch.map(String.init).joined(separator: ",")]
+            ) else {
                 continue
             }
 
-            for (pid, path) in Self.parseWorkingDirectories(from: output) {
+            let parsed = Self.parseWorkingDirectories(from: output)
+            if status != 0 && parsed.isEmpty {
+                continue
+            }
+
+            for (pid, path) in parsed {
                 resolved[pid] = path
             }
         }
