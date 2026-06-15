@@ -748,7 +748,15 @@ enum ServiceHeuristics {
             }
         }
 
-        return dependencies
+        return dependencies.sorted {
+            if $0.sourceID != $1.sourceID {
+                return $0.sourceID < $1.sourceID
+            }
+            if $0.targetID != $1.targetID {
+                return $0.targetID < $1.targetID
+            }
+            return $0.label < $1.label
+        }
     }
 
     private static func classifyProcessKind(process: NodeProcess, ports: [Int]) -> ServiceKind {

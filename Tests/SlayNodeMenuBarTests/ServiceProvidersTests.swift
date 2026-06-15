@@ -345,6 +345,28 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(workspace?.rootPath, "/Volumes/ExtraDisk/Dev/julia-live/backend")
     }
 
+    func testDependenciesAreSortedDeterministically() {
+        let workspace = WorkspaceIdentity(id: "workspace:/demo", name: "demo", rootPath: "/tmp/demo")
+        let services = [
+            makeDependencyService(id: "process:worker", kind: .worker, workspace: workspace),
+            makeDependencyService(id: "process:redis", kind: .cache, workspace: workspace),
+            makeDependencyService(id: "process:api", kind: .api, workspace: workspace),
+            makeDependencyService(id: "process:postgres", kind: .database, workspace: workspace)
+        ]
+
+        let dependencies = ServiceHeuristics.dependencies(for: services)
+
+        XCTAssertEqual(
+            dependencies.map(\.id),
+            [
+                "process:api->process:postgres",
+                "process:api->process:redis",
+                "process:worker->process:postgres",
+                "process:worker->process:redis"
+            ]
+        )
+    }
+
     func testDockerPortParserExpandsHostPortRanges() {
         let ports = ServiceHeuristics.parseDockerPorts(
             "0.0.0.0:3000-3002->3000-3002/tcp, :::8080->80/tcp"
@@ -632,6 +654,30 @@ final class ServiceProvidersTests: XCTestCase {
 
         XCTAssertEqual(service?.status, .degraded)
         XCTAssertEqual(service?.health, .critical)
+    }
+}
+
+private extension ServiceProvidersTests {
+    func makeDependencyService(id: String, kind: ServiceKind, workspace: WorkspaceIdentity) -> ManagedService {
+        ManagedService(
+            id: id,
+            name: id,
+            kind: kind,
+            status: .running,
+            health: .healthy,
+            source: .process(pid: 1, command: "npm run dev"),
+            workspace: workspace,
+            ports: [],
+            runtime: "Node.js",
+            summary: "fixture",
+            command: "npm run dev",
+            configPath: nil,
+            logPath: nil,
+            tags: [],
+            availableActions: [.stop],
+            startedAt: nil,
+            lastSeenAt: Date()
+        )
     }
 }
 #endif
