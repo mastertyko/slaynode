@@ -534,6 +534,9 @@ struct BrewServiceProvider: DiscoveryProvider, ControlProvider {
               !trimmed.isEmpty else {
             return nil
         }
+        guard trimmed.lowercased().hasSuffix(".plist") else {
+            return nil
+        }
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: trimmed, isDirectory: &isDirectory) else {
             return nil

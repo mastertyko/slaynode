@@ -600,6 +600,25 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(service.configPath, plistURL.path)
     }
 
+    func testBrewServiceWithNonPlistFileDoesNotOfferRevealConfig() async throws {
+        let mock = MockShellExecutor()
+        let textURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("slaynode-\(UUID().uuidString).txt")
+        try Data("not a plist".utf8).write(to: textURL)
+        defer { try? FileManager.default.removeItem(at: textURL) }
+
+        mock.responses["/usr/bin/env brew services list --json"] = (
+            0,
+            #"[{"name":"postgresql@16","status":"started","user":"tyko","file":"\#(textURL.path)"}]"#
+        )
+        let provider = BrewServiceProvider(shell: mock)
+
+        let service = await provider.discoverServices().services.first
+
+        XCTAssertFalse(service?.supports(.revealConfig) ?? true)
+        XCTAssertNil(service?.configPath)
+    }
+
     func testBrewServiceWithDirectoryPathDoesNotOfferRevealConfig() async throws {
         let mock = MockShellExecutor()
         let directoryURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
