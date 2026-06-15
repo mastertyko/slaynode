@@ -118,11 +118,11 @@ final class PortResolverTests: XCTestCase {
         XCTAssertEqual(result, [101: [3000], 102: [4173], 103: [8080]])
     }
 
-    func testResolvePortsRetriesNonZeroBatchOnceBeforeSucceeding() async {
+    func testResolvePortsRetriesNonZeroBatchWithUnparseableOutputOnceBeforeSucceeding() async {
         let mock = SequencedShellExecutor()
         mock.enqueue(
             key: "\(Constants.Path.lsof) -Pan -p 101 -iTCP -sTCP:LISTEN",
-            result: .success((1, ""))
+            result: .success((1, "lsof: unexpected permission warning"))
         )
         mock.enqueue(
             key: "\(Constants.Path.lsof) -Pan -p 101 -iTCP -sTCP:LISTEN",
@@ -163,6 +163,36 @@ final class PortResolverTests: XCTestCase {
 
         XCTAssertEqual(result, [101: [3000]])
     }
+
+    func testResolvePortsAcceptsPartialResultsFromNonZeroLsofExit() async {
+        let mock = SequencedShellExecutor()
+        mock.enqueue(
+            key: "\(Constants.Path.lsof) -Pan -p 101,102 -iTCP -sTCP:LISTEN",
+            result: .success((
+                1,
+                """
+                COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+                node      101 user   22u  IPv4 0x0   0t0      TCP  *:3000 (LISTEN)
+                """
+            ))
+        )
+
+        let resolver = PortResolver(shell: mock, pidQueryBatchSize: 2)
+        let result = await resolver.resolvePorts(for: [101, 102])
+
+        XCTAssertEqual(result, [101: [3000]])
+    }
+
+    func testResolvePortsTreatsEmptyNonZeroLsofExitAsNoListenersWithoutRetry() async {
+        let mock = CountingShellExecutor(result: (1, ""))
+        let resolver = PortResolver(shell: mock, pidQueryBatchSize: 1)
+
+        let result = await resolver.resolvePorts(for: [101])
+        let invocationCount = await mock.invocationCount()
+
+        XCTAssertTrue(result.isEmpty)
+        XCTAssertEqual(invocationCount, 1)
+    }
     #endif
 }
 
@@ -194,6 +224,36 @@ private final class SequencedShellExecutor: ShellExecuting, @unchecked Sendable 
         let next = queued.removeFirst()
         responses[key] = queued
         return try next.get()
+    }
+}
+
+private actor CountingShellState {
+    var count = 0
+
+    func recordInvocation() {
+        count += 1
+    }
+}
+
+private final class CountingShellExecutor: ShellExecuting, @unchecked Sendable {
+    private let result: (status: Int32, output: String)
+    private let state = CountingShellState()
+
+    init(result: (status: Int32, output: String)) {
+        self.result = result
+    }
+
+    func run(
+        _ launchPath: String,
+        arguments: [String],
+        timeout: TimeInterval
+    ) async throws -> (status: Int32, output: String) {
+        await state.recordInvocation()
+        return result
+    }
+
+    func invocationCount() async -> Int {
+        await state.count
     }
 }
 #endif

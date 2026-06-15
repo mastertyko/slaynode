@@ -43,14 +43,20 @@ struct PortResolver: Sendable {
                     arguments: arguments,
                     timeout: Constants.Timeout.lsofTimeout
                 )
-                guard status == 0 else {
-                    if attempt == retryCount {
-                        Log.network.warning("Port resolution failed for pid batch \(pidList) with exit status \(status).")
-                    }
-                    continue
+                let parsed = Self.parseLsofOutput(output)
+
+                if status == 0 {
+                    return parsed
                 }
 
-                return Self.parseLsofOutput(output)
+                let trimmedOutput = output.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !parsed.isEmpty || trimmedOutput.isEmpty {
+                    return parsed
+                }
+
+                if attempt == retryCount {
+                    Log.network.warning("Port resolution failed for pid batch \(pidList) with exit status \(status).")
+                }
             } catch {
                 if attempt == retryCount {
                     Log.network.warning("Port resolution failed for pid batch \(pidList): \(error.localizedDescription)")
