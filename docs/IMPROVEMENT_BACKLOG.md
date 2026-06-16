@@ -6,6 +6,7 @@ Baseline evidence before this audit: `DEVELOPER_DIR=/Applications/Xcode.app/Cont
 
 Status legend:
 - Fixed in this pass: implemented during the audit.
+- Fixed in later pass: implemented after the original audit and verified in the current repo state.
 - Candidate: concrete follow-up improvement found in the current codebase.
 
 ## 100 Improvement Candidates
@@ -16,16 +17,16 @@ Status legend:
 2. Fixed in this pass - Treat npm registry `_authToken` arguments as sensitive values and redact the following token.
 3. Fixed in this pass - Ignore blank working-directory flag values instead of storing an empty path.
 4. Fixed in this pass - Normalize quoted tilde working-directory values before expanding them.
-5. Candidate - Add redaction coverage for `Cookie:`, `Set-Cookie:`, `X-Api-Key:`, and `Proxy-Authorization:` header forms.
-6. Candidate - Add tests for escaped spaces in `--cwd` and `--prefix` values from real shell command lines.
-7. Candidate - Add parser fixtures for `npm --prefix app exec vite -- --host 127.0.0.1 --port 5173`.
-8. Candidate - Add parser fixtures for `pnpm --filter web dev -- --port 3000` and workspace filter aliases.
-9. Candidate - Teach `CommandParser.firstScriptToken` to recognize `server.tsx` entrypoints without relying on directory names.
+5. Fixed in later pass - Added redaction coverage for `Cookie:`, `Set-Cookie:`, `X-Api-Key:`, and `Proxy-Authorization:` header forms, including split-header cases.
+6. Fixed in later pass - Added tests for escaped spaces in `--cwd` and `--prefix` values from real shell command lines.
+7. Fixed in later pass - Added parser fixtures for `npm --prefix app exec vite -- --host 127.0.0.1 --port 5173`.
+8. Fixed in later pass - Added parser fixtures for `pnpm --filter web dev -- --port 3000` and workspace filter aliases.
+9. Fixed in later pass - `CommandParser.firstScriptToken` now recognizes `server.tsx`-style entrypoints without relying on directory names.
 10. Candidate - Expand port inference to handle `--host 127.0.0.1 --port 3000` when the port is embedded in a later URL argument.
-11. Candidate - Add fixtures for IPv4-mapped IPv6 literals such as `[::ffff:127.0.0.1]:3000`.
-12. Candidate - Add fixtures for Bun's `--hot`, `--watch`, and `bun --bun vite` command shapes.
-13. Candidate - Add fixtures for Deno task commands, including `deno task dev --port 8000`.
-14. Candidate - Add framework classifiers for H3/Nitro, TanStack Start, and Hono dev-server variants.
+11. Fixed in later pass - Added fixtures for IPv4-mapped IPv6 literals such as `[::ffff:127.0.0.1]:3000`.
+12. Fixed in later pass - Added fixtures for Bun's `--hot`, `--watch`, and `bun --bun vite` command shapes.
+13. Fixed in later pass - Added fixtures for Deno task commands, including `deno task dev --port 8000`.
+14. Fixed in later pass - Added framework classifiers for H3/Nitro, TanStack Start, and Hono dev-server variants.
 15. Candidate - Extract common command-token normalization helpers so `CommandParsing`, `ProcessClassifier`, and `ServiceHeuristics` do not drift.
 
 ### Process Discovery And Ports
@@ -81,7 +82,7 @@ Status legend:
 55. Candidate - Add visible stale-data state when refresh fails after previously showing services.
 56. Candidate - Add tabular number styling to pid, port, and uptime labels for easier scanning.
 57. Candidate - Add truncation tooltips for long command summaries in the dashboard.
-58. Candidate - Add a command-copy action that copies the redacted command, not the raw command.
+58. Fixed in later pass - The command-copy action now copies the redacted command, not the raw command.
 59. Candidate - Add per-workspace counts in the workspace sidebar.
 60. Candidate - Add a "show hidden tooling" debug toggle for support sessions.
 61. Candidate - Add a filter chip for Docker, Homebrew, and local process sources.
@@ -108,7 +109,7 @@ Status legend:
 
 ### Tests And Tooling
 
-79. Candidate - Add a single command in `docs/DEVELOPMENT.md` for the full local verification gate.
+79. Fixed in later pass - `docs/DEVELOPMENT.md` now points to a single full local verification command.
 80. Candidate - Add test helpers for building `NodeProcess` fixtures to reduce repetitive constructor boilerplate.
 81. Candidate - Add parameterized tests for common process command examples instead of one-off assertions.
 82. Candidate - Add tests for `ShellExecutor` timeout behavior when stdout remains open.
@@ -118,18 +119,18 @@ Status legend:
 86. Candidate - Add tests that verify menu and service-center action ordering stays consistent.
 87. Candidate - Add tests for workspace history eligibility around build folders, caches, and hidden state directories.
 88. Candidate - Add tests for Docker mount parsing with escaped spaces and read-only mount suffixes.
-89. Candidate - Add tests for Homebrew services with missing, invalid, or unreadable plist paths.
-90. Candidate - Add a lightweight static script that scans for `try!`, `as!`, `fatalError`, and unredacted secret fixtures.
+89. Fixed in later pass - Added tests for Homebrew services with missing, invalid, or unreadable plist paths.
+90. Fixed in later pass - Added a lightweight static script that scans for `try!`, `as!`, `fatalError`, and unredacted secret fixtures.
 
 ### Documentation And Operations
 
-91. Candidate - Link this backlog from `docs/DEVELOPMENT.md` so future maintenance work has a concrete queue.
-92. Candidate - Document why full Xcode is preferred over Command Line Tools for local SwiftPM verification.
-93. Candidate - Document the difference between local ad-hoc signing, CI signing, and notarized release signing.
-94. Candidate - Document the privacy boundary for command capture and redaction.
-95. Candidate - Document the process-control safety model for stop, force stop, restart, and preview.
-96. Candidate - Add troubleshooting for "no services found" with commands to inspect `ps`, `lsof`, and permissions.
-97. Candidate - Add troubleshooting for stale menu-bar state after a process exits.
-98. Candidate - Add a supported examples page with real Next.js, Vite, Bun, Deno, Docker, and Homebrew scenarios.
-99. Candidate - Add a release checklist that mirrors `.github/workflows/release.yml` step by step.
+91. Fixed in later pass - `docs/DEVELOPMENT.md` now links this backlog so future maintenance work has a concrete queue.
+92. Fixed in later pass - Documented why full Xcode is preferred over Command Line Tools for local SwiftPM verification.
+93. Fixed in later pass - Documented the difference between local ad-hoc signing, CI signing, and notarized release signing.
+94. Fixed in later pass - Documented the privacy boundary for command capture and redaction.
+95. Fixed in later pass - Documented the process-control safety model for stop, force stop, restart, and preview.
+96. Fixed in later pass - Added troubleshooting for "no services found" with commands to inspect `ps`, `lsof`, and permissions.
+97. Fixed in later pass - Added troubleshooting for stale menu-bar state after a process exits.
+98. Fixed in later pass - Added a supported examples page with real Next.js, Vite, Bun, Deno, Docker, and Homebrew scenarios.
+99. Fixed in later pass - Added a release checklist that mirrors `.github/workflows/release.yml` step by step.
 100. Candidate - Add a contributor note explaining how to add new process classifiers without widening false positives.
