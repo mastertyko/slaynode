@@ -286,6 +286,33 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertEqual(record.workspacePath, "/tmp/demo workspace")
     }
 
+    func testRecordSnapshotPreservesSpacesInWorkspaceIdentifiersAndPaths() throws {
+        let store = try makeStore()
+        let root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("My App \(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let workspace = WorkspaceIdentity(
+            id: "workspace:\(root.path.lowercased())",
+            name: "My App",
+            rootPath: root.path
+        )
+
+        store.record(snapshot: ServiceSnapshot(
+            services: [makeService(name: "demo", kind: .api, workspace: workspace, status: .running)],
+            dependencies: [],
+            generatedAt: Date(timeIntervalSince1970: 1)
+        ))
+
+        let workspaceRecord = try XCTUnwrap(store.modelContext.fetch(FetchDescriptor<WorkspaceHistoryRecord>()).first)
+        XCTAssertEqual(workspaceRecord.id, workspace.id)
+        XCTAssertEqual(workspaceRecord.rootPath, workspace.rootPath)
+
+        let serviceRecord = try XCTUnwrap(store.modelContext.fetch(FetchDescriptor<ServiceHistoryRecord>()).first)
+        XCTAssertEqual(serviceRecord.workspaceID, workspace.id)
+        XCTAssertEqual(serviceRecord.workspacePath, workspace.rootPath)
+    }
+
     func testRecordSnapshotSkipsInvalidServiceIdentifier() throws {
         let store = try makeStore()
         let workspace = WorkspaceIdentity(
@@ -376,6 +403,31 @@ final class ServiceHistoryStoreTests: XCTestCase {
 
         let record = try XCTUnwrap(store.modelContext.fetch(FetchDescriptor<WorkspaceHistoryRecord>()).first)
         XCTAssertEqual(record.openCount, 2)
+    }
+
+    func testRecentWorkspacesRoundTripPathsWithSpaces() throws {
+        let store = try makeStore()
+        let root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("My App \(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let workspace = WorkspaceIdentity(
+            id: "workspace:\(root.path.lowercased())",
+            name: "My App",
+            rootPath: root.path
+        )
+
+        store.record(snapshot: ServiceSnapshot(
+            services: [makeService(name: "api", kind: .api, workspace: workspace, status: .running)],
+            dependencies: [],
+            generatedAt: Date()
+        ))
+
+        let restored = try XCTUnwrap(store.recentWorkspaces(limit: 1).first)
+        XCTAssertEqual(restored.rootPath, workspace.rootPath)
+        XCTAssertEqual(restored.id, root.path.lowercased())
+        XCTAssertEqual(restored.name, root.lastPathComponent)
     }
 
     func testRecordSnapshotSkipsIneligibleWorkspaceHistory() throws {

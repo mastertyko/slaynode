@@ -117,11 +117,15 @@ private enum PersistedTextSanitizer {
     private static let disallowedIdentifierScalars = CharacterSet.newlines
         .union(.controlCharacters)
         .subtracting(CharacterSet(charactersIn: " "))
-
     static func identifier(_ value: String?) -> String? {
         guard let value else { return nil }
         guard value.rangeOfCharacter(from: disallowedIdentifierScalars) == nil else { return nil }
-        return sanitize(value, separator: "")
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    static func path(_ value: String?) -> String? {
+        sanitize(value, separator: " ")
     }
 
     static func text(_ value: String?) -> String? {
@@ -412,10 +416,11 @@ final class ServiceHistoryStore {
 
     private func sanitized(workspace: WorkspaceIdentity) -> WorkspaceIdentity? {
         guard let sanitizedID = PersistedTextSanitizer.identifier(workspace.id) else { return nil }
+        guard let sanitizedRootPath = PersistedTextSanitizer.path(workspace.rootPath) else { return nil }
         return WorkspaceIdentity(
             id: sanitizedID,
             name: PersistedTextSanitizer.text(workspace.name) ?? workspace.name,
-            rootPath: PersistedTextSanitizer.text(workspace.rootPath) ?? workspace.rootPath
+            rootPath: sanitizedRootPath
         )
     }
 
