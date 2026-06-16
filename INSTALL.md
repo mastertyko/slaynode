@@ -41,7 +41,10 @@ cd slaynode
 
 ### Useful Commands
 ```bash
-# Run the full test suite
+# Run the repo's full local verification gate (matches CI/release preflight)
+./script/full_verification.sh
+
+# Run only the Swift test suite
 swift test --disable-sandbox
 
 # Build a release bundle
@@ -59,6 +62,11 @@ swift test --disable-sandbox
 # Stream app logs
 ./script/build_and_run.sh --logs
 ```
+
+If you only run one validation command before pushing or packaging, prefer
+`./script/full_verification.sh`. It wraps the shell checks, static safety scan,
+release-note regressions, debug-port samples, plist linting, whitespace check,
+and Swift test suite in the same order the repo expects elsewhere.
 
 ## Troubleshooting
 
