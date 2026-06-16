@@ -46,6 +46,21 @@ run_verify_only() {
 
 repo="$(copy_repo_fixture)"
 
+help_output="$(
+  cd "${repo}"
+  ./build.sh --help
+)"
+assert_contains "${help_output}" "usage: ./build.sh [debug|release] [--generate-icons] [--verify-only]"
+assert_contains "${help_output}" "--verify-only"
+
+if output="$(
+  cd "${repo}"
+  ./build.sh debug release 2>&1
+)"; then
+  fail "expected multiple build configurations to fail"
+fi
+assert_contains "${output}" "Multiple build configurations provided"
+
 if output="$(run_verify_only "${repo}" env SLAYNODE_VERSION=invalid 2>&1)"; then
   fail "expected invalid SLAYNODE_VERSION to fail build preflight"
 fi

@@ -49,7 +49,7 @@ run_preflight() {
 
 usage() {
   cat <<EOF
-usage: $0 [debug|release] [--generate-icons]
+usage: $0 [debug|release] [--generate-icons] [--verify-only]
 
 Options:
   --generate-icons  Refresh tracked PNG assets from generate-icons.swift before building.
