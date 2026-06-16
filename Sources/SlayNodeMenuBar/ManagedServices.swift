@@ -54,7 +54,12 @@ enum ServiceSanitizer {
             if let header = redactSensitiveHeader(token) {
                 redacted.append(header)
                 if token.hasSuffix(":"), index + 1 < tokens.count {
-                    index += 2
+                    let headerName = String(token.dropLast())
+                    if consumesAuthorizationSchemeValue(headerName: headerName, tokens: tokens, valueStartIndex: index + 1) {
+                        index += 3
+                    } else {
+                        index += 2
+                    }
                 } else {
                     index += 1
                 }
@@ -113,6 +118,43 @@ enum ServiceSanitizer {
 
         return "\(headerName): ***"
     }
+
+    private static func consumesAuthorizationSchemeValue(
+        headerName: String,
+        tokens: [String],
+        valueStartIndex: Int
+    ) -> Bool {
+        guard let normalizedHeader = sensitiveFlagName(from: headerName),
+              authorizationSchemeHeaders.contains(normalizedHeader),
+              valueStartIndex + 1 < tokens.count else {
+            return false
+        }
+
+        let schemeToken = tokens[valueStartIndex].lowercased()
+        guard authorizationSchemeTokens.contains(schemeToken) else {
+            return false
+        }
+
+        return !isLikelyArgumentBoundary(tokens[valueStartIndex + 1])
+    }
+
+    private static func isLikelyArgumentBoundary(_ token: String) -> Bool {
+        token.hasPrefix("-") || token.contains("://")
+    }
+
+    private static let authorizationSchemeHeaders: Set<String> = [
+        "authorization",
+        "proxy-authorization"
+    ]
+
+    private static let authorizationSchemeTokens: Set<String> = [
+        "basic",
+        "bearer",
+        "digest",
+        "macaroon",
+        "negotiate",
+        "token"
+    ]
 
     private static func redactURLSecrets(in token: String) -> String {
         redactQuerySecrets(in: redactURLCredentials(in: token))

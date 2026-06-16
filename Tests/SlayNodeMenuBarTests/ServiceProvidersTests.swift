@@ -84,6 +84,24 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertTrue(redacted.contains("value"))
     }
 
+    func testSanitizerRedactsSplitSensitiveHeaderValues() {
+        let command = """
+        node server.js --header Cookie: sid=abc123 --header Set-Cookie: refresh=xyz --header X-Api-Key: top-secret --header Proxy-Authorization: Basic proxy-secret --header X-Safe: value
+        """
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("abc123"))
+        XCTAssertFalse(redacted.contains("xyz"))
+        XCTAssertFalse(redacted.contains("top-secret"))
+        XCTAssertFalse(redacted.contains("proxy-secret"))
+        XCTAssertTrue(redacted.contains("Cookie: ***"))
+        XCTAssertTrue(redacted.contains("Set-Cookie: ***"))
+        XCTAssertTrue(redacted.contains("X-Api-Key: ***"))
+        XCTAssertTrue(redacted.contains("Proxy-Authorization: ***"))
+        XCTAssertTrue(redacted.contains("X-Safe:"))
+        XCTAssertTrue(redacted.contains("value"))
+    }
+
     func testSanitizerRedactsCookieAndApiKeyHeaders() {
         let command = "node server.js --header 'Cookie: sid=abc123' --header 'Set-Cookie: refresh=xyz' --header 'X-Api-Key: top-secret' --header 'X-Safe: value'"
         let redacted = ServiceSanitizer.redactSecrets(in: command)

@@ -40,6 +40,23 @@ final class ServiceCommandClipboardTests: XCTestCase {
         XCTAssertTrue(copied.contains("trace-123"))
     }
 
+    func testServiceCommandCopyTextRedactsSplitCookieApiKeyAndProxyHeaders() {
+        let copied = serviceCommandCopyText(
+            "curl --header Cookie: sid=abc123 --header Set-Cookie: refresh=xyz --header X-Api-Key: top-secret --header Proxy-Authorization: Basic proxy-secret --header X-Trace: trace-123 https://example.test"
+        )
+
+        XCTAssertFalse(copied.contains("abc123"))
+        XCTAssertFalse(copied.contains("xyz"))
+        XCTAssertFalse(copied.contains("top-secret"))
+        XCTAssertFalse(copied.contains("proxy-secret"))
+        XCTAssertTrue(copied.contains("Cookie: ***"))
+        XCTAssertTrue(copied.contains("Set-Cookie: ***"))
+        XCTAssertTrue(copied.contains("X-Api-Key: ***"))
+        XCTAssertTrue(copied.contains("Proxy-Authorization: ***"))
+        XCTAssertTrue(copied.contains("X-Trace:"))
+        XCTAssertTrue(copied.contains("trace-123"))
+    }
+
     func testServiceCommandCopyTextRedactsUrlCredentials() {
         let copied = serviceCommandCopyText(
             "node server.js postgres://demo:super-secret@localhost:5432/app"
