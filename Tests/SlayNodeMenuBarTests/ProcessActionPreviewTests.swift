@@ -270,6 +270,62 @@ final class ProcessActionPreviewTests: XCTestCase {
         XCTAssertFalse(preview.processes.first?.command.contains("live-secret") ?? true)
     }
 
+    func testEveryPreviewProducingActionIncludesAtLeastOneWarning() throws {
+        struct PreviewFixture {
+            let action: ServiceAction
+            let targetPID: Int32
+            let rows: [ProcessActionPreviewer.ProcessRow]
+            let fallbackCommand: String
+        }
+
+        let fixtures = [
+            PreviewFixture(
+                action: .stop,
+                targetPID: 4700,
+                rows: [
+                    ProcessActionPreviewer.ProcessRow(pid: 4700, parentPID: 1, processGroupID: 0, command: "node solo.js")
+                ],
+                fallbackCommand: "node solo.js"
+            ),
+            PreviewFixture(
+                action: .stop,
+                targetPID: 4701,
+                rows: [
+                    ProcessActionPreviewer.ProcessRow(pid: 4701, parentPID: 4700, processGroupID: 4700, command: "node vite"),
+                    ProcessActionPreviewer.ProcessRow(pid: 4700, parentPID: 1, processGroupID: 4700, command: "npm run dev")
+                ],
+                fallbackCommand: "node vite"
+            ),
+            PreviewFixture(
+                action: .forceStop,
+                targetPID: 4702,
+                rows: [
+                    ProcessActionPreviewer.ProcessRow(pid: 4702, parentPID: 1, processGroupID: 4702, command: "npm run dev"),
+                    ProcessActionPreviewer.ProcessRow(pid: 4703, parentPID: 4702, processGroupID: 4702, command: "node vite")
+                ],
+                fallbackCommand: "npm run dev"
+            )
+        ]
+
+        for fixture in fixtures {
+            let service = makeProcessService(pid: fixture.targetPID)
+            let preview = try XCTUnwrap(
+                ProcessActionPreviewer.makePreview(
+                    action: fixture.action,
+                    service: service,
+                    targetPID: fixture.targetPID,
+                    fallbackCommand: fixture.fallbackCommand,
+                    rows: fixture.rows,
+                    portsByPid: [:]
+                ),
+                "Expected preview for \(fixture.action.rawValue)"
+            )
+
+            XCTAssertFalse(preview.warnings.isEmpty, "Expected warnings for \(fixture.action.rawValue) \(preview.scope.rawValue)")
+            XCTAssertNotNil(preview.warning, "Expected primary warning for \(fixture.action.rawValue) \(preview.scope.rawValue)")
+        }
+    }
+
     func testPortSummaryCompactsLongPortLists() throws {
         let service = makeProcessService(pid: 4600)
         let rows = [
