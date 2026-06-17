@@ -13,6 +13,7 @@ struct ServiceDashboardWindowView: View {
 
     @State private var selectedWorkspaceID: String?
     @State private var selectedServiceID: String?
+    @State private var previousFilteredServiceIDs: [String] = []
     @State private var searchText = ""
     @State private var inspectorVisible = true
     @State private var processActionPreview: ServiceActionPreview?
@@ -489,16 +490,20 @@ struct ServiceDashboardWindowView: View {
             selectedWorkspaceID = nil
         }
 
-        guard !filteredServices.isEmpty else {
+        let filteredServiceIDs = filteredServices.map(\.id)
+
+        guard !filteredServiceIDs.isEmpty else {
             selectedServiceID = nil
+            previousFilteredServiceIDs = []
             return
         }
 
-        if let selectedServiceID, filteredServices.contains(where: { $0.id == selectedServiceID }) {
-            return
-        }
-
-        selectedServiceID = filteredServices.first?.id
+        selectedServiceID = preferredServiceSelection(
+            selectedServiceID: selectedServiceID,
+            previousServiceIDs: previousFilteredServiceIDs,
+            currentServiceIDs: filteredServiceIDs
+        )
+        previousFilteredServiceIDs = filteredServiceIDs
     }
 
     private func restoreWindowState() {
@@ -594,6 +599,35 @@ struct ServiceDashboardWindowView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+}
+
+func preferredServiceSelection(
+    selectedServiceID: String?,
+    previousServiceIDs: [String],
+    currentServiceIDs: [String]
+) -> String? {
+    guard !currentServiceIDs.isEmpty else { return nil }
+
+    if let selectedServiceID, currentServiceIDs.contains(selectedServiceID) {
+        return selectedServiceID
+    }
+
+    guard let selectedServiceID,
+          let previousIndex = previousServiceIDs.firstIndex(of: selectedServiceID) else {
+        return currentServiceIDs.first
+    }
+
+    let currentIDs = Set(currentServiceIDs)
+
+    for candidateID in previousServiceIDs.dropFirst(previousIndex + 1) where currentIDs.contains(candidateID) {
+        return candidateID
+    }
+
+    for candidateID in previousServiceIDs[..<previousIndex].reversed() where currentIDs.contains(candidateID) {
+        return candidateID
+    }
+
+    return currentServiceIDs.first
 }
 
 struct ServiceMenuBarView: View {

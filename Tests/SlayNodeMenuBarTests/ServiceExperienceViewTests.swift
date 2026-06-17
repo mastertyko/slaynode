@@ -3,6 +3,46 @@ import XCTest
 @testable import SlayNodeMenuBar
 
 final class ServiceExperienceViewTests: XCTestCase {
+    func testPreferredServiceSelectionKeepsCurrentSelectionWhenStillVisible() {
+        let selection = preferredServiceSelection(
+            selectedServiceID: "process:200",
+            previousServiceIDs: ["process:100", "process:200", "process:300"],
+            currentServiceIDs: ["process:200", "process:400"]
+        )
+
+        XCTAssertEqual(selection, "process:200")
+    }
+
+    func testPreferredServiceSelectionFallsForwardToNearestVisibleNeighbor() {
+        let selection = preferredServiceSelection(
+            selectedServiceID: "process:200",
+            previousServiceIDs: ["process:100", "process:200", "process:300", "process:400"],
+            currentServiceIDs: ["process:100", "process:300", "process:500"]
+        )
+
+        XCTAssertEqual(selection, "process:300")
+    }
+
+    func testPreferredServiceSelectionFallsBackToPreviousVisibleNeighborWhenNeeded() {
+        let selection = preferredServiceSelection(
+            selectedServiceID: "process:300",
+            previousServiceIDs: ["process:100", "process:200", "process:300"],
+            currentServiceIDs: ["process:100", "process:200"]
+        )
+
+        XCTAssertEqual(selection, "process:200")
+    }
+
+    func testPreferredServiceSelectionUsesFirstVisibleServiceWithoutSelectionHistory() {
+        let selection = preferredServiceSelection(
+            selectedServiceID: "process:999",
+            previousServiceIDs: [],
+            currentServiceIDs: ["process:100", "process:200"]
+        )
+
+        XCTAssertEqual(selection, "process:100")
+    }
+
     func testWorkspaceServiceCountsGroupsByWorkspaceID() {
         let appWorkspace = WorkspaceIdentity(id: "workspace:/app", name: "app", rootPath: "/tmp/app")
         let apiWorkspace = WorkspaceIdentity(id: "workspace:/api", name: "api", rootPath: "/tmp/api")
