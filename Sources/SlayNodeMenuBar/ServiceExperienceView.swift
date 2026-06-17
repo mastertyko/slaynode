@@ -584,6 +584,7 @@ struct ServiceDashboardWindowView: View {
                 Text(command)
                     .font(.system(.body, design: .monospaced))
                     .textSelection(.enabled)
+                    .help(command)
 
                 Button {
                     copyToPasteboard(serviceCommandCopyText(command))
@@ -950,6 +951,7 @@ private struct ProcessActionPreviewRow: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
                 .textSelection(.enabled)
+                .help(process.command)
         }
         .padding(12)
         .padding(.leading, CGFloat(min(process.depth, 4) * 10))
