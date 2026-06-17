@@ -185,32 +185,15 @@ enum ProcessClassifier {
     }
 
     private static func optionTakesValue(_ argument: String) -> Bool {
-        [
-            "--workspace",
-            "-w",
-            "--dir",
-            "--filter",
-            "-f",
-            "--cwd",
-            "-c",
-            "--root",
-            "--project",
-            "--working-dir",
-            "--prefix",
-            "-c"
-        ].contains(argument)
+        ["--workspace", "-w", "--filter", "-f"].contains(argument) ||
+            CommandParser.isWorkingDirectoryValueFlag(argument)
     }
 
     private static func isSkippableOption(_ argument: String) -> Bool {
         argument == "--" ||
             argument.hasPrefix("--workspace=") ||
-            argument.hasPrefix("--dir=") ||
             argument.hasPrefix("--filter=") ||
-            argument.hasPrefix("--cwd=") ||
-            argument.hasPrefix("--root=") ||
-            argument.hasPrefix("--project=") ||
-            argument.hasPrefix("--working-dir=") ||
-            argument.hasPrefix("--prefix=") ||
+            CommandParser.hasInlineWorkingDirectoryValue(argument) ||
             argument.hasPrefix("-")
     }
 

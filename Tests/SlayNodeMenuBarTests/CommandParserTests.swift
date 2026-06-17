@@ -475,6 +475,31 @@ extension CommandParserTests {
         XCTAssertEqual(descriptor.script, "dev")
     }
 
+    func testPackageManagerWrapperSkipsProjectAndWorkingDirectoryFlagsBeforeRun() {
+        let projectTokens = ["npm", "--project", "frontend", "exec", "vite"]
+        let projectContext = CommandParser.makeContext(
+            executable: projectTokens[0],
+            tokens: projectTokens,
+            workingDirectory: "/Users/test/app"
+        )
+        let projectDescriptor = CommandParser.descriptor(from: projectContext)
+
+        let workingDirectoryTokens = ["yarn", "--working-dir", "frontend", "workspace", "web", "run", "dev"]
+        let workingDirectoryContext = CommandParser.makeContext(
+            executable: workingDirectoryTokens[0],
+            tokens: workingDirectoryTokens,
+            workingDirectory: "/Users/test/app"
+        )
+        let workingDirectoryDescriptor = CommandParser.descriptor(from: workingDirectoryContext)
+
+        XCTAssertEqual(projectDescriptor.packageManager, "npm")
+        XCTAssertEqual(projectDescriptor.displayName, "Vite")
+        XCTAssertEqual(projectDescriptor.script, "vite")
+
+        XCTAssertEqual(workingDirectoryDescriptor.packageManager, "yarn")
+        XCTAssertEqual(workingDirectoryDescriptor.script, "dev")
+    }
+
     func testPackageManagerWrapperParsesNpmPrefixExecViteCommand() {
         let tokens = ["npm", "--prefix", "app", "exec", "vite", "--", "--host", "127.0.0.1", "--port", "5173"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")

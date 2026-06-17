@@ -138,7 +138,7 @@ enum CommandParser {
     static func inferWorkingDirectory(from tokens: [String]) -> String? {
         let tokenPairs = tokens.enumerated()
         for (index, token) in tokenPairs {
-            if workingDirectoryValueFlags.contains(token) {
+            if isWorkingDirectoryValueFlag(token) {
                 let nextIndex = index + 1
                 if nextIndex < tokens.count,
                    let sanitizedPath = sanitizePath(tokens[nextIndex]) {
@@ -192,7 +192,7 @@ enum CommandParser {
         return normalized.isEmpty ? nil : normalized
     }
 
-    private static let workingDirectoryValueFlags = Set([
+    static let workingDirectoryValueFlags = Set([
         "--cwd",
         "--dir",
         "--working-dir",
@@ -200,7 +200,7 @@ enum CommandParser {
         "--project",
         "--workspace",
         "--prefix",
-        "-C"
+        "-c"
     ])
 
     private static let extensionlessServerEntrypoints = Set([
@@ -208,10 +208,18 @@ enum CommandParser {
         "dev-server"
     ])
 
-    private static func inlineWorkingDirectoryPath(from token: String) -> String? {
+    static func isWorkingDirectoryValueFlag(_ token: String) -> Bool {
+        workingDirectoryValueFlags.contains(token) || workingDirectoryValueFlags.contains(token.lowercased())
+    }
+
+    static func hasInlineWorkingDirectoryValue(_ token: String) -> Bool {
+        inlineWorkingDirectoryPath(from: token) != nil
+    }
+
+    static func inlineWorkingDirectoryPath(from token: String) -> String? {
         for flag in workingDirectoryValueFlags {
             let prefix = "\(flag)="
-            if token.hasPrefix(prefix) {
+            if token.hasPrefix(prefix) || token.lowercased().hasPrefix(prefix.lowercased()) {
                 return String(token.dropFirst(prefix.count))
             }
         }
