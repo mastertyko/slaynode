@@ -92,18 +92,21 @@ enum WorkspaceHistoryHeuristics {
 
     private static func hasDisallowedPathComponent(_ path: String) -> Bool {
         let components = URL(fileURLWithPath: path).standardized.pathComponents.map { $0.lowercased() }
-        if containsDerivedDataComponents(components) {
+        if containsPathWindow(["library", "developer", "xcode", "deriveddata"], in: components) ||
+            containsPathWindow(["library", "caches"], in: components) ||
+            containsPathWindow(["library", "logs"], in: components) ||
+            containsPathWindow(["build", "products"], in: components) {
             return true
         }
         return components.contains { disallowedNames.contains($0) }
     }
 
-    private static func containsDerivedDataComponents(_ components: [String]) -> Bool {
-        guard components.count >= 4 else { return false }
+    private static func containsPathWindow(_ needle: [String], in components: [String]) -> Bool {
+        guard components.count >= needle.count else { return false }
 
-        for index in 0...(components.count - 4) {
-            let window = Array(components[index..<(index + 4)])
-            if window == ["library", "developer", "xcode", "deriveddata"] {
+        for index in 0...(components.count - needle.count) {
+            let window = Array(components[index..<(index + needle.count)])
+            if window == needle {
                 return true
             }
         }

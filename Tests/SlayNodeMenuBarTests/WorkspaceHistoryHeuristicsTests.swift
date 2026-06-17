@@ -231,6 +231,47 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
         XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
     }
 
+    func testEligibleRecentWorkspaceRejectsLibraryCacheAndLogPaths() throws {
+        let tempRoot = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+
+        for components in [
+            ["Library", "Caches", "org.swift.swiftpm"],
+            ["Library", "Logs", "DiagnosticReports"]
+        ] {
+            let statePath = components.reduce(tempRoot) { partialResult, component in
+                partialResult.appendingPathComponent(component)
+            }
+            try FileManager.default.createDirectory(at: statePath, withIntermediateDirectories: true)
+
+            let workspace = WorkspaceIdentity(
+                id: statePath.path.lowercased(),
+                name: "frontend",
+                rootPath: statePath.path
+            )
+
+            XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace), statePath.path)
+        }
+    }
+
+    func testEligibleRecentWorkspaceRejectsBuildProductsPaths() throws {
+        let tempRoot = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: tempRoot) }
+        let buildProductsPath = tempRoot
+            .appendingPathComponent("Build")
+            .appendingPathComponent("Products")
+            .appendingPathComponent("Debug")
+        try FileManager.default.createDirectory(at: buildProductsPath, withIntermediateDirectories: true)
+
+        let workspace = WorkspaceIdentity(
+            id: buildProductsPath.path.lowercased(),
+            name: "frontend",
+            rootPath: buildProductsPath.path
+        )
+
+        XCTAssertFalse(WorkspaceHistoryHeuristics.isEligibleRecentWorkspace(workspace))
+    }
+
     private func makeTempDirectory() throws -> URL {
         let directory = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent(UUID().uuidString)
