@@ -135,4 +135,4 @@ Status legend:
 97. Fixed in later pass - Added troubleshooting for stale menu-bar state after a process exits.
 98. Fixed in later pass - Added a supported examples page with real Next.js, Vite, Bun, Deno, Docker, and Homebrew scenarios.
 99. Fixed in later pass - Added a release checklist that mirrors `.github/workflows/release.yml` step by step.
-100. Candidate - Add a contributor note explaining how to add new process classifiers without widening false positives.
+100. Fixed in later pass - `docs/DEVELOPMENT.md` now includes a classifier checklist covering false-positive control, wrapper alignment, shared parser helpers, and required regression tests.

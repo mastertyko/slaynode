@@ -235,8 +235,10 @@ If the UI looks stale after a process exits or after a local rebuild:
 When you add or widen a process classifier, optimize for false-positive control first and nicer labels second.
 
 - Prefer exact executable or token matches over broad substring matches when a tool name can appear inside unrelated script paths.
+- Reuse shared parser helpers such as `CommandParser.isWorkingDirectoryValueFlag`, `CommandParser.hasInlineWorkingDirectoryValue`, and `CommandParser.firstScriptToken` instead of open-coding wrapper-specific token scans in `ProcessClassifier`.
 - Keep package-manager wrappers and the promoted child runtime aligned so the UI preserves both the human service name and the real runtime details.
 - When adding wrapper aliases such as `bun x`, `pnpm dlx`, or `npm exec`, add a fixture that proves `descriptor.script` stays pinned to the promoted tool rather than the wrapper subcommand.
+- If a classifier change depends on workspace or cwd flags, add a paired assertion that `CommandParser.inferWorkingDirectory` and `ProcessClassifier` still agree on the same command shape.
 - Add at least one positive fixture and one nearby negative fixture in `Tests/SlayNodeMenuBarTests/CommandParserTests.swift` so a new classifier does not silently widen matches.
 - If the new classifier should surface a service without a live port, also add or update a discovery-focused test in `ProcessDiscoveryTests.swift` or `ProcessMonitorUnitTests.swift`.
 - Re-run `./debug-port-detection.sh --samples-only` and `swift test --disable-sandbox` after classifier changes; together they catch both parser drift and discovery drift.
