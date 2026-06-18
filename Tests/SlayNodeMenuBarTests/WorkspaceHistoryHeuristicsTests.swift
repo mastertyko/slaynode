@@ -78,11 +78,13 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
             ".next",
             ".nx",
             ".npm",
+            ".nuxt",
             ".pytest_cache",
             ".parcel-cache",
             ".playwright",
             ".swiftpm",
             ".ruff_cache",
+            ".svelte-kit",
             ".turbo",
             ".terraform",
             ".pnpm-store",
@@ -92,9 +94,13 @@ final class WorkspaceHistoryHeuristicsTests: XCTestCase {
             ".venv",
             ".vite",
             ".wrangler",
+            ".yarn",
             ".omx",
             ".codex",
-            ".claude"
+            ".claude",
+            "temp",
+            "tmp",
+            "vitest"
         ] {
             let workspace = WorkspaceIdentity(
                 id: tempRoot.appendingPathComponent(name).path.lowercased(),
