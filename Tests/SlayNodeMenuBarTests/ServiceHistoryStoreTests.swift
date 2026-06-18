@@ -258,7 +258,7 @@ final class ServiceHistoryStoreTests: XCTestCase {
         XCTAssertEqual(records.last?.id, "process:31")
     }
 
-    func testRecordSnapshotSanitizesPersistedServiceAndWorkspaceFields() throws {
+    func testRecordSnapshotSanitizesPersistedServiceFieldsAndDropsInvalidWorkspacePath() throws {
         let store = try makeStore()
         let workspace = WorkspaceIdentity(
             id: " workspace:/demo ",
@@ -281,9 +281,29 @@ final class ServiceHistoryStoreTests: XCTestCase {
         let record = try XCTUnwrap(store.modelContext.fetch(FetchDescriptor<ServiceHistoryRecord>()).first)
         XCTAssertEqual(record.id, "process:999")
         XCTAssertEqual(record.name, "demo api")
-        XCTAssertEqual(record.workspaceID, "workspace:/demo")
-        XCTAssertEqual(record.workspaceName, "Demo Workspace")
-        XCTAssertEqual(record.workspacePath, "/tmp/demo workspace")
+        XCTAssertNil(record.workspaceID)
+        XCTAssertNil(record.workspaceName)
+        XCTAssertNil(record.workspacePath)
+    }
+
+    func testRecordActionDropsWorkspaceWithControlCharactersInPath() throws {
+        let store = try makeStore()
+        let workspace = WorkspaceIdentity(
+            id: "workspace:/demo",
+            name: "Demo Workspace",
+            rootPath: "/tmp/demo\tworkspace"
+        )
+
+        store.record(
+            action: .restart,
+            on: makeService(name: "demo", kind: .api, workspace: workspace, status: .running),
+            outcome: "Restarted"
+        )
+
+        let record = try XCTUnwrap(store.modelContext.fetch(FetchDescriptor<ServiceHistoryRecord>()).first)
+        XCTAssertNil(record.workspaceID)
+        XCTAssertNil(record.workspaceName)
+        XCTAssertNil(record.workspacePath)
     }
 
     func testRecordSnapshotPreservesSpacesInWorkspaceIdentifiersAndPaths() throws {

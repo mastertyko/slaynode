@@ -120,6 +120,8 @@ private enum PersistedTextSanitizer {
     private static let disallowedIdentifierScalars = CharacterSet.newlines
         .union(.controlCharacters)
         .subtracting(CharacterSet(charactersIn: " "))
+    private static let disallowedPathScalars = CharacterSet.controlCharacters
+        .subtracting(CharacterSet(charactersIn: " "))
     static func identifier(_ value: String?) -> String? {
         guard let value else { return nil }
         guard value.rangeOfCharacter(from: disallowedIdentifierScalars) == nil else { return nil }
@@ -128,7 +130,10 @@ private enum PersistedTextSanitizer {
     }
 
     static func path(_ value: String?) -> String? {
-        sanitize(value, separator: " ")
+        guard let value else { return nil }
+        guard value.rangeOfCharacter(from: disallowedPathScalars) == nil else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     static func text(_ value: String?) -> String? {
