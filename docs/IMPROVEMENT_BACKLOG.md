@@ -4,6 +4,8 @@ Audit date: 2026-05-27
 
 Baseline evidence before this audit: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test` passed 246 XCTest tests with 0 failures.
 
+Current verification snapshot (2026-06-18): `./script/full_verification.sh` passed 350 tests with 0 failures in the current repo state.
+
 Status legend:
 - Fixed in this pass: implemented during the audit.
 - Fixed in later pass: implemented after the original audit and verified in the current repo state.
@@ -58,7 +60,7 @@ Status legend:
 37. Candidate - Add dependency confidence scores instead of creating all workspace-shared dependencies equally.
 38. Candidate - Add deterministic sorting for dependencies to keep UI snapshots and tests stable.
 39. Candidate - Add a service-source display helper so process, Docker, and brew identifiers are formatted in one place.
-40. Candidate - Add validation that service IDs cannot contain newline or tab characters before persistence.
+40. Fixed in later pass - Persisted service and workspace identifiers now reject newline/tab control characters before history persistence.
 
 ### Safety And Process Control
 
@@ -78,33 +80,33 @@ Status legend:
 51. Candidate - Add keyboard shortcuts for refresh, search focus, and opening the service center.
 52. Candidate - Add VoiceOver labels for service health, port badges, and destructive action buttons.
 53. Candidate - Add accessibility tests for menu status text and dashboard action labels.
-54. Candidate - Add a compact empty state that distinguishes no servers found from discovery errors.
+54. Fixed in later pass - The dashboard empty state now distinguishes discovery errors from "no services found" and active search filtering.
 55. Candidate - Add visible stale-data state when refresh fails after previously showing services.
 56. Candidate - Add tabular number styling to pid, port, and uptime labels for easier scanning.
-57. Candidate - Add truncation tooltips for long command summaries in the dashboard.
+57. Fixed in later pass - Long redacted command summaries now expose the full value through dashboard and preview tooltips.
 58. Fixed in later pass - The command-copy action now copies the redacted command, not the raw command.
 59. Candidate - Add per-workspace counts in the workspace sidebar.
 60. Candidate - Add a "show hidden tooling" debug toggle for support sessions.
 61. Candidate - Add a filter chip for Docker, Homebrew, and local process sources.
 62. Candidate - Add a filter chip for degraded services.
-63. Candidate - Add a stable selection fallback when a selected service disappears during refresh.
+63. Fixed in later pass - Service selection now falls to the nearest visible neighbor when the current selection disappears during refresh.
 64. Candidate - Add UI snapshot tests for long workspace names and long command strings.
 65. Candidate - Split the largest SwiftUI views into smaller view models and subviews to reduce compile-time churn.
 
 ### Build, Release, And CI
 
-66. Candidate - Add explicit read-only `permissions` to the CI workflow.
-67. Candidate - Add a CI step for `git diff --check` to catch whitespace regressions.
+66. Fixed in later pass - The CI workflow now declares explicit read-only `contents` permissions.
+67. Fixed in later pass - CI now runs `git diff --check` to catch whitespace regressions.
 68. Candidate - Add a CI step that runs `./debug-port-detection.sh --samples-only`.
-69. Candidate - Add a CI artifact with release bundle metadata, including version, build number, and minimum macOS.
-70. Candidate - Validate `SLAYNODE_VERSION` and `SLAYNODE_BUILD_NUMBER` before writing them into generated Info.plist.
+69. Fixed in later pass - CI and release workflows now publish release metadata artifacts with version, build number, minimum macOS, and git provenance.
+70. Fixed in later pass - `build.sh` now validates `SLAYNODE_VERSION` and `SLAYNODE_BUILD_NUMBER` before generating `Info.plist`.
 71. Candidate - Escape all generated Info.plist string values, not only Sparkle metadata.
-72. Candidate - Fail `build.sh` if `iconutil` does not create `AppIcon.icns`.
-73. Candidate - Add a local `./build.sh --verify-only` mode for preflight checks without rebuilding.
-74. Candidate - Add shell tests for release-note extraction from unreleased, versioned, and git-log fallback paths.
-75. Candidate - Add a release-workflow guard that refuses empty generated release notes.
+72. Fixed in later pass - `build.sh` now fails explicitly if `iconutil` does not produce `AppIcon.icns`.
+73. Fixed in later pass - `build.sh --verify-only` now provides a local metadata/asset/plist preflight without rebuilding.
+74. Fixed in later pass - Shell regression coverage now locks unreleased, versioned, and git-log release note extraction paths.
+75. Fixed in later pass - Release note validation now refuses empty or heading-only generated notes before packaging.
 76. Candidate - Add notarization retry guidance for transient Apple notarytool failures.
-77. Candidate - Add checks that Sparkle feed URL and public ED key are either both present or both absent in release builds.
+77. Fixed in later pass - Build preflight now requires Sparkle feed URL and ED key to be configured together or omitted together.
 78. Candidate - Add a dependency update workflow for Sparkle and Sentry with a manual approval gate.
 
 ### Tests And Tooling
@@ -112,12 +114,12 @@ Status legend:
 79. Fixed in later pass - `docs/DEVELOPMENT.md` now points to a single full local verification command.
 80. Candidate - Add test helpers for building `NodeProcess` fixtures to reduce repetitive constructor boilerplate.
 81. Candidate - Add parameterized tests for common process command examples instead of one-off assertions.
-82. Candidate - Add tests for `ShellExecutor` timeout behavior when stdout remains open.
+82. Fixed in later pass - `ShellExecutor` tests now cover timeout behavior for long-running commands and large stderr output.
 83. Candidate - Add tests for `PortResolver` timeout behavior and cancellation.
-84. Candidate - Add tests that ensure all sanitized summaries are free from known secret fixture values.
-85. Candidate - Add tests that verify every destructive action has a non-empty preview warning.
+84. Fixed in later pass - Sanitizer tests now verify that known secret fixtures do not survive into rendered summaries.
+85. Fixed in later pass - Preview tests now assert that every destructive action surfaces at least one warning.
 86. Candidate - Add tests that verify menu and service-center action ordering stays consistent.
-87. Candidate - Add tests for workspace history eligibility around build folders, caches, and hidden state directories.
+87. Fixed in later pass - Workspace history tests now cover build folders, caches, and editor/agent hidden state directories.
 88. Candidate - Add tests for Docker mount parsing with escaped spaces and read-only mount suffixes.
 89. Fixed in later pass - Added tests for Homebrew services with missing, invalid, or unreadable plist paths.
 90. Fixed in later pass - Added a lightweight static script that scans for `try!`, `as!`, `fatalError`, and unredacted secret fixtures.
