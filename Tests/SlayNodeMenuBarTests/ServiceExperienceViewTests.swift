@@ -44,8 +44,8 @@ final class ServiceExperienceViewTests: XCTestCase {
     }
 
     func testWorkspaceServiceCountsGroupsByWorkspaceID() {
-        let appWorkspace = WorkspaceIdentity(id: "workspace:/app", name: "app", rootPath: "/tmp/app")
-        let apiWorkspace = WorkspaceIdentity(id: "workspace:/api", name: "api", rootPath: "/tmp/api")
+        let appWorkspace = makeWorkspaceFixture()
+        let apiWorkspace = makeWorkspaceFixture(id: "workspace:/api", name: "api", rootPath: "/tmp/api")
         let services = [
             makeService(id: "process:100", name: "frontend", workspace: appWorkspace),
             makeService(id: "process:101", name: "worker", workspace: appWorkspace),
@@ -91,51 +91,30 @@ final class ServiceExperienceViewTests: XCTestCase {
     }
 
     func testServiceStatusAccessibilityLabelIncludesHealthContext() {
-        let service = ManagedService(
+        let service = makeManagedServiceFixture(
             id: "process:101",
             name: "api",
             kind: .api,
             status: .degraded,
             health: .watch,
             source: .process(pid: 101, command: "npm run api"),
-            workspace: nil,
             ports: [],
-            runtime: "Node.js",
-            summary: "summary",
-            command: "npm run api",
-            configPath: nil,
-            logPath: nil,
-            tags: [],
-            availableActions: [.stop],
-            startedAt: nil,
-            lastSeenAt: Date()
+            command: "npm run api"
         )
 
         XCTAssertEqual(serviceStatusAccessibilityLabel(for: service), "Status Degraded, Needs attention")
     }
 
     func testServicePortAccessibilityLabelDescribesLikelyPorts() {
-        let service = ManagedService(
+        let service = makeManagedServiceFixture(
             id: "process:202",
             name: "frontend",
-            kind: .app,
-            status: .running,
-            health: .healthy,
             source: .process(pid: 202, command: "npm run dev"),
-            workspace: nil,
             ports: [
                 ServicePort(value: 3000, isInferred: false),
                 ServicePort(value: 5173, isInferred: true)
             ],
-            runtime: "Node.js",
-            summary: "summary",
-            command: "npm run dev",
-            configPath: nil,
-            logPath: nil,
-            tags: [],
-            availableActions: [.stop],
-            startedAt: nil,
-            lastSeenAt: Date()
+            command: "npm run dev"
         )
 
         XCTAssertEqual(
@@ -145,24 +124,13 @@ final class ServiceExperienceViewTests: XCTestCase {
     }
 
     private func makeService(id: String, name: String, workspace: WorkspaceIdentity?) -> ManagedService {
-        ManagedService(
+        makeManagedServiceFixture(
             id: id,
             name: name,
-            kind: .app,
-            status: .running,
-            health: .healthy,
             source: .process(pid: 999, command: "npm run dev"),
             workspace: workspace,
             ports: [],
-            runtime: "Node.js",
-            summary: "summary",
-            command: "npm run dev",
-            configPath: nil,
-            logPath: nil,
-            tags: [],
-            availableActions: [.stop],
-            startedAt: nil,
-            lastSeenAt: Date()
+            command: "npm run dev"
         )
     }
 }

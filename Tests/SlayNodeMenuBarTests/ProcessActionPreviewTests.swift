@@ -347,24 +347,17 @@ final class ProcessActionPreviewTests: XCTestCase {
     }
 
     func testDockerServiceDoesNotNeedProcessPreview() async {
-        let service = ManagedService(
+        let service = makeManagedServiceFixture(
             id: "docker:abc123",
             name: "postgres",
             kind: .database,
-            status: .running,
-            health: .healthy,
             source: .docker(containerID: "abc123", image: "postgres:latest"),
-            workspace: nil,
             ports: [ServicePort(value: 5432, isInferred: false)],
             runtime: "postgres:latest",
             summary: "Container listening on 5432",
             command: nil,
-            configPath: nil,
-            logPath: nil,
             tags: ["docker"],
-            availableActions: [.stop, .restart],
-            startedAt: nil,
-            lastSeenAt: Date()
+            availableActions: [.stop, .restart]
         )
 
         let previewer = ProcessActionPreviewer()
@@ -374,24 +367,20 @@ final class ProcessActionPreviewTests: XCTestCase {
     }
 
     private func makeProcessService(pid: Int32) -> ManagedService {
-        ManagedService(
+        makeManagedServiceFixture(
             id: "process:\(pid)",
             name: "frontend",
-            kind: .app,
-            status: .running,
-            health: .healthy,
             source: .process(pid: pid, command: "npm run dev"),
-            workspace: WorkspaceIdentity(id: "/users/test/app", name: "app", rootPath: "/Users/test/app"),
+            workspace: makeWorkspaceFixture(
+                id: "/users/test/app",
+                name: "app",
+                rootPath: "/Users/test/app"
+            ),
             ports: [ServicePort(value: 3000, isInferred: false)],
-            runtime: "Node.js",
             summary: "Application listening on 3000",
-            command: "npm run dev",
-            configPath: nil,
-            logPath: nil,
             tags: ["node", "npm"],
             availableActions: [.stop, .forceStop],
-            startedAt: Date(),
-            lastSeenAt: Date()
+            startedAt: Date()
         )
     }
 }
