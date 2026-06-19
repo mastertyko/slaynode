@@ -4,7 +4,7 @@ Audit date: 2026-05-27
 
 Baseline evidence before this audit: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test` passed 246 XCTest tests with 0 failures.
 
-Current verification snapshot (2026-06-18): `./script/full_verification.sh` passed 350 tests with 0 failures in the current repo state.
+Current verification snapshot (2026-06-19): `./script/full_verification.sh` passed 353 tests with 0 failures in the current repo state.
 
 Status legend:
 - Fixed in this pass: implemented during the audit.
@@ -24,7 +24,7 @@ Status legend:
 7. Fixed in later pass - Added parser fixtures for `npm --prefix app exec vite -- --host 127.0.0.1 --port 5173`.
 8. Fixed in later pass - Added parser fixtures for `pnpm --filter web dev -- --port 3000` and workspace filter aliases.
 9. Fixed in later pass - `CommandParser.firstScriptToken` now recognizes `server.tsx`-style entrypoints without relying on directory names.
-10. Candidate - Expand port inference to handle `--host 127.0.0.1 --port 3000` when the port is embedded in a later URL argument.
+10. Fixed in later pass - Expanded port inference to handle URL ports embedded inside flag values such as `--public-url=http://127.0.0.1:3000/app`.
 11. Fixed in later pass - Added fixtures for IPv4-mapped IPv6 literals such as `[::ffff:127.0.0.1]:3000`.
 12. Fixed in later pass - Added fixtures for Bun's `--hot`, `--watch`, and `bun --bun vite` command shapes.
 13. Fixed in later pass - Added fixtures for Deno task commands, including `deno task dev --port 8000`.
@@ -34,7 +34,7 @@ Status legend:
 ### Process Discovery And Ports
 
 16. Candidate - Share the duplicated system/tooling-process exclusion rules between `ProcessDiscovery` and `ServiceHeuristics`.
-17. Candidate - Add a single fixture table for excluded tooling processes so Codex, OMX, tsserver, esbuild, and sourcekit patterns stay consistent.
+17. Fixed in later pass - Added a single fixture table for excluded tooling processes so Codex, OMX, tsserver, esbuild, and sourcekit patterns stay consistent.
 18. Candidate - Add discovery tests for child promotion when a package-manager wrapper has multiple child runtimes.
 19. Candidate - Add discovery tests for process trees where a child exposes a port but the parent owns the workspace.
 20. Candidate - Add discovery tests for process groups where the promoted child exits between `ps` and `lsof`.
@@ -97,7 +97,7 @@ Status legend:
 
 66. Fixed in later pass - The CI workflow now declares explicit read-only `contents` permissions.
 67. Fixed in later pass - CI now runs `git diff --check` to catch whitespace regressions.
-68. Candidate - Add a CI step that runs `./debug-port-detection.sh --samples-only`.
+68. Fixed in later pass - Added an explicit CI step that runs `./debug-port-detection.sh --samples-only`.
 69. Fixed in later pass - CI and release workflows now publish release metadata artifacts with version, build number, minimum macOS, and git provenance.
 70. Fixed in later pass - `build.sh` now validates `SLAYNODE_VERSION` and `SLAYNODE_BUILD_NUMBER` before generating `Info.plist`.
 71. Candidate - Escape all generated Info.plist string values, not only Sparkle metadata.
@@ -120,7 +120,7 @@ Status legend:
 85. Fixed in later pass - Preview tests now assert that every destructive action surfaces at least one warning.
 86. Candidate - Add tests that verify menu and service-center action ordering stays consistent.
 87. Fixed in later pass - Workspace history tests now cover build folders, caches, and editor/agent hidden state directories.
-88. Candidate - Add tests for Docker mount parsing with escaped spaces and read-only mount suffixes.
+88. Fixed in later pass - Added tests and normalization for Docker bind mount sources with escaped spaces and read-only mount suffixes.
 89. Fixed in later pass - Added tests for Homebrew services with missing, invalid, or unreadable plist paths.
 90. Fixed in later pass - Added a lightweight static script that scans for `try!`, `as!`, `fatalError`, and unredacted secret fixtures.
 
