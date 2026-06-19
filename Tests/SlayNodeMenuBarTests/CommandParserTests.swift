@@ -311,6 +311,13 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [5443])
     }
 
+    func testInferPortsFromURLEmbeddedInFlagValue() {
+        let tokens = ["vite", "--host", "127.0.0.1", "--public-url=http://127.0.0.1:3000/app"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000])
+    }
+
     func testInferPortsFromURLTokenWithIPv4MappedIPv6Host() {
         let tokens = ["node", "server.js", "http://[::ffff:127.0.0.1]:5173/graphql"]
         let ports = CommandParser.inferPorts(from: tokens)

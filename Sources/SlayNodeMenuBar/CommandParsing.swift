@@ -121,7 +121,7 @@ enum CommandParser {
             }
 
             if token.contains("://"),
-               let port = extractURLPort(from: token) {
+               let port = extractURLPort(from: token) ?? extractEmbeddedURLPort(from: token) {
                 collected.insert(port)
                 continue
             }
@@ -395,6 +395,20 @@ enum CommandParser {
         }
 
         return port
+    }
+
+    private static func extractEmbeddedURLPort(from token: String) -> Int? {
+        guard let schemeRange = token.range(of: "://") else { return nil }
+
+        var start = schemeRange.lowerBound
+        while start > token.startIndex {
+            let previous = token.index(before: start)
+            guard token[previous].isLetter else { break }
+            start = previous
+        }
+
+        let urlCandidate = String(token[start...])
+        return extractURLPort(from: urlCandidate)
     }
 
     private static func parsePortPrefix(_ value: String) -> Int? {
