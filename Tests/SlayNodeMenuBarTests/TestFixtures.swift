@@ -49,4 +49,36 @@ func makeManagedServiceFixture(
         lastSeenAt: lastSeenAt
     )
 }
+
+struct ToolingProcessFixture {
+    let executable: String
+    let command: String
+}
+
+let knownToolingProcessFixtures: [ToolingProcessFixture] = [
+    ToolingProcessFixture(
+        executable: "/opt/homebrew/bin/node",
+        command: "/opt/homebrew/lib/node_modules/typescript/lib/typingsinstaller.js --globalTypingsCacheLocation /tmp/cache"
+    ),
+    ToolingProcessFixture(
+        executable: "/opt/homebrew/bin/node",
+        command: "/opt/homebrew/bin/browser_use.skill_cli.daemon --transport pipe"
+    ),
+    ToolingProcessFixture(
+        executable: "/opt/homebrew/bin/esbuild",
+        command: "/opt/homebrew/bin/esbuild --service=0.25.1 --ping"
+    ),
+    ToolingProcessFixture(
+        executable: "/usr/bin/sourcekit-lsp",
+        command: "/usr/bin/sourcekit-lsp"
+    ),
+    ToolingProcessFixture(
+        executable: "/opt/homebrew/bin/node",
+        command: "/Users/test/.codex/worktrees/abcd/repo/node_modules/.bin/tsx src/dev.ts"
+    ),
+    ToolingProcessFixture(
+        executable: "/tmp/codex-native-hook",
+        command: "/tmp/codex-native-hook --event post-command"
+    )
+]
 #endif

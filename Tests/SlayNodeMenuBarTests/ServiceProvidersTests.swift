@@ -271,36 +271,38 @@ final class ServiceProvidersTests: XCTestCase {
     }
 
     func testToolingDaemonIsFilteredOut() {
-        let process = NodeProcess(
-            pid: 3131,
-            ppid: 1,
-            executable: "node",
-            command: "/opt/homebrew/bin/node /Users/test/project/node_modules/typescript/lib/tsserver.js --useNodeIpc",
-            arguments: ["/Users/test/project/node_modules/typescript/lib/tsserver.js", "--useNodeIpc"],
-            ports: [],
-            uptime: 20,
-            startTime: Date(),
-            workingDirectory: "/Users/test/project",
-            descriptor: ServerDescriptor(
-                name: "Node.js",
-                displayName: "Node.js",
-                category: .runtime,
-                runtime: "Node.js",
-                packageManager: nil,
-                script: nil,
-                details: nil,
-                portHints: []
-            ),
-            commandHash: 3
-        )
+        for (index, fixture) in knownToolingProcessFixtures.enumerated() {
+            let process = NodeProcess(
+                pid: Int32(3_131 + index),
+                ppid: 1,
+                executable: fixture.executable,
+                command: fixture.command,
+                arguments: Array(CommandParser.tokenize(fixture.command).dropFirst()),
+                ports: [53_754],
+                uptime: 20,
+                startTime: Date(),
+                workingDirectory: "/Users/test/project",
+                descriptor: ServerDescriptor(
+                    name: "Node.js",
+                    displayName: "Node.js",
+                    category: .runtime,
+                    runtime: "Node.js",
+                    packageManager: nil,
+                    script: nil,
+                    details: nil,
+                    portHints: []
+                ),
+                commandHash: NodeProcess.stableCommandHash(for: fixture.command)
+            )
 
-        let service = ServiceHeuristics.makeProcessService(
-            from: process,
-            ports: [],
-            workingDirectory: "/Users/test/project"
-        )
+            let service = ServiceHeuristics.makeProcessService(
+                from: process,
+                ports: process.ports,
+                workingDirectory: "/Users/test/project"
+            )
 
-        XCTAssertNil(service)
+            XCTAssertNil(service, fixture.command)
+        }
     }
 
     func testAgentBrowserToolingDaemonIsFilteredOutEvenWithPort() {
