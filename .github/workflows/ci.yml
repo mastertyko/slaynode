@@ -65,6 +65,9 @@ jobs:
       - name: Prepare verification scripts
         run: chmod +x build.sh debug-port-detection.sh script/*.sh
 
+      - name: Verify debug port samples
+        run: ./debug-port-detection.sh --samples-only
+
       - name: Run shared verification gate
         run: ./script/full_verification.sh
 
