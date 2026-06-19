@@ -367,7 +367,7 @@ struct DockerServiceProvider: DiscoveryProvider, ControlProvider {
     private func preferredWorkspaceMountSource(in mounts: [DockerMount]) -> String? {
         mounts
             .filter { $0.type == "bind" }
-            .compactMap(\.source)
+            .compactMap { normalizedBindSource($0.source) }
             .first { source in
                 var isDirectory: ObjCBool = false
                 guard FileManager.default.fileExists(atPath: source, isDirectory: &isDirectory) else {
@@ -387,8 +387,30 @@ struct DockerServiceProvider: DiscoveryProvider, ControlProvider {
 
         return mounts
             .filter { $0.type == "bind" }
-            .compactMap(\.source)
+            .compactMap { normalizedBindSource($0.source) }
             .first(where: { !$0.isEmpty })
+    }
+
+    private func normalizedBindSource(_ source: String?) -> String? {
+        guard let source else { return nil }
+
+        let unescaped = source.replacingOccurrences(of: "\\ ", with: " ")
+        let trimmed = unescaped.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if FileManager.default.fileExists(atPath: trimmed) {
+            return trimmed
+        }
+
+        for suffix in [":ro", ":rw", ":z", ":Z", ":delegated", ":cached", ":consistent"] {
+            guard trimmed.hasSuffix(suffix) else { continue }
+            let candidate = String(trimmed.dropLast(suffix.count))
+            if FileManager.default.fileExists(atPath: candidate) {
+                return candidate
+            }
+        }
+
+        return trimmed
     }
 
     private struct DockerRow: Sendable {

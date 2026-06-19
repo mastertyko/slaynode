@@ -488,6 +488,36 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(service.configPath, workspacePath.path)
     }
 
+    func testDockerServiceNormalizesEscapedReadonlyBindMounts() async throws {
+        let mock = MockShellExecutor()
+        let root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent(UUID().uuidString)
+        let workspacePath = root.appendingPathComponent("demo app")
+        try FileManager.default.createDirectory(at: workspacePath, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let escapedReadonlyPath = workspacePath.path
+            .replacingOccurrences(of: " ", with: "\\ ") + ":ro"
+        let jsonEscapedReadonlyPath = escapedReadonlyPath
+            .replacingOccurrences(of: "\\", with: "\\\\")
+        mock.responses["/usr/bin/env docker ps --format {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"] = (
+            0,
+            "abc123\tweb\tnginx:latest\t0.0.0.0:8080->80/tcp\tUp 2 minutes"
+        )
+        mock.responses["/usr/bin/env docker inspect --format {{json .Mounts}}@@{{.LogPath}} abc123"] = (
+            0,
+            #" [{"Type":"bind","Source":"\#(jsonEscapedReadonlyPath)"}] @@/tmp/web.log "#
+        )
+        let provider = DockerServiceProvider(shell: mock)
+
+        let services = await provider.discoverServices().services
+        let service = try XCTUnwrap(services.first)
+
+        XCTAssertTrue(service.supports(.openWorkspace))
+        XCTAssertEqual(service.workspace?.rootPath, workspacePath.path)
+        XCTAssertEqual(service.configPath, workspacePath.path)
+    }
+
     func testDockerServiceOffersForceStopBeforeOrchestration() async {
         let mock = MockShellExecutor()
         mock.responses["/usr/bin/env docker ps --format {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"] = (
