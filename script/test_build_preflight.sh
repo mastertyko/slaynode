@@ -116,4 +116,60 @@ assert_contains "${output}" "Build: 456"
 assert_contains "${output}" "Minimum macOS: 26.0"
 assert_contains "${output}" "Sparkle metadata: configured"
 
+mkdir -p "${repo}/bin"
+cat > "${repo}/bin/swift" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$*" == *"--show-bin-path"* ]]; then
+  printf '%s\n' "$(pwd)/.build/debug"
+  exit 0
+fi
+
+if [[ "$1" == "build" ]]; then
+  mkdir -p .build/debug/SlayNodeMenuBar_SlayNodeMenuBar.bundle
+  touch .build/debug/SlayNodeMenuBar_SlayNodeMenuBar.bundle/placeholder
+  printf '#!/usr/bin/env bash\n' > .build/debug/SlayNodeMenuBar
+  chmod +x .build/debug/SlayNodeMenuBar
+  exit 0
+fi
+
+exit 0
+EOF
+chmod +x "${repo}/bin/swift"
+
+cat > "${repo}/bin/iconutil" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+while [[ $# -gt 0 ]]; do
+  if [[ "$1" == "-o" ]]; then
+    shift
+    touch "$1"
+    exit 0
+  fi
+  shift
+done
+exit 1
+EOF
+chmod +x "${repo}/bin/iconutil"
+
+for command_name in codesign install_name_tool; do
+  cat > "${repo}/bin/${command_name}" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+  chmod +x "${repo}/bin/${command_name}"
+done
+
+output="$(
+  cd "${repo}"
+  PATH="${repo}/bin:$PATH" \
+    SLAYNODE_SPARKLE_FEED_URL='https://example.test/appcast.xml?channel=beta&lang=en' \
+    SLAYNODE_SPARKLE_PUBLIC_ED_KEY=ZmFrZS1mZWVkLWtleQ== \
+    ./build.sh debug
+)"
+assert_contains "${output}" "SlayNode.app is ready"
+plutil -lint "${repo}/SlayNode.app/Contents/Info.plist" >/dev/null
+
 echo "PASS: build_preflight"

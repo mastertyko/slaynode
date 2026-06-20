@@ -248,6 +248,10 @@ EOF
 )
 fi
 
+APP_VERSION_XML="$(xml_escape "${APP_VERSION}")"
+APP_BUILD_XML="$(xml_escape "${APP_BUILD}")"
+MIN_SYSTEM_VERSION_XML="$(xml_escape "${MIN_SYSTEM_VERSION}")"
+
 echo "🔨 Building SlayNodeMenuBar (${CONFIGURATION})..."
 if [[ "${GENERATE_ICONS}" == "true" ]]; then
   echo "🎨 Regenerating brand assets..."
@@ -293,11 +297,11 @@ cat > "${APP_DIR}/Contents/Info.plist" <<EOF
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>${APP_VERSION}</string>
+    <string>${APP_VERSION_XML}</string>
     <key>CFBundleVersion</key>
-    <string>${APP_BUILD}</string>
+    <string>${APP_BUILD_XML}</string>
     <key>LSMinimumSystemVersion</key>
-    <string>${MIN_SYSTEM_VERSION}</string>
+    <string>${MIN_SYSTEM_VERSION_XML}</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>CFBundleIconFile</key>
