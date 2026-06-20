@@ -171,14 +171,14 @@ enum ServiceSanitizer {
 
     private static func redactQuerySecrets(in token: String) -> String {
         guard let questionIndex = token.firstIndex(of: "?") else {
-            return token
+            return redactFragmentSecrets(in: token)
         }
 
         let prefix = token[..<questionIndex]
         let queryAndFragment = token[token.index(after: questionIndex)...]
         let fragmentIndex = queryAndFragment.firstIndex(of: "#")
         let query = fragmentIndex.map { queryAndFragment[..<$0] } ?? queryAndFragment[...]
-        let fragment = fragmentIndex.map { queryAndFragment[$0...] } ?? ""
+        let fragment = fragmentIndex.map { String(queryAndFragment[$0...]) } ?? ""
         let pairs = query.split(separator: "&", omittingEmptySubsequences: false).map { pair -> String in
             let parts = pair.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
             guard let key = parts.first, parts.count == 2 else {
@@ -192,7 +192,30 @@ enum ServiceSanitizer {
             return String(pair)
         }
 
-        return "\(prefix)?\(pairs.joined(separator: "&"))\(fragment)"
+        return redactFragmentSecrets(in: "\(prefix)?\(pairs.joined(separator: "&"))\(fragment)")
+    }
+
+    private static func redactFragmentSecrets(in token: String) -> String {
+        guard let hashIndex = token.firstIndex(of: "#") else {
+            return token
+        }
+
+        let prefix = token[...hashIndex]
+        let fragment = token[token.index(after: hashIndex)...]
+        let pairs = fragment.split(separator: "&", omittingEmptySubsequences: false).map { pair -> String in
+            let parts = pair.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+            guard let key = parts.first, parts.count == 2 else {
+                return String(pair)
+            }
+
+            if sensitiveFlagName(from: String(key)) != nil {
+                return "\(key)=***"
+            }
+
+            return String(pair)
+        }
+
+        return "\(prefix)\(pairs.joined(separator: "&"))"
     }
 }
 

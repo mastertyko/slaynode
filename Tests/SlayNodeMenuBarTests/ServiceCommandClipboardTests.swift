@@ -65,5 +65,18 @@ final class ServiceCommandClipboardTests: XCTestCase {
         XCTAssertFalse(copied.contains("demo:super-secret"))
         XCTAssertEqual(copied, "node server.js postgres://***@localhost:5432/app")
     }
+
+    func testServiceCommandCopyTextRedactsUrlFragmentSecrets() {
+        let copied = serviceCommandCopyText(
+            "node server.js 'https://example.test/callback?state=ok&token=query-secret#access_token=fragment-secret&tab=home'"
+        )
+
+        XCTAssertFalse(copied.contains("query-secret"))
+        XCTAssertFalse(copied.contains("fragment-secret"))
+        XCTAssertTrue(copied.contains("state=ok"))
+        XCTAssertTrue(copied.contains("tab=home"))
+        XCTAssertTrue(copied.contains("token=***"))
+        XCTAssertTrue(copied.contains("access_token=***"))
+    }
 }
 #endif
