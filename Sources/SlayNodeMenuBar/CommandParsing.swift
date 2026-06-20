@@ -105,7 +105,7 @@ enum CommandParser {
 
             if isDefaultInspectFlag(token) {
                 if index + 1 < tokens.count,
-                   let port = extractPortCandidate(from: tokens[index + 1]) {
+                   let port = extractPortValue(from: tokens[index + 1]) {
                     collected.insert(port)
                 } else {
                     collected.insert(9_229)
@@ -115,7 +115,7 @@ enum CommandParser {
 
             if isPortFlag(token),
                index + 1 < tokens.count,
-               let port = extractPortCandidate(from: tokens[index + 1]) {
+               let port = extractPortValue(from: tokens[index + 1]) {
                 collected.insert(port)
                 continue
             }
@@ -377,6 +377,12 @@ enum CommandParser {
         }
 
         return extractTrailingPort(from: sanitized)
+    }
+
+    private static func extractPortValue(from value: String) -> Int? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let unwrapped = unwrappedQuotedValue(trimmed)
+        return extractPortCandidate(from: unwrapped) ?? extractURLPort(from: unwrapped)
     }
 
     private static func extractTrailingPort(from value: String) -> Int? {

@@ -95,6 +95,20 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [4173, 9230])
     }
 
+    func testInferPortsFromSeparateFlagURLArguments() {
+        let tokens = [
+            "deno",
+            "serve",
+            "--listen",
+            "http://127.0.0.1:8080/app",
+            "--inspect",
+            "ws://localhost:9230/debug"
+        ]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [8080, 9230])
+    }
+
     func testInferPortsFromQuotedFlagArguments() {
         let tokens = ["vite", "--port", "\"4173\"", "--inspect", "'127.0.0.1:9230'"]
         let ports = CommandParser.inferPorts(from: tokens)
