@@ -410,7 +410,7 @@ struct DockerServiceProvider: DiscoveryProvider, ControlProvider {
             }
         }
 
-        return trimmed
+        return nil
     }
 
     private struct DockerRow: Sendable {

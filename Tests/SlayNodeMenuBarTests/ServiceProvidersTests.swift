@@ -459,6 +459,26 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(service?.configPath, socketPath.path)
     }
 
+    func testDockerServiceMissingBindMountDoesNotExposeConfigPath() async {
+        let mock = MockShellExecutor()
+        let missingPath = "/tmp/slaynode-\(UUID().uuidString)/missing-project"
+
+        mock.responses["/usr/bin/env docker ps --format {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}"] = (
+            0,
+            "abc123\tweb\tnginx:latest\t0.0.0.0:8080->80/tcp\tUp 2 minutes"
+        )
+        mock.responses["/usr/bin/env docker inspect --format {{json .Mounts}}@@{{.LogPath}} abc123"] = (
+            0,
+            #" [{"Type":"bind","Source":"\#(missingPath)"}] @@/tmp/web.log "#
+        )
+        let provider = DockerServiceProvider(shell: mock)
+
+        let service = await provider.discoverServices().services.first
+
+        XCTAssertFalse(service?.supports(.openWorkspace) ?? true)
+        XCTAssertNil(service?.configPath)
+    }
+
     func testDockerServicePrefersDirectoryBindMountForWorkspace() async throws {
         let mock = MockShellExecutor()
         let root = URL(fileURLWithPath: NSTemporaryDirectory())
