@@ -309,10 +309,13 @@ enum CommandParser {
             .lowercased()
         let rawValue = String(token[token.index(after: separator)...])
 
-        guard isPortEnvironmentKey(key) else { return nil }
-
         let trimmedValue = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedValue = unwrappedQuotedValue(trimmedValue)
+
+        if !isPortEnvironmentKey(key) {
+            guard isURLLikeEnvironmentKey(key) else { return nil }
+            return extractURLPort(from: normalizedValue) ?? extractEmbeddedURLPort(from: normalizedValue)
+        }
 
         if let port = extractPortCandidate(from: normalizedValue) {
             return port
@@ -338,6 +341,15 @@ enum CommandParser {
             character == "_" || character == "-"
         }
         return parts.last == "port"
+    }
+
+    private static func isURLLikeEnvironmentKey(_ key: String) -> Bool {
+        guard !key.isEmpty else { return false }
+        let parts = key.split { character in
+            character == "_" || character == "-"
+        }
+        guard let last = parts.last else { return false }
+        return ["url", "uri", "origin", "endpoint"].contains(last)
     }
 
     private static func extractJVMPortProperty(from token: String) -> Int? {
