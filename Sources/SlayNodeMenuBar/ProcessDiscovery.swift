@@ -182,11 +182,50 @@ struct ProcessDiscovery: Sendable {
     private static func sanitizedWorkingDirectoryPath(from rawPath: String) -> String {
         let trimmed = rawPath.trimmingCharacters(in: .whitespacesAndNewlines)
         let deletedSuffix = " (deleted)"
+        let activePath: String
         if trimmed.hasSuffix(deletedSuffix) {
-            return String(trimmed.dropLast(deletedSuffix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            activePath = String(trimmed.dropLast(deletedSuffix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            activePath = trimmed
         }
 
-        return trimmed
+        return decodeOctalEscapes(in: activePath)
+    }
+
+    private static func decodeOctalEscapes(in path: String) -> String {
+        var result = ""
+        var index = path.startIndex
+
+        while index < path.endIndex {
+            guard path[index] == "\\" else {
+                result.append(path[index])
+                index = path.index(after: index)
+                continue
+            }
+
+            let firstDigit = path.index(after: index)
+            guard firstDigit < path.endIndex else {
+                result.append(path[index])
+                index = firstDigit
+                continue
+            }
+
+            let digitEnd = path.index(firstDigit, offsetBy: 3, limitedBy: path.endIndex) ?? path.endIndex
+            let digits = String(path[firstDigit..<digitEnd])
+            guard digits.count == 3,
+                  digits.allSatisfy({ ("0"..."7").contains($0) }),
+                  let value = UInt8(digits, radix: 8),
+                  let scalar = UnicodeScalar(UInt32(value)) else {
+                result.append(path[index])
+                index = firstDigit
+                continue
+            }
+
+            result.append(Character(scalar))
+            index = digitEnd
+        }
+
+        return result
     }
 
     private func enrichProcesses(_ processes: [NodeProcess]) async -> [NodeProcess] {

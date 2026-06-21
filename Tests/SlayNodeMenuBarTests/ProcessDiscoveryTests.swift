@@ -123,6 +123,18 @@ final class ProcessDiscoveryTests: XCTestCase {
         XCTAssertEqual(directories[201], "/Users/test/api")
     }
 
+    func testParseWorkingDirectoriesDecodesOctalEscapedSpaces() {
+        let output = """
+        p210
+        fcwd
+        n/Users/test/My\\040App/frontend
+        """
+
+        let directories = ProcessDiscovery.parseWorkingDirectories(from: output)
+
+        XCTAssertEqual(directories[210], "/Users/test/My App/frontend")
+    }
+
     func testPidBatchesNormalizeAndChunkValues() {
         XCTAssertEqual(
             ProcessDiscovery.pidBatches(for: [4, 2, 2, -1, 3, 1], batchSize: 2),
