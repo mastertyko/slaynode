@@ -185,17 +185,28 @@ enum ProcessClassifier {
     }
 
     private static func optionTakesValue(_ argument: String) -> Bool {
-        ["--workspace", "-w", "--filter", "-f"].contains(argument) ||
+        packageManagerValueOptions.contains(argument) ||
             CommandParser.isWorkingDirectoryValueFlag(argument)
     }
 
     private static func isSkippableOption(_ argument: String) -> Bool {
         argument == "--" ||
-            argument.hasPrefix("--workspace=") ||
-            argument.hasPrefix("--filter=") ||
+            packageManagerValueOptions.contains { option in argument.hasPrefix("\(option)=") } ||
             CommandParser.hasInlineWorkingDirectoryValue(argument) ||
             argument.hasPrefix("-")
     }
+
+    private static let packageManagerValueOptions = Set([
+        "--workspace",
+        "-w",
+        "--filter",
+        "-f",
+        "--config",
+        "--userconfig",
+        "--registry",
+        "--cache",
+        "--store-dir"
+    ])
 
     private static func classifyKnownFramework(context: CommandParser.CommandContext) -> ServerDescriptor? {
         let lowered = context.lowercasedTokens

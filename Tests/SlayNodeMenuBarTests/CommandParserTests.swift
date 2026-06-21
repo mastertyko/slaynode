@@ -536,6 +536,30 @@ extension CommandParserTests {
         XCTAssertEqual(workingDirectoryDescriptor.script, "dev")
     }
 
+    func testPackageManagerWrapperSkipsConfigAndRegistryFlagsBeforeRun() {
+        let configTokens = ["npm", "--userconfig", ".npmrc.local", "run", "dev"]
+        let configContext = CommandParser.makeContext(
+            executable: configTokens[0],
+            tokens: configTokens,
+            workingDirectory: "/Users/test/app"
+        )
+        let configDescriptor = CommandParser.descriptor(from: configContext)
+
+        let registryTokens = ["pnpm", "--registry=https://registry.example.test", "exec", "vite"]
+        let registryContext = CommandParser.makeContext(
+            executable: registryTokens[0],
+            tokens: registryTokens,
+            workingDirectory: "/Users/test/app"
+        )
+        let registryDescriptor = CommandParser.descriptor(from: registryContext)
+
+        XCTAssertEqual(configDescriptor.packageManager, "npm")
+        XCTAssertEqual(configDescriptor.script, "dev")
+        XCTAssertEqual(registryDescriptor.packageManager, "pnpm")
+        XCTAssertEqual(registryDescriptor.displayName, "Vite")
+        XCTAssertEqual(registryDescriptor.script, "vite")
+    }
+
     func testPackageManagerWrapperParsesNpmPrefixExecViteCommand() {
         let tokens = ["npm", "--prefix", "app", "exec", "vite", "--", "--host", "127.0.0.1", "--port", "5173"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
