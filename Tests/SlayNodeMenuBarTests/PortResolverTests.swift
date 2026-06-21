@@ -53,6 +53,21 @@ final class PortResolverTests: XCTestCase {
         )
     }
 
+    func testParseLsofOutputHandlesFieldFormatRows() {
+        let output = """
+        p12345
+        n*:3000
+        n[::1]:5173
+        p22345
+        nlocalhost:http-alt
+        """
+
+        XCTAssertEqual(
+            PortResolver.parseLsofOutput(output),
+            [12345: [3000, 5173], 22345: [8080]]
+        )
+    }
+
     func testExtractPortHandlesArrowSuffixAndWhitespace() {
         XCTAssertEqual(PortResolver.extractPort(from: "127.0.0.1:3000->127.0.0.1:52341"), 3000)
         XCTAssertEqual(PortResolver.extractPort(from: "  *:8080  "), 8080)

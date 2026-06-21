@@ -93,11 +93,17 @@ struct PortResolver: Sendable {
         guard !output.isEmpty else { return [:] }
 
         var result: [Int32: [Int]] = [:]
+        var currentFieldPid: Int32?
         let lines = output.split(whereSeparator: { $0.isNewline })
 
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             guard !trimmed.isEmpty, !trimmed.hasPrefix("COMMAND") else { continue }
+
+            if let fieldPort = parseFieldFormatLine(trimmed, currentPid: &currentFieldPid) {
+                result[fieldPort.pid, default: []].append(fieldPort.port)
+                continue
+            }
 
             let tokens = trimmed.split(omittingEmptySubsequences: true, whereSeparator: { $0.isWhitespace })
             guard tokens.count >= 9,
@@ -119,6 +125,27 @@ struct PortResolver: Sendable {
         }
 
         return result
+    }
+
+    private static func parseFieldFormatLine(
+        _ line: String,
+        currentPid: inout Int32?
+    ) -> (pid: Int32, port: Int)? {
+        guard let field = line.first else { return nil }
+
+        switch field {
+        case "p":
+            currentPid = Int32(line.dropFirst())
+            return nil
+        case "n":
+            guard let pid = currentPid,
+                  let port = extractPort(from: String(line.dropFirst())) else {
+                return nil
+            }
+            return (pid, port)
+        default:
+            return nil
+        }
     }
     
     static func extractPort(from token: String) -> Int? {
