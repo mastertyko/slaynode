@@ -15,6 +15,12 @@ final class RuntimePresentationSupportTests: XCTestCase {
         XCTAssertEqual(runtimePortBadgeAccessibilityLabel(for: badge), "Likely port 4173")
     }
 
+    func testRuntimePortBadgeAccessibilityLabelForMissingPort() {
+        let badge = NodeProcessItemViewModel.PortBadge(text: "No port", isLikely: true)
+
+        XCTAssertEqual(runtimePortBadgeAccessibilityLabel(for: badge), "No port detected")
+    }
+
     func testRuntimeStatusPillAccessibilityLabelReturnsText() {
         XCTAssertEqual(
             runtimeStatusPillAccessibilityLabel(text: "High confidence"),

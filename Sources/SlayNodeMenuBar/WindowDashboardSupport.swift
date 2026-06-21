@@ -255,6 +255,10 @@ func slayScopeNarrative(for process: NodeProcessItemViewModel) -> String {
 }
 
 func runtimePortBadgeAccessibilityLabel(for badge: NodeProcessItemViewModel.PortBadge) -> String {
+    if badge.text.lowercased() == "no port" {
+        return "No port detected"
+    }
+
     if badge.isLikely {
         return "Likely port \(badge.text)"
     }
