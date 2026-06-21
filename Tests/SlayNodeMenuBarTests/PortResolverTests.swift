@@ -59,12 +59,12 @@ final class PortResolverTests: XCTestCase {
         n*:3000
         n[::1]:5173
         p22345
-        nlocalhost:http-alt
+        nlocalhost:http
         """
 
         XCTAssertEqual(
             PortResolver.parseLsofOutput(output),
-            [12345: [3000, 5173], 22345: [8080]]
+            [12345: [3000, 5173], 22345: [80]]
         )
     }
 
