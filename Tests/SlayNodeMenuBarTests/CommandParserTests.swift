@@ -221,6 +221,21 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 5050, 8443])
     }
 
+    func testInferPortsFromURLLikeEnvironmentAssignmentsWithShellDefaults() {
+        let tokens = [
+            "PUBLIC_URL=${PUBLIC_URL:-http://localhost:3000/app}",
+            "API_ORIGIN=${API_ORIGIN:=https://127.0.0.1:8443}",
+            "GRAPHQL_ENDPOINT=${GRAPHQL_ENDPOINT-'http://0.0.0.0:5050/graphql'}",
+            "STATIC_URL=${STATIC_URL:-https://example.com/assets}",
+            "npm",
+            "run",
+            "dev"
+        ]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000, 5050, 8443])
+    }
+
     func testInferPortsFromEnvironmentAssignmentsWithShellDefaults() {
         let tokens = [
             "PORT=${PORT:-3000}",

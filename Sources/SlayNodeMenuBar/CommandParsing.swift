@@ -314,7 +314,9 @@ enum CommandParser {
 
         if !isPortEnvironmentKey(key) {
             guard isURLLikeEnvironmentKey(key) else { return nil }
-            return extractURLPort(from: normalizedValue) ?? extractEmbeddedURLPort(from: normalizedValue)
+            return extractURLPort(from: normalizedValue)
+                ?? extractEmbeddedURLPort(from: normalizedValue)
+                ?? extractShellDefaultPort(from: normalizedValue)
         }
 
         if let port = extractPortCandidate(from: normalizedValue) {
