@@ -499,6 +499,19 @@ extension CommandParserTests {
         XCTAssertTrue(summaries.contains(ServerDescriptor.Category.webFramework.displayName))
     }
 
+    func testCorepackPackageManagerWrapperAddsMetadata() {
+        let tokens = ["corepack", "pnpm", "exec", "vite", "--", "--port", "5173"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Vite")
+        XCTAssertEqual(descriptor.packageManager, "pnpm")
+        XCTAssertEqual(descriptor.script, "vite")
+        XCTAssertEqual(descriptor.category, .bundler)
+        XCTAssertEqual(ports, [5173])
+    }
+
     func testPackageManagerWrapperSkipsWorkspaceFlagsBeforeRun() {
         let tokens = ["npm", "--workspace", "web", "run", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")

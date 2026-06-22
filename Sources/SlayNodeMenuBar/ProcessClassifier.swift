@@ -41,9 +41,17 @@ enum ProcessClassifier {
     }
 
     private static func classifyPackageManagerWrapper(context: CommandParser.CommandContext) -> ServerDescriptor? {
-        let loweredTokens = context.lowercasedTokens
-        guard let executor = loweredTokens.first else { return nil }
-        let normalizedExecutor = (executor as NSString).lastPathComponent
+        var effectiveTokens = context.tokens
+        var loweredTokens = effectiveTokens.map { $0.lowercased() }
+        guard var executor = loweredTokens.first else { return nil }
+        var normalizedExecutor = (executor as NSString).lastPathComponent
+
+        if normalizedExecutor == "corepack", effectiveTokens.count > 1 {
+            effectiveTokens = Array(effectiveTokens.dropFirst())
+            loweredTokens = effectiveTokens.map { $0.lowercased() }
+            executor = loweredTokens.first ?? ""
+            normalizedExecutor = (executor as NSString).lastPathComponent
+        }
 
         let wrappers: [String: String] = [
             "npm": "npm",
@@ -60,7 +68,7 @@ enum ProcessClassifier {
             return nil
         }
 
-        let remainingTokens = Array(context.tokens.dropFirst())
+        let remainingTokens = Array(effectiveTokens.dropFirst())
         if remainingTokens.isEmpty {
             return nil
         }
@@ -72,7 +80,7 @@ enum ProcessClassifier {
         )
 
         if let descriptor = classifyKnownFramework(context: nestedContext) {
-            let scriptOverride = extractScriptName(from: context.tokens) ?? descriptor.script
+            let scriptOverride = extractScriptName(from: effectiveTokens) ?? descriptor.script
             let runtimeValue = descriptor.runtime ?? runtime(from: nestedContext) ?? runtime(from: context)
             return ServerDescriptor(
                 name: descriptor.name,
@@ -86,7 +94,7 @@ enum ProcessClassifier {
             )
         }
 
-        if let scriptName = extractScriptName(from: context.tokens) {
+        if let scriptName = extractScriptName(from: effectiveTokens) {
             return ServerDescriptor(
                 name: scriptName,
                 displayName: scriptName,
