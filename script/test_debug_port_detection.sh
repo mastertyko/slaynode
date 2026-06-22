@@ -33,5 +33,7 @@ assert_ports "bun --hot server.ts --port 3002" 3002
 assert_ports "bun --watch --inspect-wait=127.0.0.1:9330 server.ts" 9330
 assert_ports "PORT=8788 deno task dev" 8788
 assert_ports "deno task dev -- --listen 127.0.0.1:8789" 8789
+assert_ports "PUBLIC_URL=\${PUBLIC_URL:-http://localhost:3000/app} pnpm dev" 3000
+assert_ports "WS_ENDPOINT=ws://127.0.0.1:9231/debug node server.js" 9231
 
 echo "PASS: debug_port_detection"

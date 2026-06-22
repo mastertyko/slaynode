@@ -32,7 +32,7 @@ extract_ports() {
       while (/(?:--(?:inspect|inspect-brk|inspect-wait)\s*=?\s*(?:[^:\s]+:))([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:--(?:inspect|inspect-brk|inspect-wait)\s*=?\s*)(?:\[[^\]]+\]|localhost|0\.0\.0\.0|127(?:\.\d{1,3}){3}|::1)(?=[\s,;]|$)/g) { print "9229\n" }
       while (/(?:--(?:listen|listen-address|addr|address|bind|socket)\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
-      while (/(?:https?:\/\/[^:\s]+:)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/(?:[A-Za-z][A-Za-z0-9+.-]*:\/\/[^:\s]+:)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0):([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/\[[^\]]+\]:([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/\*:([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
@@ -68,6 +68,8 @@ show_samples() {
     "PORT=\"3002\" npm run dev"
     "WEB_PORT=\${WEB_PORT:-4174} pnpm dev"
     "API_PORT=\${API_PORT:=4200} pnpm dev"
+    "PUBLIC_URL=\${PUBLIC_URL:-http://localhost:3000/app} pnpm dev"
+    "WS_ENDPOINT=ws://127.0.0.1:9231/debug node server.js"
     "INSPECT_PORT=\${INSPECT_PORT=9333} node --inspect app.js"
     "node --inspect=9229 app.js"
     "node --inspect=127.0.0.1:9229 app.js"
