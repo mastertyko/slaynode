@@ -78,5 +78,16 @@ final class ServiceCommandClipboardTests: XCTestCase {
         XCTAssertTrue(copied.contains("token=***"))
         XCTAssertTrue(copied.contains("access_token=***"))
     }
+
+    func testServiceCommandCopyTextRedactsIDTokenParameters() {
+        let copied = serviceCommandCopyText(
+            "node server.js 'https://example.test/callback?id_token=query-secret#id_token=fragment-secret&tab=home'"
+        )
+
+        XCTAssertFalse(copied.contains("query-secret"))
+        XCTAssertFalse(copied.contains("fragment-secret"))
+        XCTAssertTrue(copied.contains("id_token=***"))
+        XCTAssertTrue(copied.contains("tab=home"))
+    }
 }
 #endif

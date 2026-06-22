@@ -16,6 +16,7 @@ enum ServiceSanitizer {
         "database-url",
         "db-url",
         "dsn",
+        "id-token",
         "mongo-uri",
         "mongo-url",
         "mongodb-uri",

@@ -30,6 +30,16 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(redacted, "node server.js https://example.test/callback?access_token=***&state=ok")
     }
 
+    func testSanitizerRedactsIDTokenParameters() {
+        let command = "node server.js https://example.test/callback?id_token=query-secret#id_token=fragment-secret&state=ok"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("query-secret"))
+        XCTAssertFalse(redacted.contains("fragment-secret"))
+        XCTAssertTrue(redacted.contains("id_token=***"))
+        XCTAssertTrue(redacted.contains("state=ok"))
+    }
+
     func testSanitizerRedactsURLCredentials() {
         let command = "node server.js postgres://user:password@localhost:5432/app"
         let redacted = ServiceSanitizer.redactSecrets(in: command)
