@@ -89,5 +89,18 @@ final class ServiceCommandClipboardTests: XCTestCase {
         XCTAssertTrue(copied.contains("id_token=***"))
         XCTAssertTrue(copied.contains("tab=home"))
     }
+
+    func testServiceCommandCopyTextRedactsCredentialEnvironmentNames() {
+        let copied = serviceCommandCopyText(
+            "AWS_SECRET_ACCESS_KEY=aws-secret GOOGLE_APPLICATION_CREDENTIALS=/tmp/creds.json npm run dev --secret-key local-secret"
+        )
+
+        XCTAssertFalse(copied.contains("aws-secret"))
+        XCTAssertFalse(copied.contains("/tmp/creds.json"))
+        XCTAssertFalse(copied.contains("local-secret"))
+        XCTAssertTrue(copied.contains("AWS_SECRET_ACCESS_KEY=***"))
+        XCTAssertTrue(copied.contains("GOOGLE_APPLICATION_CREDENTIALS=***"))
+        XCTAssertTrue(copied.contains("--secret-key ***"))
+    }
 }
 #endif
