@@ -235,6 +235,10 @@ enum CommandParser {
             "--inspect-brk",
             "--inspect-wait",
             "--inspect-port",
+            "--debug-port",
+            "--dev-server-port",
+            "--hmr-port",
+            "--server-port",
             "--http-port",
             "--https-port",
             "--listen",
@@ -280,6 +284,7 @@ enum CommandParser {
         let patterns = [
             #"^--?(?:port|p)=(.+)$"#,
             #"^--?(?:inspect|inspect-brk|inspect-wait|inspect-port)=(.+)$"#,
+            #"^--?(?:debug-port|dev-server-port|hmr-port|server-port)=(.+)$"#,
             #"^--?(?:listen|listen-address|addr|address|bind|socket)=(.+)$"#,
             #"^-p(\d+)$"#
         ]

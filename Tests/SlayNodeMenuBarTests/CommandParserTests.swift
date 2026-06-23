@@ -283,6 +283,21 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [8000, 9000, 9100, 9200])
     }
 
+    func testInferPortsFromNamedDevServerPortFlags() {
+        let tokens = [
+            "vite",
+            "--hmr-port",
+            "24678",
+            "--server-port=5173",
+            "--debug-port=127.0.0.1:9230",
+            "--dev-server-port",
+            "localhost:3000"
+        ]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [3000, 5173, 9230, 24678])
+    }
+
     func testInferPortsFromJVMSystemProperties() {
         let tokens = [
             "java",
