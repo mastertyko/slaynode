@@ -45,7 +45,7 @@ final class RuntimePresentationSupportTests: XCTestCase {
     func testRuntimeActionAccessibilityLabelForSlay() {
         XCTAssertEqual(
             runtimeActionAccessibilityLabel(.slay, processTitle: "demo-api"),
-            "Slay demo-api"
+            "Stop process group for demo-api"
         )
     }
 }
