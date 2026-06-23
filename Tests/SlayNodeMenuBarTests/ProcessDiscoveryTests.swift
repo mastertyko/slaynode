@@ -135,6 +135,18 @@ final class ProcessDiscoveryTests: XCTestCase {
         XCTAssertEqual(directories[210], "/Users/test/My App/frontend")
     }
 
+    func testParseWorkingDirectoriesDecodesUTF8OctalEscapes() {
+        let output = """
+        p211
+        fcwd
+        n/Users/test/M\\303\\274nchen/frontend
+        """
+
+        let directories = ProcessDiscovery.parseWorkingDirectories(from: output)
+
+        XCTAssertEqual(directories[211], "/Users/test/München/frontend")
+    }
+
     func testPidBatchesNormalizeAndChunkValues() {
         XCTAssertEqual(
             ProcessDiscovery.pidBatches(for: [4, 2, 2, -1, 3, 1], batchSize: 2),

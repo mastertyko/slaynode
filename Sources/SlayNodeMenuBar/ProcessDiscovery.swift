@@ -203,26 +203,40 @@ struct ProcessDiscovery: Sendable {
                 continue
             }
 
-            let firstDigit = path.index(after: index)
-            guard firstDigit < path.endIndex else {
+            var byteIndex = index
+            var bytes: [UInt8] = []
+
+            while byteIndex < path.endIndex, path[byteIndex] == "\\" {
+                let firstDigit = path.index(after: byteIndex)
+                guard firstDigit < path.endIndex else { break }
+
+                let digitEnd = path.index(firstDigit, offsetBy: 3, limitedBy: path.endIndex) ?? path.endIndex
+                let digits = String(path[firstDigit..<digitEnd])
+                guard digits.count == 3,
+                      digits.allSatisfy({ ("0"..."7").contains($0) }),
+                      let value = UInt8(digits, radix: 8) else {
+                    break
+                }
+
+                bytes.append(value)
+                byteIndex = digitEnd
+            }
+
+            guard !bytes.isEmpty else {
                 result.append(path[index])
-                index = firstDigit
+                index = path.index(after: index)
                 continue
             }
 
-            let digitEnd = path.index(firstDigit, offsetBy: 3, limitedBy: path.endIndex) ?? path.endIndex
-            let digits = String(path[firstDigit..<digitEnd])
-            guard digits.count == 3,
-                  digits.allSatisfy({ ("0"..."7").contains($0) }),
-                  let value = UInt8(digits, radix: 8),
-                  let scalar = UnicodeScalar(UInt32(value)) else {
-                result.append(path[index])
-                index = firstDigit
-                continue
+            if let decoded = String(data: Data(bytes), encoding: .utf8) {
+                result.append(decoded)
+            } else {
+                for byte in bytes {
+                    guard let scalar = UnicodeScalar(UInt32(byte)) else { continue }
+                    result.append(Character(scalar))
+                }
             }
-
-            result.append(Character(scalar))
-            index = digitEnd
+            index = byteIndex
         }
 
         return result
