@@ -133,6 +133,25 @@ final class WindowDashboardSupportTests: XCTestCase {
         XCTAssertTrue(narrative.contains("child runtime"))
     }
 
+    func testRuntimeActionAccessibilityLabelsDescribeActions() {
+        XCTAssertEqual(
+            runtimeActionAccessibilityLabel(.openPort(5173), processTitle: "Vite"),
+            "Open localhost port 5173 for Vite"
+        )
+        XCTAssertEqual(
+            runtimeActionAccessibilityLabel(.openFolder, processTitle: "Vite"),
+            "Open workspace folder for Vite"
+        )
+        XCTAssertEqual(
+            runtimeActionAccessibilityLabel(.copyCommand, processTitle: "Vite"),
+            "Copy redacted command for Vite"
+        )
+        XCTAssertEqual(
+            runtimeActionAccessibilityLabel(.slay, processTitle: "Vite"),
+            "Stop process group for Vite"
+        )
+    }
+
     private func makeProcess(
         pid: Int32,
         title: String = "fixture",

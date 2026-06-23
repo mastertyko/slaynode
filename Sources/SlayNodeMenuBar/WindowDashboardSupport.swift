@@ -289,7 +289,7 @@ func runtimeActionAccessibilityLabel(
     case .copyCommand:
         return "Copy redacted command for \(processTitle)"
     case .slay:
-        return "Slay \(processTitle)"
+        return "Stop process group for \(processTitle)"
     }
 }
 
