@@ -36,5 +36,7 @@ assert_ports "deno task dev -- --listen 127.0.0.1:8789" 8789
 assert_ports "PUBLIC_URL=\${PUBLIC_URL:-http://localhost:3000/app} pnpm dev" 3000
 assert_ports "WS_ENDPOINT=ws://127.0.0.1:9231/debug node server.js" 9231
 assert_ports "WS_ENDPOINT=ws://[::1]:9232/debug node server.js" 9232
+assert_ports "vite --hmr-port 24678 --server-port=5173" 5173 24678
+assert_ports "node server.js --debug-port=127.0.0.1:9230 --dev-server-port localhost:3000" 3000 9230
 
 echo "PASS: debug_port_detection"

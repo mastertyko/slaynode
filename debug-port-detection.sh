@@ -24,8 +24,8 @@ extract_ports() {
       while (/(?:^|\s)[A-Z_]*PORT=\$\{[^}:]+:=(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)\}(?:\D|$)/g) { print "$1\n" }
       while (/(?:^|\s)[A-Z_]*PORT=\$\{[^}-]+-(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)\}(?:\D|$)/g) { print "$1\n" }
       while (/(?:^|\s)[A-Z_]*PORT=\$\{[^}=]+=(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)\}(?:\D|$)/g) { print "$1\n" }
-      while (/(?:--(?:port|http-port|https-port)\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
-      while (/(?:--(?:port|http-port|https-port)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
+      while (/(?:--(?:port|debug-port|dev-server-port|hmr-port|server-port|http-port|https-port)\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/(?:--(?:port|debug-port|dev-server-port|hmr-port|server-port|http-port|https-port)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
       while (/(?:--inspect-port\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:--inspect-port\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
       while (/(?:--(?:inspect|inspect-brk|inspect-wait)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
@@ -80,6 +80,8 @@ show_samples() {
     "node --inspect-wait=127.0.0.1:9330 app.js"
     "node --inspect-wait=::1 app.js"
     "next dev --hostname [::1] --port=3000"
+    "vite --hmr-port 24678 --server-port=5173"
+    "node server.js --debug-port=127.0.0.1:9230"
     "bun --hot server.ts --port 3002"
     "bun --watch --inspect-wait=127.0.0.1:9330 server.ts"
     "deno serve --listen 0.0.0.0:8787"
