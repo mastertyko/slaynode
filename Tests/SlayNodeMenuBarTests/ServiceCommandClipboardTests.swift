@@ -112,5 +112,15 @@ final class ServiceCommandClipboardTests: XCTestCase {
         XCTAssertTrue(copied.hasSuffix("--token"))
         XCTAssertFalse(copied.contains("--password *** 3000"))
     }
+
+    func testServiceCommandCopyTextRedactsURLValuesAfterSensitiveFlags() {
+        let copied = serviceCommandCopyText(
+            "node server.js --database-url postgres://demo:db-secret@localhost:5432/app --sentry-dsn https://public:dsn-secret@example.test/1"
+        )
+
+        XCTAssertFalse(copied.contains("db-secret"))
+        XCTAssertFalse(copied.contains("dsn-secret"))
+        XCTAssertEqual(copied, "node server.js --database-url *** --sentry-dsn ***")
+    }
 }
 #endif

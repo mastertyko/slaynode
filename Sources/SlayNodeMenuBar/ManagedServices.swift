@@ -74,7 +74,7 @@ enum ServiceSanitizer {
 
             if sensitiveFlagName(from: token) != nil {
                 redacted.append(token)
-                if index + 1 < tokens.count, !isLikelyArgumentBoundary(tokens[index + 1]) {
+                if index + 1 < tokens.count, !isFlagBoundary(tokens[index + 1]) {
                     redacted.append("***")
                     index += 2
                 } else {
@@ -146,6 +146,10 @@ enum ServiceSanitizer {
 
     private static func isLikelyArgumentBoundary(_ token: String) -> Bool {
         token.hasPrefix("-") || token.contains("://")
+    }
+
+    private static func isFlagBoundary(_ token: String) -> Bool {
+        token.hasPrefix("-")
     }
 
     private static let authorizationSchemeHeaders: Set<String> = [
