@@ -228,7 +228,7 @@ enum CommandParser {
 
     private static func isPortFlag(_ token: String) -> Bool {
         let normalized = token.lowercased()
-        return [
+        if [
             "--port",
             "-p",
             "--inspect",
@@ -247,7 +247,11 @@ enum CommandParser {
             "--address",
             "--bind",
             "--socket"
-        ].contains(normalized)
+        ].contains(normalized) {
+            return true
+        }
+
+        return normalized.hasPrefix("--") && normalized.hasSuffix("-port")
     }
 
     private static func isDefaultInspectFlag(_ token: String) -> Bool {
@@ -285,6 +289,7 @@ enum CommandParser {
             #"^--?(?:port|p)=(.+)$"#,
             #"^--?(?:inspect|inspect-brk|inspect-wait|inspect-port)=(.+)$"#,
             #"^--?(?:debug-port|dev-server-port|hmr-port|server-port)=(.+)$"#,
+            #"^--?[A-Za-z0-9][A-Za-z0-9-]*-port=(.+)$"#,
             #"^--?(?:listen|listen-address|addr|address|bind|socket)=(.+)$"#,
             #"^-p(\d+)$"#
         ]
