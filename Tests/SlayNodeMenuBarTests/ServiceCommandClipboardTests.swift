@@ -40,6 +40,17 @@ final class ServiceCommandClipboardTests: XCTestCase {
         XCTAssertTrue(copied.contains("trace-123"))
     }
 
+    func testServiceCommandCopyTextRedactsAuthorizationSchemeWithoutSpaceAfterColon() {
+        let copied = serviceCommandCopyText(
+            "curl --header Authorization:Bearer bearer-secret --header Proxy-Authorization:Basic proxy-secret https://example.test"
+        )
+
+        XCTAssertFalse(copied.contains("bearer-secret"))
+        XCTAssertFalse(copied.contains("proxy-secret"))
+        XCTAssertTrue(copied.contains("Authorization: ***"))
+        XCTAssertTrue(copied.contains("Proxy-Authorization: ***"))
+    }
+
     func testServiceCommandCopyTextRedactsSplitCookieApiKeyAndProxyHeaders() {
         let copied = serviceCommandCopyText(
             "curl --header Cookie: sid=abc123 --header Set-Cookie: refresh=xyz --header X-Api-Key: top-secret --header Proxy-Authorization: Basic proxy-secret --header X-Trace: trace-123 https://example.test"

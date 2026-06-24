@@ -59,12 +59,19 @@ enum ServiceSanitizer {
 
             if let header = redactSensitiveHeader(token) {
                 redacted.append(header)
-                if token.hasSuffix(":"), index + 1 < tokens.count {
-                    let headerName = String(token.dropLast())
-                    if consumesAuthorizationSchemeValue(headerName: headerName, tokens: tokens, valueStartIndex: index + 1) {
+                if let headerParts = sensitiveHeaderParts(from: token) {
+                    if headerParts.value.isEmpty,
+                       index + 1 < tokens.count,
+                       consumesAuthorizationSchemeValue(headerName: headerParts.name, tokens: tokens, valueStartIndex: index + 1) {
                         index += 3
-                    } else {
+                    } else if headerParts.value.isEmpty, index + 1 < tokens.count {
                         index += 2
+                    } else if isAuthorizationSchemeValue(headerName: headerParts.name, value: headerParts.value),
+                              index + 1 < tokens.count,
+                              !isLikelyArgumentBoundary(tokens[index + 1]) {
+                        index += 2
+                    } else {
+                        index += 1
                     }
                 } else {
                     index += 1
@@ -116,13 +123,20 @@ enum ServiceSanitizer {
     }
 
     private static func redactSensitiveHeader(_ token: String) -> String? {
+        guard let parts = sensitiveHeaderParts(from: token) else { return nil }
+        return "\(parts.name): ***"
+    }
+
+    private static func sensitiveHeaderParts(from token: String) -> (name: String, value: String)? {
         guard let separator = token.firstIndex(of: ":") else { return nil }
 
         let headerName = String(token[..<separator])
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard sensitiveFlagName(from: headerName) != nil else { return nil }
 
-        return "\(headerName): ***"
+        let valueStart = token.index(after: separator)
+        let value = String(token[valueStart...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        return (headerName, value)
     }
 
     private static func consumesAuthorizationSchemeValue(
@@ -142,6 +156,15 @@ enum ServiceSanitizer {
         }
 
         return !isLikelyArgumentBoundary(tokens[valueStartIndex + 1])
+    }
+
+    private static func isAuthorizationSchemeValue(headerName: String, value: String) -> Bool {
+        guard let normalizedHeader = sensitiveFlagName(from: headerName),
+              authorizationSchemeHeaders.contains(normalizedHeader) else {
+            return false
+        }
+
+        return authorizationSchemeTokens.contains(value.lowercased())
     }
 
     private static func isLikelyArgumentBoundary(_ token: String) -> Bool {
