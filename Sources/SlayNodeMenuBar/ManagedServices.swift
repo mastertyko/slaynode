@@ -74,7 +74,7 @@ enum ServiceSanitizer {
 
             if sensitiveFlagName(from: token) != nil {
                 redacted.append(token)
-                if index + 1 < tokens.count {
+                if index + 1 < tokens.count, !isLikelyArgumentBoundary(tokens[index + 1]) {
                     redacted.append("***")
                     index += 2
                 } else {

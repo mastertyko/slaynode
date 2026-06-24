@@ -102,5 +102,15 @@ final class ServiceCommandClipboardTests: XCTestCase {
         XCTAssertTrue(copied.contains("GOOGLE_APPLICATION_CREDENTIALS=***"))
         XCTAssertTrue(copied.contains("--secret-key ***"))
     }
+
+    func testServiceCommandCopyTextDoesNotConsumeNextFlagWhenSecretValueIsMissing() {
+        let copied = serviceCommandCopyText(
+            "node server.js --password --port 3000 --token"
+        )
+
+        XCTAssertTrue(copied.contains("--password --port 3000"))
+        XCTAssertTrue(copied.hasSuffix("--token"))
+        XCTAssertFalse(copied.contains("--password *** 3000"))
+    }
 }
 #endif
