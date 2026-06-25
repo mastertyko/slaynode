@@ -150,7 +150,7 @@ enum ProcessClassifier {
             return script
         }
 
-        let commonManagers = Set(["npm", "pnpm", "pnpx", "yarn", "yarnx", "bun", "bunx"])
+        let commonManagers = Set(["npm", "npx", "pnpm", "pnpx", "yarn", "yarnx", "bun", "bunx"])
         if commonManagers.contains(first), !command.hasPrefix("-") {
             return arguments[commandIndex]
         }
