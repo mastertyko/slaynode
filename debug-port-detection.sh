@@ -34,6 +34,7 @@ extract_ports() {
       while (/(?:--(?:inspect|inspect-brk|inspect-wait)\s*=?\s*(?:[^:\s]+:))([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:--(?:inspect|inspect-brk|inspect-wait)\s*=?\s*)(?:\[[^\]]+\]|localhost|0\.0\.0\.0|127(?:\.\d{1,3}){3}|::1)(?=[\s,;]|$)/g) { print "9229\n" }
       while (/(?:--(?:listen|listen-address|addr|address|bind|socket)\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/(?:--(?:listen|listen-address|addr|address|bind|socket)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
       while (/(?:[A-Za-z][A-Za-z0-9+.-]*:\/\/\[[^\]]+\]:)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:[A-Za-z][A-Za-z0-9+.-]*:\/\/[^:\s]+:)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0):([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
@@ -88,6 +89,7 @@ show_samples() {
     "bun --hot server.ts --port 3002"
     "bun --watch --inspect-wait=127.0.0.1:9330 server.ts"
     "deno serve --listen 0.0.0.0:8787"
+    "deno serve --listen 8790 --addr=8791"
     "PORT=8788 deno task dev"
     "deno task dev -- --listen 127.0.0.1:8789"
     "java -Dserver.port=8080 -Dmanagement.server.port=127.0.0.1:9001 -jar app.jar"
