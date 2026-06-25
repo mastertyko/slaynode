@@ -219,7 +219,7 @@ enum ServiceSanitizer {
                 return String(pair)
             }
 
-            if sensitiveFlagName(from: String(key)) != nil {
+            if isSensitiveURLParameterKey(String(key)) {
                 return "\(key)=***"
             }
 
@@ -242,7 +242,7 @@ enum ServiceSanitizer {
                 return String(pair)
             }
 
-            if sensitiveFlagName(from: String(key)) != nil {
+            if isSensitiveURLParameterKey(String(key)) {
                 return "\(key)=***"
             }
 
@@ -250,6 +250,18 @@ enum ServiceSanitizer {
         }
 
         return "\(prefix)\(pairs.joined(separator: "&"))"
+    }
+
+    private static func isSensitiveURLParameterKey(_ key: String) -> Bool {
+        if sensitiveFlagName(from: key) != nil {
+            return true
+        }
+
+        guard let decoded = key.removingPercentEncoding, decoded != key else {
+            return false
+        }
+
+        return sensitiveFlagName(from: decoded) != nil
     }
 }
 
