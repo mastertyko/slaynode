@@ -24,6 +24,8 @@ extract_ports() {
       while (/(?:^|\s)[A-Z_]*PORT=\$\{[^}:]+:=(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)\}(?:\D|$)/g) { print "$1\n" }
       while (/(?:^|\s)[A-Z_]*PORT=\$\{[^}-]+-(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)\}(?:\D|$)/g) { print "$1\n" }
       while (/(?:^|\s)[A-Z_]*PORT=\$\{[^}=]+=(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)\}(?:\D|$)/g) { print "$1\n" }
+      while (/(?:^|\s)-D[A-Za-z0-9_.-]*[._-]port=(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)(?:\D|$)/gi) { print "$1\n" }
+      while (/(?:^|\s)-D[A-Za-z0-9_.-]*[._-]port=(?:[^:\s]+|\[[^\]]+\]):([0-9]{1,5})(?:\D|$)/gi) { print "$1\n" }
       while (/(?:--(?:port|[A-Za-z0-9][A-Za-z0-9-]*-port)\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:--(?:port|[A-Za-z0-9][A-Za-z0-9-]*-port)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
       while (/(?:--inspect-port\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
@@ -88,6 +90,7 @@ show_samples() {
     "deno serve --listen 0.0.0.0:8787"
     "PORT=8788 deno task dev"
     "deno task dev -- --listen 127.0.0.1:8789"
+    "java -Dserver.port=8080 -Dmanagement.server.port=127.0.0.1:9001 -jar app.jar"
   )
 
   echo "=== Sample command extraction ==="
