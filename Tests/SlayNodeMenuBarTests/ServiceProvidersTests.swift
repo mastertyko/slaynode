@@ -66,6 +66,15 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(redacted, "OPENAI_API_KEY=*** ANTHROPIC_API_KEY=*** npm run dev")
     }
 
+    func testSanitizerRedactsSecretKeyBaseValues() {
+        let command = "SECRET_KEY_BASE=rails-secret rails server --secret-key-base local-secret"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("rails-secret"))
+        XCTAssertFalse(redacted.contains("local-secret"))
+        XCTAssertEqual(redacted, "SECRET_KEY_BASE=*** rails server --secret-key-base ***")
+    }
+
     func testSanitizerRedactsConnectionStringAssignments() {
         let command = "MONGODB_URL=mongodb://user:password@localhost/app --connection-string postgres://secret@localhost/app"
         let redacted = ServiceSanitizer.redactSecrets(in: command)

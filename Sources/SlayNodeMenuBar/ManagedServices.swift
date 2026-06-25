@@ -31,6 +31,7 @@ enum ServiceSanitizer {
         "refresh-token",
         "secret-access-key",
         "secret-key",
+        "secret-key-base",
         "redis-url",
         "secret",
         "sentry-dsn",
