@@ -209,6 +209,8 @@ enum ProcessClassifier {
         "-w",
         "--filter",
         "-f",
+        "--package",
+        "-p",
         "--config",
         "--userconfig",
         "--registry",

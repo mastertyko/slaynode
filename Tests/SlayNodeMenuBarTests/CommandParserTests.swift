@@ -618,6 +618,22 @@ extension CommandParserTests {
         XCTAssertEqual(registryDescriptor.script, "vite")
     }
 
+    func testPackageManagerWrapperSkipsPackageOptionBeforeBinary() {
+        let tokens = ["npx", "--package", "vite", "vite", "--port", "5173"]
+        let context = CommandParser.makeContext(
+            executable: tokens[0],
+            tokens: tokens,
+            workingDirectory: "/Users/test/app"
+        )
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.packageManager, "npm")
+        XCTAssertEqual(descriptor.displayName, "Vite")
+        XCTAssertEqual(descriptor.script, "vite")
+        XCTAssertEqual(ports, [5173])
+    }
+
     func testPackageManagerWrapperParsesNpmPrefixExecViteCommand() {
         let tokens = ["npm", "--prefix", "app", "exec", "vite", "--", "--host", "127.0.0.1", "--port", "5173"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
