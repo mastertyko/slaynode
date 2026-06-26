@@ -115,6 +115,15 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertEqual(redacted, "MONGODB_URL=*** --connection-string ***")
     }
 
+    func testSanitizerRedactsWebhookURLValues() {
+        let command = "WEBHOOK_URL=https://hooks.example.test/services/T000/B000/secret node server.js --slack-webhook-url https://hooks.example.test/services/T111/B111/also-secret"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("secret"))
+        XCTAssertFalse(redacted.contains("hooks.example.test"))
+        XCTAssertEqual(redacted, "WEBHOOK_URL=*** node server.js --slack-webhook-url ***")
+    }
+
     func testSanitizerRedactsAuthorizationHeaders() {
         let command = "node server.js --header 'Authorization: Bearer secret-token' --header 'X-Safe: value'"
         let redacted = ServiceSanitizer.redactSecrets(in: command)

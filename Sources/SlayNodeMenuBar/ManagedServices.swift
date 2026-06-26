@@ -37,7 +37,8 @@ enum ServiceSanitizer {
         "secret",
         "sentry-dsn",
         "session-token",
-        "token"
+        "token",
+        "webhook-url"
     ]
 
     static func redactSecrets(in value: String) -> String {
