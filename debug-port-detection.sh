@@ -28,6 +28,9 @@ extract_ports() {
       while (/(?:^|\s)-D[A-Za-z0-9_.-]*[._-]port=(?:[^:\s]+|\[[^\]]+\]):([0-9]{1,5})(?:\D|$)/gi) { print "$1\n" }
       while (/(?:--(?:port|[A-Za-z0-9][A-Za-z0-9-]*-port)\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:--(?:port|[A-Za-z0-9][A-Za-z0-9-]*-port)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
+      while (/(?:^|\s)-p\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/(?:^|\s)-p\s*=?\s*([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
+      while (/(?:^|\s)-p([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
       while (/(?:--inspect-port\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:--inspect-port\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
       while (/(?:--(?:inspect|inspect-brk|inspect-wait)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
@@ -66,6 +69,8 @@ show_live_processes() {
 show_samples() {
   local samples=(
     "npm run dev -- --port 3001"
+    "rails server -p 3003"
+    "puma -p3004"
     "node server.js --port 8080"
     "vite --port 5173 --host 0.0.0.0"
     "PORT=4173 npm run preview"
