@@ -20,6 +20,7 @@ enum ServiceSanitizer {
         "db-url",
         "dsn",
         "id-token",
+        "jwt",
         "mongo-uri",
         "mongo-url",
         "mongodb-uri",
@@ -35,6 +36,7 @@ enum ServiceSanitizer {
         "redis-url",
         "secret",
         "sentry-dsn",
+        "session-token",
         "token"
     ]
 

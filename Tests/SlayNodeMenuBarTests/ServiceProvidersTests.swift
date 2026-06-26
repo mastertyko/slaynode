@@ -40,6 +40,26 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertTrue(redacted.contains("state=ok"))
     }
 
+    func testSanitizerRedactsJWTAndSessionTokenParameters() {
+        let command = "node server.js https://example.test/callback?jwt=query-secret#session_token=fragment-secret&state=ok"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("query-secret"))
+        XCTAssertFalse(redacted.contains("fragment-secret"))
+        XCTAssertTrue(redacted.contains("jwt=***"))
+        XCTAssertTrue(redacted.contains("session_token=***"))
+        XCTAssertTrue(redacted.contains("state=ok"))
+    }
+
+    func testSanitizerRedactsJWTAndSessionTokenFlags() {
+        let command = "node server.js --jwt signed-token --session-token session-secret"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("signed-token"))
+        XCTAssertFalse(redacted.contains("session-secret"))
+        XCTAssertEqual(redacted, "node server.js --jwt *** --session-token ***")
+    }
+
     func testSanitizerRedactsPercentEncodedSecretParameterKeys() {
         let command = "node server.js https://example.test/callback?api%5Fkey=query-secret#access%5Ftoken=fragment-secret&state=ok"
         let redacted = ServiceSanitizer.redactSecrets(in: command)
