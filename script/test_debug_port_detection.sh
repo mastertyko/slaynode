@@ -17,6 +17,14 @@ assert_contains() {
   fi
 }
 
+assert_not_contains() {
+  local haystack="$1"
+  local needle="$2"
+  if [[ "${haystack}" == *"${needle}"* ]]; then
+    fail "expected output not to contain '${needle}'"
+  fi
+}
+
 assert_ports() {
   local command="$1"
   shift
@@ -29,11 +37,22 @@ assert_ports() {
   done
 }
 
+assert_no_ports() {
+  local command="$1"
+
+  local output
+  output="$("${ROOT_DIR}/debug-port-detection.sh" --command "${command}")"
+  assert_contains "${output}" "  (inga port-träffar)"
+  assert_not_contains "${output}" "  :"
+}
+
 assert_ports "bun --hot server.ts --port 3002" 3002
 assert_ports "rails server -p 3003" 3003
 assert_ports "puma -p3004" 3004
 assert_ports "bun --watch --inspect-wait=127.0.0.1:9330 server.ts" 9330
 assert_ports "PORT=8788 deno task dev" 8788
+assert_ports "web_port=5174 npm run dev" 5174
+assert_no_ports "REPORT=1234 npm run dev"
 assert_ports "deno task dev -- --listen 127.0.0.1:8789" 8789
 assert_ports "PUBLIC_URL=\${PUBLIC_URL:-http://localhost:3000/app} pnpm dev" 3000
 assert_ports "WS_ENDPOINT=ws://127.0.0.1:9231/debug node server.js" 9231
