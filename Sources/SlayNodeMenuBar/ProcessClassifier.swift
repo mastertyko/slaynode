@@ -240,6 +240,9 @@ enum ProcessClassifier {
         if context.lowercasedTokens.contains(where: { tokenMatchesCommand($0, names: ["node", "nodejs"]) }) {
             return "Node.js"
         }
+        if context.lowercasedTokens.contains(where: { tokenMatchesCommand($0, names: ["ruby", "bundle", "rails", "puma"]) }) {
+            return "Ruby"
+        }
         return nil
     }
 
@@ -288,6 +291,7 @@ enum ProcessClassifier {
         case nx
         case tsx
         case nodemon
+        case rails
         case deno
         case bunServe
 
@@ -318,6 +322,7 @@ enum ProcessClassifier {
             case .nx: return "Nx"
             case .tsx: return "TSX"
             case .nodemon: return "Nodemon"
+            case .rails: return "Rails"
             case .deno: return "Deno"
             case .bunServe: return "Bun"
             }
@@ -327,6 +332,7 @@ enum ProcessClassifier {
             switch self {
             case .deno: return "Deno"
             case .bunServe: return "Bun"
+            case .rails: return "Ruby"
             default: return "Node.js"
             }
         }
@@ -341,7 +347,7 @@ enum ProcessClassifier {
                 return .componentWorkbench
             case .expo, .reactNative:
                 return .mobile
-            case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro:
+            case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails:
                 return .backend
             case .tanstackStart:
                 return .webFramework
@@ -364,9 +370,9 @@ enum ProcessClassifier {
 
         var detailsBuilder: (([String]) -> String?)? {
             switch self {
-            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular, .tanstackStart, .nitro:
+            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular, .tanstackStart, .nitro, .rails:
                 return { tokens in
-                    let modes = ["dev", "start", "serve", "preview", "build"]
+                    let modes = ["dev", "start", "serve", "server", "preview", "build"]
                     let normalized = ProcessClassifier.normalizedLifecycleTokens(from: tokens)
                     guard let mode = normalized.first(where: { modes.contains($0) }) else { return nil }
                     return "Mode: \(mode.uppercased())"
@@ -410,6 +416,7 @@ enum ProcessClassifier {
             case .nx: return []
             case .tsx: return [3000, 4000]
             case .nodemon: return [3000, 4000]
+            case .rails: return [3000]
             case .deno: return [8000]
             case .bunServe: return [3000]
             }
@@ -451,6 +458,10 @@ enum ProcessClassifier {
         (.nx, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["nx"]) } }),
         (.tsx, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["tsx"]) } }),
         (.nodemon, { tokens in tokens.contains { $0.contains("nodemon") } }),
+        (.rails, { tokens in
+            tokens.contains { tokenMatchesCommand($0, names: ["rails"]) } &&
+                tokens.contains { tokenMatchesCommand($0, names: ["server", "s"]) }
+        }),
         (.deno, { tokens in tokens.contains { $0.contains("deno") } }),
         (.bunServe, { tokens in
             let bunToken = tokens.contains { $0 == "bun" || $0.contains("bunx") }
@@ -474,6 +485,7 @@ enum ProcessClassifier {
             return [3000]
         }
         if lowered.contains("adonis") { return [3333] }
+        if lowered.contains("rails") { return [3000] }
         if lowered.contains("react-scripts") { return [3000] }
         if lowered.contains("astro") { return [4321] }
         if lowered.contains("nuxt") { return [3000] }

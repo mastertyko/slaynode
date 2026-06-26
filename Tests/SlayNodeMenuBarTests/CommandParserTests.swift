@@ -898,6 +898,20 @@ extension CommandParserTests {
         XCTAssertEqual(descriptor.portHints, [3333])
     }
 
+    func testRailsServerCommandIsDetectedAsBackend() {
+        let tokens = ["bundle", "exec", "rails", "server", "-p", "3003"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Rails")
+        XCTAssertEqual(descriptor.runtime, "Ruby")
+        XCTAssertEqual(descriptor.category, .backend)
+        XCTAssertEqual(descriptor.details, "Mode: SERVER")
+        XCTAssertEqual(descriptor.portHints, [3000])
+        XCTAssertEqual(ports, [3003])
+    }
+
     func testNitroCommandIsDetectedAsBackend() {
         let tokens = ["node", "node_modules/.bin/nitro", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
