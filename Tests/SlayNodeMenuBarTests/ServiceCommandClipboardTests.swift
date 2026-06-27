@@ -101,6 +101,18 @@ final class ServiceCommandClipboardTests: XCTestCase {
         XCTAssertTrue(copied.contains("tab=home"))
     }
 
+    func testServiceCommandCopyTextRedactsOAuthVerifierParameters() {
+        let copied = serviceCommandCopyText(
+            "node server.js 'https://example.test/oauth?client_assertion=query-secret#code_verifier=fragment-secret&tab=home'"
+        )
+
+        XCTAssertFalse(copied.contains("query-secret"))
+        XCTAssertFalse(copied.contains("fragment-secret"))
+        XCTAssertTrue(copied.contains("client_assertion=***"))
+        XCTAssertTrue(copied.contains("code_verifier=***"))
+        XCTAssertTrue(copied.contains("tab=home"))
+    }
+
     func testServiceCommandCopyTextRedactsCredentialEnvironmentNames() {
         let copied = serviceCommandCopyText(
             "AWS_SECRET_ACCESS_KEY=aws-secret GOOGLE_APPLICATION_CREDENTIALS=/tmp/creds.json npm run dev --secret-key local-secret"
