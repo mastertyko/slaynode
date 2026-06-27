@@ -49,6 +49,7 @@ assert_no_ports() {
 assert_ports "bun --hot server.ts --port 3002" 3002
 assert_ports "rails server -p 3003" 3003
 assert_ports "python manage.py runserver 8000" 8000
+assert_ports "python3 -m http.server 8080" 8080
 assert_ports "puma -p3004" 3004
 assert_ports "bun --watch --inspect-wait=127.0.0.1:9330 server.ts" 9330
 assert_ports "PORT=8788 deno task dev" 8788

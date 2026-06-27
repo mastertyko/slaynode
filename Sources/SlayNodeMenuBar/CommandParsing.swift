@@ -135,6 +135,12 @@ enum CommandParser {
             if isRunserverPortToken(token, previousToken: index > 0 ? tokens[index - 1] : nil),
                let port = extractPortCandidate(from: token) {
                 collected.insert(port)
+                continue
+            }
+
+            if isPythonHTTPServerPortToken(token, previousToken: index > 0 ? tokens[index - 1] : nil),
+               let port = extractPortCandidate(from: token) {
+                collected.insert(port)
             }
         }
 
@@ -549,6 +555,12 @@ enum CommandParser {
 
     private static func isRunserverPortToken(_ token: String, previousToken: String?) -> Bool {
         guard previousToken?.lowercased() == "runserver" else { return false }
+        let trimmed = token.trimmingCharacters(in: CharacterSet(charactersIn: ",;)"))
+        return trimmed.allSatisfy(\.isNumber)
+    }
+
+    private static func isPythonHTTPServerPortToken(_ token: String, previousToken: String?) -> Bool {
+        guard previousToken?.lowercased() == "http.server" else { return false }
         let trimmed = token.trimmingCharacters(in: CharacterSet(charactersIn: ",;)"))
         return trimmed.allSatisfy(\.isNumber)
     }
