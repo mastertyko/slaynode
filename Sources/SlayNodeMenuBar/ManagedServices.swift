@@ -25,6 +25,7 @@ enum ServiceSanitizer {
         "mongo-url",
         "mongodb-uri",
         "mongodb-url",
+        "pat",
         "password",
         "passwd",
         "private-key",

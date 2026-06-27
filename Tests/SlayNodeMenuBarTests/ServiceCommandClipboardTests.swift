@@ -114,6 +114,17 @@ final class ServiceCommandClipboardTests: XCTestCase {
         XCTAssertTrue(copied.contains("--secret-key ***"))
     }
 
+    func testServiceCommandCopyTextRedactsPersonalAccessTokens() {
+        let copied = serviceCommandCopyText(
+            "GITHUB_PAT=github-secret gh api repos/demo --pat cli-secret"
+        )
+
+        XCTAssertFalse(copied.contains("github-secret"))
+        XCTAssertFalse(copied.contains("cli-secret"))
+        XCTAssertTrue(copied.contains("GITHUB_PAT=***"))
+        XCTAssertTrue(copied.contains("--pat ***"))
+    }
+
     func testServiceCommandCopyTextDoesNotConsumeNextFlagWhenSecretValueIsMissing() {
         let copied = serviceCommandCopyText(
             "node server.js --password --port 3000 --token"
