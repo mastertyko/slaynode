@@ -40,6 +40,7 @@ extract_ports() {
       while (/(?:--(?:listen|listen-address|addr|address|bind|socket)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
       while (/(?:[A-Za-z][A-Za-z0-9+.-]*:\/\/\[[^\]]+\]:)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:[A-Za-z][A-Za-z0-9+.-]*:\/\/[^:\s]+:)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/(?:^|\s)runserver\s+([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0):([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/\[[^\]]+\]:([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/\*:([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
@@ -70,6 +71,7 @@ show_samples() {
   local samples=(
     "npm run dev -- --port 3001"
     "rails server -p 3003"
+    "python manage.py runserver 8000"
     "puma -p3004"
     "node server.js --port 8080"
     "vite --port 5173 --host 0.0.0.0"

@@ -129,6 +129,12 @@ enum CommandParser {
             if looksLikeHostPort(token),
                let port = extractTrailingPort(from: token) {
                 collected.insert(port)
+                continue
+            }
+
+            if isRunserverPortToken(token, previousToken: index > 0 ? tokens[index - 1] : nil),
+               let port = extractPortCandidate(from: token) {
+                collected.insert(port)
             }
         }
 
@@ -539,6 +545,12 @@ enum CommandParser {
             token.contains("://") ||
             looksLikeIPv4HostPort(token) ||
             looksLikeHostnamePort(token)
+    }
+
+    private static func isRunserverPortToken(_ token: String, previousToken: String?) -> Bool {
+        guard previousToken?.lowercased() == "runserver" else { return false }
+        let trimmed = token.trimmingCharacters(in: CharacterSet(charactersIn: ",;)"))
+        return trimmed.allSatisfy(\.isNumber)
     }
 
     private static func looksLikeIPv4HostPort(_ token: String) -> Bool {

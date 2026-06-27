@@ -357,6 +357,13 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [3000, 5173])
     }
 
+    func testInferPortsFromDjangoRunserverPortToken() {
+        let tokens = ["python", "manage.py", "runserver", "8000"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [8000])
+    }
+
     func testInferPortsFromWildcardHostToken() {
         let tokens = ["bun", "run", "dev", "--host", "*:4040"]
         let ports = CommandParser.inferPorts(from: tokens)
