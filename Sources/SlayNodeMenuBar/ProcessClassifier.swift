@@ -243,6 +243,10 @@ enum ProcessClassifier {
         if context.lowercasedTokens.contains(where: { tokenMatchesCommand($0, names: ["ruby", "bundle", "rails", "puma"]) }) {
             return "Ruby"
         }
+        if context.lowercasedTokens.contains(where: { tokenMatchesCommand($0, names: ["python", "python3", "django-admin", "flask"]) }) ||
+            context.lowercasedTokens.contains("manage.py") {
+            return "Python"
+        }
         return nil
     }
 
@@ -292,6 +296,8 @@ enum ProcessClassifier {
         case tsx
         case nodemon
         case rails
+        case django
+        case flask
         case deno
         case bunServe
 
@@ -323,6 +329,8 @@ enum ProcessClassifier {
             case .tsx: return "TSX"
             case .nodemon: return "Nodemon"
             case .rails: return "Rails"
+            case .django: return "Django"
+            case .flask: return "Flask"
             case .deno: return "Deno"
             case .bunServe: return "Bun"
             }
@@ -333,6 +341,7 @@ enum ProcessClassifier {
             case .deno: return "Deno"
             case .bunServe: return "Bun"
             case .rails: return "Ruby"
+            case .django, .flask: return "Python"
             default: return "Node.js"
             }
         }
@@ -347,7 +356,7 @@ enum ProcessClassifier {
                 return .componentWorkbench
             case .expo, .reactNative:
                 return .mobile
-            case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails:
+            case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails, .django, .flask:
                 return .backend
             case .tanstackStart:
                 return .webFramework
@@ -370,9 +379,9 @@ enum ProcessClassifier {
 
         var detailsBuilder: (([String]) -> String?)? {
             switch self {
-            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular, .tanstackStart, .nitro, .rails:
+            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular, .tanstackStart, .nitro, .rails, .django, .flask:
                 return { tokens in
-                    let modes = ["dev", "start", "serve", "server", "preview", "build"]
+                    let modes = ["dev", "start", "serve", "server", "preview", "build", "run", "runserver"]
                     let normalized = ProcessClassifier.normalizedLifecycleTokens(from: tokens)
                     guard let mode = normalized.first(where: { modes.contains($0) }) else { return nil }
                     return "Mode: \(mode.uppercased())"
@@ -417,6 +426,8 @@ enum ProcessClassifier {
             case .tsx: return [3000, 4000]
             case .nodemon: return [3000, 4000]
             case .rails: return [3000]
+            case .django: return [8000]
+            case .flask: return [5000]
             case .deno: return [8000]
             case .bunServe: return [3000]
             }
@@ -462,6 +473,15 @@ enum ProcessClassifier {
             tokens.contains { tokenMatchesCommand($0, names: ["rails"]) } &&
                 tokens.contains { tokenMatchesCommand($0, names: ["server", "s"]) }
         }),
+        (.django, { tokens in
+            (tokens.contains { tokenMatchesCommand($0, names: ["django-admin", "manage.py"]) } ||
+                tokens.contains("manage.py")) &&
+                tokens.contains { tokenMatchesCommand($0, names: ["runserver"]) }
+        }),
+        (.flask, { tokens in
+            tokens.contains { tokenMatchesCommand($0, names: ["flask"]) } &&
+                tokens.contains { tokenMatchesCommand($0, names: ["run"]) }
+        }),
         (.deno, { tokens in tokens.contains { $0.contains("deno") } }),
         (.bunServe, { tokens in
             let bunToken = tokens.contains { $0 == "bun" || $0.contains("bunx") }
@@ -486,6 +506,8 @@ enum ProcessClassifier {
         }
         if lowered.contains("adonis") { return [3333] }
         if lowered.contains("rails") { return [3000] }
+        if lowered.contains("django") || lowered.contains("manage.py") { return [8000] }
+        if lowered.contains("flask") { return [5000] }
         if lowered.contains("react-scripts") { return [3000] }
         if lowered.contains("astro") { return [4321] }
         if lowered.contains("nuxt") { return [3000] }

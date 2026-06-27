@@ -750,6 +750,34 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [8080])
     }
 
+    func testDjangoRunserverCommandIsClassified() {
+        let tokens = ["python", "manage.py", "runserver", "8000"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Django")
+        XCTAssertEqual(descriptor.runtime, "Python")
+        XCTAssertEqual(descriptor.category, .backend)
+        XCTAssertEqual(descriptor.details, "Mode: RUNSERVER")
+        XCTAssertEqual(descriptor.portHints, [8000])
+        XCTAssertEqual(ports, [8000])
+    }
+
+    func testFlaskRunCommandIsClassified() {
+        let tokens = ["flask", "run", "--host", "0.0.0.0", "--port", "5001"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Flask")
+        XCTAssertEqual(descriptor.runtime, "Python")
+        XCTAssertEqual(descriptor.category, .backend)
+        XCTAssertEqual(descriptor.details, "Mode: RUN")
+        XCTAssertEqual(descriptor.portHints, [5000])
+        XCTAssertEqual(ports, [5001])
+    }
+
     func testYarnWorkspaceScriptNameIsParsed() {
         let tokens = ["yarn", "workspace", "web", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
