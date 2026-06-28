@@ -785,6 +785,19 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [5001])
     }
 
+    func testUvicornCommandIsClassified() {
+        let tokens = ["python", "-m", "uvicorn", "app.main:app", "--reload", "--port", "8001"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Uvicorn")
+        XCTAssertEqual(descriptor.runtime, "Python")
+        XCTAssertEqual(descriptor.category, .backend)
+        XCTAssertEqual(descriptor.portHints, [8000])
+        XCTAssertEqual(ports, [8001])
+    }
+
     func testYarnWorkspaceScriptNameIsParsed() {
         let tokens = ["yarn", "workspace", "web", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
