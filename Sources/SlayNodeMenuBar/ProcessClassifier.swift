@@ -299,6 +299,7 @@ enum ProcessClassifier {
         case django
         case flask
         case uvicorn
+        case gunicorn
         case deno
         case bunServe
 
@@ -333,6 +334,7 @@ enum ProcessClassifier {
             case .django: return "Django"
             case .flask: return "Flask"
             case .uvicorn: return "Uvicorn"
+            case .gunicorn: return "Gunicorn"
             case .deno: return "Deno"
             case .bunServe: return "Bun"
             }
@@ -343,7 +345,7 @@ enum ProcessClassifier {
             case .deno: return "Deno"
             case .bunServe: return "Bun"
             case .rails: return "Ruby"
-            case .django, .flask, .uvicorn: return "Python"
+            case .django, .flask, .uvicorn, .gunicorn: return "Python"
             default: return "Node.js"
             }
         }
@@ -358,7 +360,7 @@ enum ProcessClassifier {
                 return .componentWorkbench
             case .expo, .reactNative:
                 return .mobile
-            case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails, .django, .flask, .uvicorn:
+            case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails, .django, .flask, .uvicorn, .gunicorn:
                 return .backend
             case .tanstackStart:
                 return .webFramework
@@ -431,6 +433,7 @@ enum ProcessClassifier {
             case .django: return [8000]
             case .flask: return [5000]
             case .uvicorn: return [8000]
+            case .gunicorn: return [8000]
             case .deno: return [8000]
             case .bunServe: return [3000]
             }
@@ -486,6 +489,7 @@ enum ProcessClassifier {
                 tokens.contains { tokenMatchesCommand($0, names: ["run"]) }
         }),
         (.uvicorn, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["uvicorn"]) } }),
+        (.gunicorn, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["gunicorn"]) } }),
         (.deno, { tokens in tokens.contains { $0.contains("deno") } }),
         (.bunServe, { tokens in
             let bunToken = tokens.contains { $0 == "bun" || $0.contains("bunx") }
