@@ -66,6 +66,21 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertTrue(redacted.contains("state=ok"))
     }
 
+    func testSanitizerRedactsPrivateTokenValues() {
+        let command = "GITLAB_PRIVATE_TOKEN=env-secret glab api projects --private-token flag-secret https://gitlab.example.test/api?private_token=query-secret#private-token=fragment-secret&state=ok"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("env-secret"))
+        XCTAssertFalse(redacted.contains("flag-secret"))
+        XCTAssertFalse(redacted.contains("query-secret"))
+        XCTAssertFalse(redacted.contains("fragment-secret"))
+        XCTAssertTrue(redacted.contains("GITLAB_PRIVATE_TOKEN=***"))
+        XCTAssertTrue(redacted.contains("--private-token ***"))
+        XCTAssertTrue(redacted.contains("private_token=***"))
+        XCTAssertTrue(redacted.contains("private-token=***"))
+        XCTAssertTrue(redacted.contains("state=ok"))
+    }
+
     func testSanitizerRedactsJWTAndSessionTokenFlags() {
         let command = "node server.js --jwt signed-token --session-token session-secret"
         let redacted = ServiceSanitizer.redactSecrets(in: command)

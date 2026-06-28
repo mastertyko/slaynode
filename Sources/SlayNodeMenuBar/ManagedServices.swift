@@ -32,6 +32,7 @@ enum ServiceSanitizer {
         "password",
         "passwd",
         "private-key",
+        "private-token",
         "proxy-authorization",
         "refresh-token",
         "secret-access-key",
