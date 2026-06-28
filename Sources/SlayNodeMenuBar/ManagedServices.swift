@@ -14,6 +14,7 @@ enum ServiceSanitizer {
         "client-secret",
         "credential",
         "credentials",
+        "csrf-token",
         "cookie",
         "connection-string",
         "database-uri",

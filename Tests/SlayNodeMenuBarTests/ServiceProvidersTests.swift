@@ -51,6 +51,21 @@ final class ServiceProvidersTests: XCTestCase {
         XCTAssertTrue(redacted.contains("state=ok"))
     }
 
+    func testSanitizerRedactsCSRFTokenValues() {
+        let command = "CSRF_TOKEN=env-secret node server.js --csrf-token flag-secret https://example.test/callback?csrf_token=query-secret#csrf-token=fragment-secret&state=ok"
+        let redacted = ServiceSanitizer.redactSecrets(in: command)
+
+        XCTAssertFalse(redacted.contains("env-secret"))
+        XCTAssertFalse(redacted.contains("flag-secret"))
+        XCTAssertFalse(redacted.contains("query-secret"))
+        XCTAssertFalse(redacted.contains("fragment-secret"))
+        XCTAssertTrue(redacted.contains("CSRF_TOKEN=***"))
+        XCTAssertTrue(redacted.contains("--csrf-token ***"))
+        XCTAssertTrue(redacted.contains("csrf_token=***"))
+        XCTAssertTrue(redacted.contains("csrf-token=***"))
+        XCTAssertTrue(redacted.contains("state=ok"))
+    }
+
     func testSanitizerRedactsJWTAndSessionTokenFlags() {
         let command = "node server.js --jwt signed-token --session-token session-secret"
         let redacted = ServiceSanitizer.redactSecrets(in: command)
