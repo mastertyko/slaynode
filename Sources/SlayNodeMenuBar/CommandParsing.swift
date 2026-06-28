@@ -138,7 +138,11 @@ enum CommandParser {
                 continue
             }
 
-            if isPythonHTTPServerPortToken(token, previousToken: index > 0 ? tokens[index - 1] : nil),
+            if isPythonHTTPServerPortToken(
+                token,
+                previousToken: index > 0 ? tokens[index - 1] : nil,
+                priorTokens: Array(tokens[..<index])
+            ),
                let port = extractPortCandidate(from: token) {
                 collected.insert(port)
             }
@@ -559,11 +563,20 @@ enum CommandParser {
         return trimmed.allSatisfy(\.isNumber)
     }
 
-    private static func isPythonHTTPServerPortToken(_ token: String, previousToken: String?) -> Bool {
-        guard previousToken?.lowercased() == "http.server" else { return false }
+    private static func isPythonHTTPServerPortToken(_ token: String, previousToken: String?, priorTokens: [String]) -> Bool {
+        guard priorTokens.contains(where: { $0.lowercased() == "http.server" }) else { return false }
+        guard previousToken.map({ !pythonHTTPServerValueOptions.contains($0.lowercased()) }) ?? true else { return false }
         let trimmed = token.trimmingCharacters(in: CharacterSet(charactersIn: ",;)"))
         return trimmed.allSatisfy(\.isNumber)
     }
+
+    private static let pythonHTTPServerValueOptions = Set([
+        "--bind",
+        "-b",
+        "--directory",
+        "-d",
+        "--protocol"
+    ])
 
     private static func looksLikeIPv4HostPort(_ token: String) -> Bool {
         guard let colonIndex = token.lastIndex(of: ":") else { return false }
