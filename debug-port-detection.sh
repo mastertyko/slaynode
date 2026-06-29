@@ -26,8 +26,8 @@ extract_ports() {
       while (/(?:^|\s)(?:[A-Za-z_][A-Za-z0-9_]*_)?PORT=\$\{[^}=]+=(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)\}(?:\D|$)/gi) { print "$1\n" }
       while (/(?:^|\s)-D[A-Za-z0-9_.-]*[._-]port=(?:[\x27"]?)([0-9]{1,5})(?:[\x27"]?)(?:\D|$)/gi) { print "$1\n" }
       while (/(?:^|\s)-D[A-Za-z0-9_.-]*[._-]port=(?:[^:\s]+|\[[^\]]+\]):([0-9]{1,5})(?:\D|$)/gi) { print "$1\n" }
-      while (/(?:--(?:port|[A-Za-z0-9][A-Za-z0-9-]*-port)\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
-      while (/(?:--(?:port|[A-Za-z0-9][A-Za-z0-9-]*-port)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
+      while (/(?:--(?:port|[A-Za-z0-9][A-Za-z0-9.-]*(?:-|[.])port)\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/(?:--(?:port|[A-Za-z0-9][A-Za-z0-9.-]*(?:-|[.])port)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
       while (/(?:^|\s)-p\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:^|\s)-p\s*=?\s*([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
       while (/(?:^|\s)-p([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
@@ -76,6 +76,7 @@ show_samples() {
     "python manage.py runserver 8000"
     "python3 -m http.server 8080"
     "python3 -m http.server --bind 127.0.0.1 --directory public 8081"
+    "streamlit run app.py --server.port 8502"
     "puma -p3004"
     "node server.js --port 8080"
     "vite --port 5173 --host 0.0.0.0"

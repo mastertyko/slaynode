@@ -300,6 +300,7 @@ enum ProcessClassifier {
         case flask
         case uvicorn
         case gunicorn
+        case streamlit
         case deno
         case bunServe
 
@@ -335,6 +336,7 @@ enum ProcessClassifier {
             case .flask: return "Flask"
             case .uvicorn: return "Uvicorn"
             case .gunicorn: return "Gunicorn"
+            case .streamlit: return "Streamlit"
             case .deno: return "Deno"
             case .bunServe: return "Bun"
             }
@@ -345,7 +347,7 @@ enum ProcessClassifier {
             case .deno: return "Deno"
             case .bunServe: return "Bun"
             case .rails: return "Ruby"
-            case .django, .flask, .uvicorn, .gunicorn: return "Python"
+            case .django, .flask, .uvicorn, .gunicorn, .streamlit: return "Python"
             default: return "Node.js"
             }
         }
@@ -362,7 +364,7 @@ enum ProcessClassifier {
                 return .mobile
             case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails, .django, .flask, .uvicorn, .gunicorn:
                 return .backend
-            case .tanstackStart:
+            case .tanstackStart, .streamlit:
                 return .webFramework
             case .turbo, .nx:
                 return .monorepo
@@ -383,7 +385,7 @@ enum ProcessClassifier {
 
         var detailsBuilder: (([String]) -> String?)? {
             switch self {
-            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular, .tanstackStart, .nitro, .rails, .django, .flask:
+            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular, .tanstackStart, .nitro, .rails, .django, .flask, .streamlit:
                 return { tokens in
                     let modes = ["dev", "start", "serve", "server", "preview", "build", "run", "runserver"]
                     let normalized = ProcessClassifier.normalizedLifecycleTokens(from: tokens)
@@ -434,6 +436,7 @@ enum ProcessClassifier {
             case .flask: return [5000]
             case .uvicorn: return [8000]
             case .gunicorn: return [8000]
+            case .streamlit: return [8501]
             case .deno: return [8000]
             case .bunServe: return [3000]
             }
@@ -490,6 +493,7 @@ enum ProcessClassifier {
         }),
         (.uvicorn, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["uvicorn"]) } }),
         (.gunicorn, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["gunicorn"]) } }),
+        (.streamlit, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["streamlit"]) } }),
         (.deno, { tokens in tokens.contains { $0.contains("deno") } }),
         (.bunServe, { tokens in
             let bunToken = tokens.contains { $0 == "bun" || $0.contains("bunx") }
@@ -516,6 +520,7 @@ enum ProcessClassifier {
         if lowered.contains("rails") { return [3000] }
         if lowered.contains("django") || lowered.contains("manage.py") { return [8000] }
         if lowered.contains("flask") { return [5000] }
+        if lowered.contains("streamlit") { return [8501] }
         if lowered.contains("react-scripts") { return [3000] }
         if lowered.contains("astro") { return [4321] }
         if lowered.contains("nuxt") { return [3000] }

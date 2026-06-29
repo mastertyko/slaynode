@@ -818,6 +818,20 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [8002])
     }
 
+    func testStreamlitCommandIsClassified() {
+        let tokens = ["streamlit", "run", "app.py", "--server.port", "8502"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Streamlit")
+        XCTAssertEqual(descriptor.runtime, "Python")
+        XCTAssertEqual(descriptor.category, .webFramework)
+        XCTAssertEqual(descriptor.details, "Mode: RUN")
+        XCTAssertEqual(descriptor.portHints, [8501])
+        XCTAssertEqual(ports, [8502])
+    }
+
     func testYarnWorkspaceScriptNameIsParsed() {
         let tokens = ["yarn", "workspace", "web", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
