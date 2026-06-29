@@ -55,6 +55,7 @@ assert_ports "streamlit run app.py --server.port 8502" 8502
 assert_ports "gradio app.py --server-port 7861" 7861
 assert_ports "hypercorn app:app --bind 127.0.0.1:8003" 8003
 assert_ports "waitress-serve --listen=0.0.0.0:8082 app:app" 8082
+assert_ports "jupyter lab --port 8890 --no-browser" 8890
 assert_ports "puma -p3004" 3004
 assert_ports "bun --watch --inspect-wait=127.0.0.1:9330 server.ts" 9330
 assert_ports "PORT=8788 deno task dev" 8788

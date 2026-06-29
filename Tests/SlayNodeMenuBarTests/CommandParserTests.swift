@@ -871,6 +871,20 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [8082])
     }
 
+    func testJupyterLabCommandIsClassified() {
+        let tokens = ["jupyter", "lab", "--port", "8890", "--no-browser"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Jupyter")
+        XCTAssertEqual(descriptor.runtime, "Python")
+        XCTAssertEqual(descriptor.category, .webFramework)
+        XCTAssertEqual(descriptor.details, "Mode: LAB")
+        XCTAssertEqual(descriptor.portHints, [8888])
+        XCTAssertEqual(ports, [8890])
+    }
+
     func testYarnWorkspaceScriptNameIsParsed() {
         let tokens = ["yarn", "workspace", "web", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")

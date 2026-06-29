@@ -304,6 +304,7 @@ enum ProcessClassifier {
         case gradio
         case hypercorn
         case waitress
+        case jupyter
         case deno
         case bunServe
 
@@ -343,6 +344,7 @@ enum ProcessClassifier {
             case .gradio: return "Gradio"
             case .hypercorn: return "Hypercorn"
             case .waitress: return "Waitress"
+            case .jupyter: return "Jupyter"
             case .deno: return "Deno"
             case .bunServe: return "Bun"
             }
@@ -353,7 +355,7 @@ enum ProcessClassifier {
             case .deno: return "Deno"
             case .bunServe: return "Bun"
             case .rails: return "Ruby"
-            case .django, .flask, .uvicorn, .gunicorn, .streamlit, .gradio, .hypercorn, .waitress: return "Python"
+            case .django, .flask, .uvicorn, .gunicorn, .streamlit, .gradio, .hypercorn, .waitress, .jupyter: return "Python"
             default: return "Node.js"
             }
         }
@@ -370,7 +372,7 @@ enum ProcessClassifier {
                 return .mobile
             case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails, .django, .flask, .uvicorn, .gunicorn, .hypercorn, .waitress:
                 return .backend
-            case .tanstackStart, .streamlit, .gradio:
+            case .tanstackStart, .streamlit, .gradio, .jupyter:
                 return .webFramework
             case .turbo, .nx:
                 return .monorepo
@@ -391,9 +393,9 @@ enum ProcessClassifier {
 
         var detailsBuilder: (([String]) -> String?)? {
             switch self {
-            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular, .tanstackStart, .nitro, .rails, .django, .flask, .streamlit, .gradio:
+            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular, .tanstackStart, .nitro, .rails, .django, .flask, .streamlit, .gradio, .jupyter:
                 return { tokens in
-                    let modes = ["dev", "start", "serve", "server", "preview", "build", "run", "runserver"]
+                    let modes = ["dev", "start", "serve", "server", "preview", "build", "run", "runserver", "lab", "notebook"]
                     let normalized = ProcessClassifier.normalizedLifecycleTokens(from: tokens)
                     guard let mode = normalized.first(where: { modes.contains($0) }) else { return nil }
                     return "Mode: \(mode.uppercased())"
@@ -446,6 +448,7 @@ enum ProcessClassifier {
             case .gradio: return [7860]
             case .hypercorn: return [8000]
             case .waitress: return [8080]
+            case .jupyter: return [8888]
             case .deno: return [8000]
             case .bunServe: return [3000]
             }
@@ -506,6 +509,10 @@ enum ProcessClassifier {
         (.gradio, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["gradio"]) } }),
         (.hypercorn, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["hypercorn"]) } }),
         (.waitress, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["waitress-serve"]) } }),
+        (.jupyter, { tokens in
+            tokens.contains { tokenMatchesCommand($0, names: ["jupyter"]) } &&
+                tokens.contains { tokenMatchesCommand($0, names: ["lab", "notebook", "server"]) }
+        }),
         (.deno, { tokens in tokens.contains { $0.contains("deno") } }),
         (.bunServe, { tokens in
             let bunToken = tokens.contains { $0 == "bun" || $0.contains("bunx") }
@@ -536,6 +543,7 @@ enum ProcessClassifier {
         if lowered.contains("gradio") { return [7860] }
         if lowered.contains("hypercorn") { return [8000] }
         if lowered.contains("waitress") { return [8080] }
+        if lowered.contains("jupyter") { return [8888] }
         if lowered.contains("react-scripts") { return [3000] }
         if lowered.contains("astro") { return [4321] }
         if lowered.contains("nuxt") { return [3000] }
