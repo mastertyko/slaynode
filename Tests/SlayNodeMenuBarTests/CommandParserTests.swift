@@ -832,6 +832,19 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [8502])
     }
 
+    func testGradioCommandIsClassified() {
+        let tokens = ["gradio", "app.py", "--server-port", "7861"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Gradio")
+        XCTAssertEqual(descriptor.runtime, "Python")
+        XCTAssertEqual(descriptor.category, .webFramework)
+        XCTAssertEqual(descriptor.portHints, [7860])
+        XCTAssertEqual(ports, [7861])
+    }
+
     func testYarnWorkspaceScriptNameIsParsed() {
         let tokens = ["yarn", "workspace", "web", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")

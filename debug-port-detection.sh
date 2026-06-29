@@ -77,6 +77,7 @@ show_samples() {
     "python3 -m http.server 8080"
     "python3 -m http.server --bind 127.0.0.1 --directory public 8081"
     "streamlit run app.py --server.port 8502"
+    "gradio app.py --server-port 7861"
     "puma -p3004"
     "node server.js --port 8080"
     "vite --port 5173 --host 0.0.0.0"
