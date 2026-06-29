@@ -303,6 +303,7 @@ enum ProcessClassifier {
         case streamlit
         case gradio
         case hypercorn
+        case waitress
         case deno
         case bunServe
 
@@ -341,6 +342,7 @@ enum ProcessClassifier {
             case .streamlit: return "Streamlit"
             case .gradio: return "Gradio"
             case .hypercorn: return "Hypercorn"
+            case .waitress: return "Waitress"
             case .deno: return "Deno"
             case .bunServe: return "Bun"
             }
@@ -351,7 +353,7 @@ enum ProcessClassifier {
             case .deno: return "Deno"
             case .bunServe: return "Bun"
             case .rails: return "Ruby"
-            case .django, .flask, .uvicorn, .gunicorn, .streamlit, .gradio, .hypercorn: return "Python"
+            case .django, .flask, .uvicorn, .gunicorn, .streamlit, .gradio, .hypercorn, .waitress: return "Python"
             default: return "Node.js"
             }
         }
@@ -366,7 +368,7 @@ enum ProcessClassifier {
                 return .componentWorkbench
             case .expo, .reactNative:
                 return .mobile
-            case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails, .django, .flask, .uvicorn, .gunicorn, .hypercorn:
+            case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails, .django, .flask, .uvicorn, .gunicorn, .hypercorn, .waitress:
                 return .backend
             case .tanstackStart, .streamlit, .gradio:
                 return .webFramework
@@ -443,6 +445,7 @@ enum ProcessClassifier {
             case .streamlit: return [8501]
             case .gradio: return [7860]
             case .hypercorn: return [8000]
+            case .waitress: return [8080]
             case .deno: return [8000]
             case .bunServe: return [3000]
             }
@@ -502,6 +505,7 @@ enum ProcessClassifier {
         (.streamlit, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["streamlit"]) } }),
         (.gradio, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["gradio"]) } }),
         (.hypercorn, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["hypercorn"]) } }),
+        (.waitress, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["waitress-serve"]) } }),
         (.deno, { tokens in tokens.contains { $0.contains("deno") } }),
         (.bunServe, { tokens in
             let bunToken = tokens.contains { $0 == "bun" || $0.contains("bunx") }
@@ -531,6 +535,7 @@ enum ProcessClassifier {
         if lowered.contains("streamlit") { return [8501] }
         if lowered.contains("gradio") { return [7860] }
         if lowered.contains("hypercorn") { return [8000] }
+        if lowered.contains("waitress") { return [8080] }
         if lowered.contains("react-scripts") { return [3000] }
         if lowered.contains("astro") { return [4321] }
         if lowered.contains("nuxt") { return [3000] }
