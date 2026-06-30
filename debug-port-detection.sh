@@ -82,6 +82,7 @@ show_samples() {
     "waitress-serve --listen=0.0.0.0:8082 app:app"
     "jupyter lab --port 8890 --no-browser"
     "fastapi dev main.py --host 0.0.0.0 --port 8004"
+    "sanic app.server --host 0.0.0.0 --port 8005"
     "puma -p3004"
     "node server.js --port 8080"
     "vite --port 5173 --host 0.0.0.0"

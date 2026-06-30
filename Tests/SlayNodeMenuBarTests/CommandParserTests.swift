@@ -730,6 +730,19 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [8004])
     }
 
+    func testSanicCommandIsClassifiedAsPythonBackend() {
+        let tokens = ["sanic", "app.server", "--host", "0.0.0.0", "--port", "8005"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Sanic")
+        XCTAssertEqual(descriptor.runtime, "Python")
+        XCTAssertEqual(descriptor.category, .backend)
+        XCTAssertEqual(descriptor.portHints, [8000])
+        XCTAssertEqual(ports, [8005])
+    }
+
     func testPackageManagerWrapperParsesBunWatchCommand() {
         let tokens = ["bun", "--watch", "src/server.ts", "--port", "4173"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")

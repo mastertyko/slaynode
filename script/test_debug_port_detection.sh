@@ -57,6 +57,7 @@ assert_ports "hypercorn app:app --bind 127.0.0.1:8003" 8003
 assert_ports "waitress-serve --listen=0.0.0.0:8082 app:app" 8082
 assert_ports "jupyter lab --port 8890 --no-browser" 8890
 assert_ports "fastapi dev main.py --host 0.0.0.0 --port 8004" 8004
+assert_ports "sanic app.server --host 0.0.0.0 --port 8005" 8005
 assert_ports "puma -p3004" 3004
 assert_ports "bun --watch --inspect-wait=127.0.0.1:9330 server.ts" 9330
 assert_ports "PORT=8788 deno task dev" 8788
