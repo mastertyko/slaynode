@@ -756,6 +756,20 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [8006])
     }
 
+    func testPanelServeCommandIsClassifiedAsPythonWebFramework() {
+        let tokens = ["panel", "serve", "dashboard.py", "--address", "0.0.0.0", "--port", "5007"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Panel")
+        XCTAssertEqual(descriptor.runtime, "Python")
+        XCTAssertEqual(descriptor.category, .webFramework)
+        XCTAssertEqual(descriptor.details, "Mode: SERVE")
+        XCTAssertEqual(descriptor.portHints, [5006])
+        XCTAssertEqual(ports, [5007])
+    }
+
     func testPackageManagerWrapperParsesBunWatchCommand() {
         let tokens = ["bun", "--watch", "src/server.ts", "--port", "4173"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")

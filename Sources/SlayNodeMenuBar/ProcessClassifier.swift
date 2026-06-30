@@ -303,6 +303,7 @@ enum ProcessClassifier {
         case fastapi
         case sanic
         case daphne
+        case panel
         case streamlit
         case gradio
         case hypercorn
@@ -346,6 +347,7 @@ enum ProcessClassifier {
             case .fastapi: return "FastAPI"
             case .sanic: return "Sanic"
             case .daphne: return "Daphne"
+            case .panel: return "Panel"
             case .streamlit: return "Streamlit"
             case .gradio: return "Gradio"
             case .hypercorn: return "Hypercorn"
@@ -361,7 +363,7 @@ enum ProcessClassifier {
             case .deno: return "Deno"
             case .bunServe: return "Bun"
             case .rails: return "Ruby"
-            case .django, .flask, .uvicorn, .gunicorn, .fastapi, .sanic, .daphne, .streamlit, .gradio, .hypercorn, .waitress, .jupyter: return "Python"
+            case .django, .flask, .uvicorn, .gunicorn, .fastapi, .sanic, .daphne, .panel, .streamlit, .gradio, .hypercorn, .waitress, .jupyter: return "Python"
             default: return "Node.js"
             }
         }
@@ -378,7 +380,7 @@ enum ProcessClassifier {
                 return .mobile
             case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails, .django, .flask, .uvicorn, .gunicorn, .fastapi, .sanic, .daphne, .hypercorn, .waitress:
                 return .backend
-            case .tanstackStart, .streamlit, .gradio, .jupyter:
+            case .tanstackStart, .panel, .streamlit, .gradio, .jupyter:
                 return .webFramework
             case .turbo, .nx:
                 return .monorepo
@@ -399,7 +401,7 @@ enum ProcessClassifier {
 
         var detailsBuilder: (([String]) -> String?)? {
             switch self {
-            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular, .tanstackStart, .nitro, .rails, .django, .flask, .fastapi, .sanic, .streamlit, .gradio, .jupyter:
+            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular, .tanstackStart, .nitro, .rails, .django, .flask, .fastapi, .sanic, .panel, .streamlit, .gradio, .jupyter:
                 return { tokens in
                     let modes = ["dev", "start", "serve", "server", "preview", "build", "run", "runserver", "lab", "notebook"]
                     let normalized = ProcessClassifier.normalizedLifecycleTokens(from: tokens)
@@ -453,6 +455,7 @@ enum ProcessClassifier {
             case .fastapi: return [8000]
             case .sanic: return [8000]
             case .daphne: return [8000]
+            case .panel: return [5006]
             case .streamlit: return [8501]
             case .gradio: return [7860]
             case .hypercorn: return [8000]
@@ -517,6 +520,10 @@ enum ProcessClassifier {
         (.fastapi, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["fastapi"]) } }),
         (.sanic, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["sanic"]) } }),
         (.daphne, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["daphne"]) } }),
+        (.panel, { tokens in
+            tokens.contains { tokenMatchesCommand($0, names: ["panel"]) } &&
+                tokens.contains { tokenMatchesCommand($0, names: ["serve"]) }
+        }),
         (.streamlit, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["streamlit"]) } }),
         (.gradio, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["gradio"]) } }),
         (.hypercorn, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["hypercorn"]) } }),
@@ -554,6 +561,7 @@ enum ProcessClassifier {
         if lowered.contains("fastapi") { return [8000] }
         if lowered.contains("sanic") { return [8000] }
         if lowered.contains("daphne") { return [8000] }
+        if lowered.contains("panel") { return [5006] }
         if lowered.contains("streamlit") { return [8501] }
         if lowered.contains("gradio") { return [7860] }
         if lowered.contains("hypercorn") { return [8000] }
