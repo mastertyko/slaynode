@@ -261,6 +261,7 @@ enum CommandParser {
             "--listen-address",
             "--addr",
             "--address",
+            "--dev-addr",
             "--bind",
             "--socket"
         ].contains(normalized) {
@@ -307,7 +308,7 @@ enum CommandParser {
             #"^--?(?:inspect|inspect-brk|inspect-wait|inspect-port)=(.+)$"#,
             #"^--?(?:debug-port|dev-server-port|hmr-port|server-port)=(.+)$"#,
             #"^--?[A-Za-z0-9][A-Za-z0-9.-]*(?:-|[.])port=(.+)$"#,
-            #"^--?(?:listen|listen-address|addr|address|bind|socket)=(.+)$"#,
+            #"^--?(?:listen|listen-address|addr|address|dev-addr|bind|socket)=(.+)$"#,
             #"^-p(\d+)$"#
         ]
 

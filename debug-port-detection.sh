@@ -36,8 +36,8 @@ extract_ports() {
       while (/(?:--(?:inspect|inspect-brk|inspect-wait)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
       while (/(?:--(?:inspect|inspect-brk|inspect-wait)\s*=?\s*(?:[^:\s]+:))([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:--(?:inspect|inspect-brk|inspect-wait)\s*=?\s*)(?:\[[^\]]+\]|localhost|0\.0\.0\.0|127(?:\.\d{1,3}){3}|::1)(?=[\s,;]|$)/g) { print "9229\n" }
-      while (/(?:--(?:listen|listen-address|addr|address|bind|socket)\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
-      while (/(?:--(?:listen|listen-address|addr|address|bind|socket)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
+      while (/(?:--(?:listen|listen-address|addr|address|dev-addr|bind|socket)\s*=?\s*(?:[^:\s]+|\[[^\]]+\]):)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
+      while (/(?:--(?:listen|listen-address|addr|address|dev-addr|bind|socket)\s*=?\s*)([0-9]{1,5})(?![.:])(?:\D|$)/g) { print "$1\n" }
       while (/(?:[A-Za-z][A-Za-z0-9+.-]*:\/\/\[[^\]]+\]:)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:[A-Za-z][A-Za-z0-9+.-]*:\/\/[^:\s]+:)([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
       while (/(?:^|\s)runserver\s+([0-9]{1,5})(?:\D|$)/g) { print "$1\n" }
@@ -85,6 +85,7 @@ show_samples() {
     "sanic app.server --host 0.0.0.0 --port 8005"
     "daphne -b 0.0.0.0 -p 8006 app.asgi:application"
     "panel serve dashboard.py --address 0.0.0.0 --port 5007"
+    "mkdocs serve --dev-addr 127.0.0.1:8008"
     "puma -p3004"
     "node server.js --port 8080"
     "vite --port 5173 --host 0.0.0.0"

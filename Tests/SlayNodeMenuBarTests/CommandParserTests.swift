@@ -283,6 +283,13 @@ final class CommandParserTests: XCTestCase {
         XCTAssertEqual(ports, [8000, 9000, 9100, 9200])
     }
 
+    func testInferPortsFromDevAddrFlag() {
+        let tokens = ["mkdocs", "serve", "--dev-addr", "127.0.0.1:8008"]
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(ports, [8008])
+    }
+
     func testInferPortsFromNamedDevServerPortFlags() {
         let tokens = [
             "vite",
@@ -768,6 +775,20 @@ extension CommandParserTests {
         XCTAssertEqual(descriptor.details, "Mode: SERVE")
         XCTAssertEqual(descriptor.portHints, [5006])
         XCTAssertEqual(ports, [5007])
+    }
+
+    func testMkDocsServeCommandIsClassifiedAsPythonWebFramework() {
+        let tokens = ["mkdocs", "serve", "--dev-addr", "127.0.0.1:8008"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "MkDocs")
+        XCTAssertEqual(descriptor.runtime, "Python")
+        XCTAssertEqual(descriptor.category, .webFramework)
+        XCTAssertEqual(descriptor.details, "Mode: SERVE")
+        XCTAssertEqual(descriptor.portHints, [8000])
+        XCTAssertEqual(ports, [8008])
     }
 
     func testPackageManagerWrapperParsesBunWatchCommand() {
