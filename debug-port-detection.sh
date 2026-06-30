@@ -83,6 +83,7 @@ show_samples() {
     "jupyter lab --port 8890 --no-browser"
     "fastapi dev main.py --host 0.0.0.0 --port 8004"
     "sanic app.server --host 0.0.0.0 --port 8005"
+    "daphne -b 0.0.0.0 -p 8006 app.asgi:application"
     "puma -p3004"
     "node server.js --port 8080"
     "vite --port 5173 --host 0.0.0.0"
