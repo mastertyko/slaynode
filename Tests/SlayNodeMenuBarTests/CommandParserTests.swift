@@ -716,6 +716,20 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [4173])
     }
 
+    func testFastAPICommandIsClassifiedAsPythonBackend() {
+        let tokens = ["fastapi", "dev", "main.py", "--host", "0.0.0.0", "--port", "8004"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "FastAPI")
+        XCTAssertEqual(descriptor.runtime, "Python")
+        XCTAssertEqual(descriptor.category, .backend)
+        XCTAssertEqual(descriptor.details, "Mode: DEV")
+        XCTAssertEqual(descriptor.portHints, [8000])
+        XCTAssertEqual(ports, [8004])
+    }
+
     func testPackageManagerWrapperParsesBunWatchCommand() {
         let tokens = ["bun", "--watch", "src/server.ts", "--port", "4173"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: "/Users/test/app")
