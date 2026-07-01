@@ -296,6 +296,7 @@ enum ProcessClassifier {
         case tsx
         case nodemon
         case rails
+        case puma
         case django
         case flask
         case uvicorn
@@ -341,6 +342,7 @@ enum ProcessClassifier {
             case .tsx: return "TSX"
             case .nodemon: return "Nodemon"
             case .rails: return "Rails"
+            case .puma: return "Puma"
             case .django: return "Django"
             case .flask: return "Flask"
             case .uvicorn: return "Uvicorn"
@@ -364,7 +366,7 @@ enum ProcessClassifier {
             switch self {
             case .deno: return "Deno"
             case .bunServe: return "Bun"
-            case .rails: return "Ruby"
+            case .rails, .puma: return "Ruby"
             case .django, .flask, .uvicorn, .gunicorn, .fastapi, .sanic, .daphne, .panel, .mkDocs, .streamlit, .gradio, .hypercorn, .waitress, .jupyter: return "Python"
             default: return "Node.js"
             }
@@ -380,7 +382,7 @@ enum ProcessClassifier {
                 return .componentWorkbench
             case .expo, .reactNative:
                 return .mobile
-            case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails, .django, .flask, .uvicorn, .gunicorn, .fastapi, .sanic, .daphne, .hypercorn, .waitress:
+            case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails, .puma, .django, .flask, .uvicorn, .gunicorn, .fastapi, .sanic, .daphne, .hypercorn, .waitress:
                 return .backend
             case .tanstackStart, .panel, .mkDocs, .streamlit, .gradio, .jupyter:
                 return .webFramework
@@ -450,6 +452,7 @@ enum ProcessClassifier {
             case .tsx: return [3000, 4000]
             case .nodemon: return [3000, 4000]
             case .rails: return [3000]
+            case .puma: return [9292]
             case .django: return [8000]
             case .flask: return [5000]
             case .uvicorn: return [8000]
@@ -509,6 +512,7 @@ enum ProcessClassifier {
             tokens.contains { tokenMatchesCommand($0, names: ["rails"]) } &&
                 tokens.contains { tokenMatchesCommand($0, names: ["server", "s"]) }
         }),
+        (.puma, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["puma"]) } }),
         (.django, { tokens in
             (tokens.contains { tokenMatchesCommand($0, names: ["django-admin", "manage.py"]) } ||
                 tokens.contains("manage.py")) &&
@@ -563,6 +567,7 @@ enum ProcessClassifier {
         }
         if lowered.contains("adonis") { return [3333] }
         if lowered.contains("rails") { return [3000] }
+        if lowered.contains("puma") { return [9292] }
         if lowered.contains("django") || lowered.contains("manage.py") { return [8000] }
         if lowered.contains("flask") { return [5000] }
         if lowered.contains("fastapi") { return [8000] }
