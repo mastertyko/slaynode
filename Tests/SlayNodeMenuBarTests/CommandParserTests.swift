@@ -1183,6 +1183,20 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [4001])
     }
 
+    func testLaravelArtisanServeCommandIsDetectedAsPHPBackend() {
+        let tokens = ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8001"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Laravel")
+        XCTAssertEqual(descriptor.runtime, "PHP")
+        XCTAssertEqual(descriptor.category, .backend)
+        XCTAssertEqual(descriptor.details, "Mode: SERVE")
+        XCTAssertEqual(descriptor.portHints, [8000])
+        XCTAssertEqual(ports, [8001])
+    }
+
     func testNitroCommandIsDetectedAsBackend() {
         let tokens = ["node", "node_modules/.bin/nitro", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)

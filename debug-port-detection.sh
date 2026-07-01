@@ -90,6 +90,7 @@ show_samples() {
     "rackup -p 9293"
     "hanami server --port 2301"
     "mix phx.server --port 4001"
+    "php artisan serve --host=0.0.0.0 --port=8001"
     "node server.js --port 8080"
     "vite --port 5173 --host 0.0.0.0"
     "PORT=4173 npm run preview"

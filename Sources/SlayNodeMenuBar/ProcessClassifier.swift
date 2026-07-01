@@ -246,6 +246,9 @@ enum ProcessClassifier {
         if context.lowercasedTokens.contains(where: { tokenMatchesCommand($0, names: ["elixir", "mix"]) }) {
             return "Elixir"
         }
+        if context.lowercasedTokens.contains(where: { tokenMatchesCommand($0, names: ["php", "artisan"]) }) {
+            return "PHP"
+        }
         if context.lowercasedTokens.contains(where: { tokenMatchesCommand($0, names: ["python", "python3", "django-admin", "flask"]) }) ||
             context.lowercasedTokens.contains("manage.py") {
             return "Python"
@@ -303,6 +306,7 @@ enum ProcessClassifier {
         case rackup
         case hanami
         case phoenix
+        case laravel
         case django
         case flask
         case uvicorn
@@ -352,6 +356,7 @@ enum ProcessClassifier {
             case .rackup: return "Rackup"
             case .hanami: return "Hanami"
             case .phoenix: return "Phoenix"
+            case .laravel: return "Laravel"
             case .django: return "Django"
             case .flask: return "Flask"
             case .uvicorn: return "Uvicorn"
@@ -377,6 +382,7 @@ enum ProcessClassifier {
             case .bunServe: return "Bun"
             case .rails, .puma, .rackup, .hanami: return "Ruby"
             case .phoenix: return "Elixir"
+            case .laravel: return "PHP"
             case .django, .flask, .uvicorn, .gunicorn, .fastapi, .sanic, .daphne, .panel, .mkDocs, .streamlit, .gradio, .hypercorn, .waitress, .jupyter: return "Python"
             default: return "Node.js"
             }
@@ -392,7 +398,7 @@ enum ProcessClassifier {
                 return .componentWorkbench
             case .expo, .reactNative:
                 return .mobile
-            case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails, .puma, .rackup, .hanami, .phoenix, .django, .flask, .uvicorn, .gunicorn, .fastapi, .sanic, .daphne, .hypercorn, .waitress:
+            case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails, .puma, .rackup, .hanami, .phoenix, .laravel, .django, .flask, .uvicorn, .gunicorn, .fastapi, .sanic, .daphne, .hypercorn, .waitress:
                 return .backend
             case .tanstackStart, .panel, .mkDocs, .streamlit, .gradio, .jupyter:
                 return .webFramework
@@ -415,7 +421,7 @@ enum ProcessClassifier {
 
         var detailsBuilder: (([String]) -> String?)? {
             switch self {
-            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular, .tanstackStart, .nitro, .rails, .hanami, .phoenix, .django, .flask, .fastapi, .sanic, .panel, .mkDocs, .streamlit, .gradio, .jupyter:
+            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular, .tanstackStart, .nitro, .rails, .hanami, .phoenix, .laravel, .django, .flask, .fastapi, .sanic, .panel, .mkDocs, .streamlit, .gradio, .jupyter:
                 return { tokens in
                     let modes = ["dev", "start", "serve", "server", "preview", "build", "run", "runserver", "phx.server", "lab", "notebook"]
                     let normalized = ProcessClassifier.normalizedLifecycleTokens(from: tokens)
@@ -466,6 +472,7 @@ enum ProcessClassifier {
             case .rackup: return [9292]
             case .hanami: return [2300]
             case .phoenix: return [4000]
+            case .laravel: return [8000]
             case .django: return [8000]
             case .flask: return [5000]
             case .uvicorn: return [8000]
@@ -532,6 +539,10 @@ enum ProcessClassifier {
             tokens.contains { tokenMatchesCommand($0, names: ["mix"]) } &&
                 tokens.contains { tokenMatchesCommand($0, names: ["phx.server"]) }
         }),
+        (.laravel, { tokens in
+            tokens.contains { tokenMatchesCommand($0, names: ["artisan"]) } &&
+                tokens.contains { tokenMatchesCommand($0, names: ["serve"]) }
+        }),
         (.django, { tokens in
             (tokens.contains { tokenMatchesCommand($0, names: ["django-admin", "manage.py"]) } ||
                 tokens.contains("manage.py")) &&
@@ -590,6 +601,7 @@ enum ProcessClassifier {
         if lowered.contains("rackup") { return [9292] }
         if lowered.contains("hanami") { return [2300] }
         if lowered.contains("phoenix") || lowered.contains("phx.server") { return [4000] }
+        if lowered.contains("artisan") || lowered.contains("laravel") { return [8000] }
         if lowered.contains("django") || lowered.contains("manage.py") { return [8000] }
         if lowered.contains("flask") { return [5000] }
         if lowered.contains("fastapi") { return [8000] }
