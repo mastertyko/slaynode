@@ -1169,6 +1169,20 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [2301])
     }
 
+    func testPhoenixServerCommandIsDetectedAsElixirBackend() {
+        let tokens = ["mix", "phx.server", "--port", "4001"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Phoenix")
+        XCTAssertEqual(descriptor.runtime, "Elixir")
+        XCTAssertEqual(descriptor.category, .backend)
+        XCTAssertEqual(descriptor.details, "Mode: PHX.SERVER")
+        XCTAssertEqual(descriptor.portHints, [4000])
+        XCTAssertEqual(ports, [4001])
+    }
+
     func testNitroCommandIsDetectedAsBackend() {
         let tokens = ["node", "node_modules/.bin/nitro", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)

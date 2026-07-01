@@ -64,6 +64,7 @@ assert_ports "mkdocs serve --dev-addr 127.0.0.1:8008" 8008
 assert_ports "puma -p3004" 3004
 assert_ports "rackup -p 9293" 9293
 assert_ports "hanami server --port 2301" 2301
+assert_ports "mix phx.server --port 4001" 4001
 assert_ports "bun --watch --inspect-wait=127.0.0.1:9330 server.ts" 9330
 assert_ports "PORT=8788 deno task dev" 8788
 assert_ports "web_port=5174 npm run dev" 5174
