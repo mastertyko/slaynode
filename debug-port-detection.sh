@@ -87,6 +87,7 @@ show_samples() {
     "panel serve dashboard.py --address 0.0.0.0 --port 5007"
     "mkdocs serve --dev-addr 127.0.0.1:8008"
     "puma -p3004"
+    "rackup -p 9293"
     "node server.js --port 8080"
     "vite --port 5173 --host 0.0.0.0"
     "PORT=4173 npm run preview"
