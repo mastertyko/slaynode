@@ -1155,6 +1155,20 @@ extension CommandParserTests {
         XCTAssertEqual(ports, [9293])
     }
 
+    func testHanamiServerCommandIsDetectedAsRubyBackend() {
+        let tokens = ["bundle", "exec", "hanami", "server", "--port", "2301"]
+        let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)
+        let descriptor = CommandParser.descriptor(from: context)
+        let ports = CommandParser.inferPorts(from: tokens)
+
+        XCTAssertEqual(descriptor.displayName, "Hanami")
+        XCTAssertEqual(descriptor.runtime, "Ruby")
+        XCTAssertEqual(descriptor.category, .backend)
+        XCTAssertEqual(descriptor.details, "Mode: SERVER")
+        XCTAssertEqual(descriptor.portHints, [2300])
+        XCTAssertEqual(ports, [2301])
+    }
+
     func testNitroCommandIsDetectedAsBackend() {
         let tokens = ["node", "node_modules/.bin/nitro", "dev"]
         let context = CommandParser.makeContext(executable: tokens[0], tokens: tokens, workingDirectory: nil)

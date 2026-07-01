@@ -88,6 +88,7 @@ show_samples() {
     "mkdocs serve --dev-addr 127.0.0.1:8008"
     "puma -p3004"
     "rackup -p 9293"
+    "hanami server --port 2301"
     "node server.js --port 8080"
     "vite --port 5173 --host 0.0.0.0"
     "PORT=4173 npm run preview"

@@ -240,7 +240,7 @@ enum ProcessClassifier {
         if context.lowercasedTokens.contains(where: { tokenMatchesCommand($0, names: ["node", "nodejs"]) }) {
             return "Node.js"
         }
-        if context.lowercasedTokens.contains(where: { tokenMatchesCommand($0, names: ["ruby", "bundle", "rails", "puma", "rackup"]) }) {
+        if context.lowercasedTokens.contains(where: { tokenMatchesCommand($0, names: ["ruby", "bundle", "rails", "puma", "rackup", "hanami"]) }) {
             return "Ruby"
         }
         if context.lowercasedTokens.contains(where: { tokenMatchesCommand($0, names: ["python", "python3", "django-admin", "flask"]) }) ||
@@ -298,6 +298,7 @@ enum ProcessClassifier {
         case rails
         case puma
         case rackup
+        case hanami
         case django
         case flask
         case uvicorn
@@ -345,6 +346,7 @@ enum ProcessClassifier {
             case .rails: return "Rails"
             case .puma: return "Puma"
             case .rackup: return "Rackup"
+            case .hanami: return "Hanami"
             case .django: return "Django"
             case .flask: return "Flask"
             case .uvicorn: return "Uvicorn"
@@ -368,7 +370,7 @@ enum ProcessClassifier {
             switch self {
             case .deno: return "Deno"
             case .bunServe: return "Bun"
-            case .rails, .puma, .rackup: return "Ruby"
+            case .rails, .puma, .rackup, .hanami: return "Ruby"
             case .django, .flask, .uvicorn, .gunicorn, .fastapi, .sanic, .daphne, .panel, .mkDocs, .streamlit, .gradio, .hypercorn, .waitress, .jupyter: return "Python"
             default: return "Node.js"
             }
@@ -384,7 +386,7 @@ enum ProcessClassifier {
                 return .componentWorkbench
             case .expo, .reactNative:
                 return .mobile
-            case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails, .puma, .rackup, .django, .flask, .uvicorn, .gunicorn, .fastapi, .sanic, .daphne, .hypercorn, .waitress:
+            case .nest, .express, .fastify, .koa, .hono, .adonis, .nitro, .rails, .puma, .rackup, .hanami, .django, .flask, .uvicorn, .gunicorn, .fastapi, .sanic, .daphne, .hypercorn, .waitress:
                 return .backend
             case .tanstackStart, .panel, .mkDocs, .streamlit, .gradio, .jupyter:
                 return .webFramework
@@ -407,7 +409,7 @@ enum ProcessClassifier {
 
         var detailsBuilder: (([String]) -> String?)? {
             switch self {
-            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular, .tanstackStart, .nitro, .rails, .django, .flask, .fastapi, .sanic, .panel, .mkDocs, .streamlit, .gradio, .jupyter:
+            case .next, .vite, .nuxt, .svelteKit, .remix, .astro, .angular, .tanstackStart, .nitro, .rails, .hanami, .django, .flask, .fastapi, .sanic, .panel, .mkDocs, .streamlit, .gradio, .jupyter:
                 return { tokens in
                     let modes = ["dev", "start", "serve", "server", "preview", "build", "run", "runserver", "lab", "notebook"]
                     let normalized = ProcessClassifier.normalizedLifecycleTokens(from: tokens)
@@ -456,6 +458,7 @@ enum ProcessClassifier {
             case .rails: return [3000]
             case .puma: return [9292]
             case .rackup: return [9292]
+            case .hanami: return [2300]
             case .django: return [8000]
             case .flask: return [5000]
             case .uvicorn: return [8000]
@@ -517,6 +520,7 @@ enum ProcessClassifier {
         }),
         (.puma, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["puma"]) } }),
         (.rackup, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["rackup"]) } }),
+        (.hanami, { tokens in tokens.contains { tokenMatchesCommand($0, names: ["hanami"]) } }),
         (.django, { tokens in
             (tokens.contains { tokenMatchesCommand($0, names: ["django-admin", "manage.py"]) } ||
                 tokens.contains("manage.py")) &&
@@ -573,6 +577,7 @@ enum ProcessClassifier {
         if lowered.contains("rails") { return [3000] }
         if lowered.contains("puma") { return [9292] }
         if lowered.contains("rackup") { return [9292] }
+        if lowered.contains("hanami") { return [2300] }
         if lowered.contains("django") || lowered.contains("manage.py") { return [8000] }
         if lowered.contains("flask") { return [5000] }
         if lowered.contains("fastapi") { return [8000] }
